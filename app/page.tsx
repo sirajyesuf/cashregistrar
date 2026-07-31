@@ -4,17 +4,17 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/lib/auth"
+import { useConvexAuth } from "@convex-dev/auth/react"
 
 export default function Page() {
-  const { user } = useAuth()
+  const { isAuthenticated, isLoading } = useConvexAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (user) router.push("/dashboard")
-  }, [user, router])
+    if (!isLoading && isAuthenticated) router.push("/dashboard")
+  }, [isAuthenticated, isLoading, router])
 
-  if (user) return null
+  if (isLoading || isAuthenticated) return null
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 p-6">
@@ -24,7 +24,9 @@ export default function Page() {
       </div>
       <div className="flex gap-4">
         <Link href="/login">
-          <Button variant="outline" size="lg">Sign In</Button>
+          <Button variant="outline" size="lg">
+            Sign In
+          </Button>
         </Link>
         <Link href="/register">
           <Button size="lg">Create Account</Button>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { InvoiceData } from "@/lib/invoice"
@@ -12,8 +12,10 @@ type Props = {
 }
 
 export function InvoicePreview({ data, onBack }: Props) {
-  const printRef = useRef<HTMLDivElement>(null)
-  const { subtotal, taxAmount, grandTotal } = calculateTotals(data.lineItems, data.taxRate)
+  const { subtotal, taxAmount, grandTotal } = calculateTotals(
+    data.lineItems,
+    data.taxRate
+  )
 
   useEffect(() => {
     const original = document.title
@@ -35,10 +37,7 @@ export function InvoicePreview({ data, onBack }: Props) {
         </Button>
       </div>
 
-      <div
-        ref={printRef}
-        className="rounded-lg border bg-white p-8 shadow-sm print:border-none print:shadow-none"
-      >
+      <div className="rounded-lg border bg-white p-8 shadow-sm print:border-none print:shadow-none">
         <div className="flex items-start justify-between border-b pb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">INVOICE</h1>
@@ -53,11 +52,17 @@ export function InvoicePreview({ data, onBack }: Props) {
 
         <div className="mt-6 grid grid-cols-2 gap-8">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Bill To</p>
-            <p className="mt-1 font-medium text-gray-900">{data.customerName}</p>
+            <p className="text-xs font-medium tracking-wider text-gray-500 uppercase">
+              Bill To
+            </p>
+            <p className="mt-1 font-medium text-gray-900">
+              {data.customerName}
+            </p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Date</p>
+            <p className="text-xs font-medium tracking-wider text-gray-500 uppercase">
+              Date
+            </p>
             <p className="mt-1 text-gray-900">{data.date}</p>
           </div>
         </div>
@@ -65,21 +70,29 @@ export function InvoicePreview({ data, onBack }: Props) {
         <table className="mt-8 w-full text-sm">
           <thead>
             <tr className="border-b-2 border-gray-200">
-              <th className="pb-2 text-left font-medium text-gray-500">Description</th>
+              <th className="pb-2 text-left font-medium text-gray-500">
+                Description
+              </th>
               <th className="pb-2 text-right font-medium text-gray-500">Qty</th>
-              <th className="pb-2 text-right font-medium text-gray-500">Rate</th>
-              <th className="pb-2 text-right font-medium text-gray-500">Total</th>
+              <th className="pb-2 text-right font-medium text-gray-500">
+                Rate
+              </th>
+              <th className="pb-2 text-right font-medium text-gray-500">
+                Total
+              </th>
             </tr>
           </thead>
           <tbody>
             {data.lineItems.map((item) => (
               <tr key={item.id} className="border-b border-gray-100">
                 <td className="py-3 text-gray-900">{item.description}</td>
-                <td className="py-3 text-right tabular-nums text-gray-900">{item.quantity}</td>
-                <td className="py-3 text-right tabular-nums text-gray-900">
+                <td className="py-3 text-right text-gray-900 tabular-nums">
+                  {item.quantity}
+                </td>
+                <td className="py-3 text-right text-gray-900 tabular-nums">
                   {formatCurrency(item.rate)}
                 </td>
-                <td className="py-3 text-right tabular-nums text-gray-900">
+                <td className="py-3 text-right text-gray-900 tabular-nums">
                   {formatCurrency(item.quantity * item.rate)}
                 </td>
               </tr>
@@ -87,7 +100,7 @@ export function InvoicePreview({ data, onBack }: Props) {
           </tbody>
         </table>
 
-        <div className="ml-auto mt-4 w-64 space-y-1.5 text-sm">
+        <div className="mt-4 ml-auto w-64 space-y-1.5 text-sm">
           <div className="flex justify-between text-gray-600">
             <span>Subtotal</span>
             <span className="tabular-nums">{formatCurrency(subtotal)}</span>

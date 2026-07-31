@@ -19,17 +19,28 @@ export type InvoiceTotals = {
   grandTotal: number
 }
 
-export function calculateTotals(lineItems: LineItem[], taxRate: number): InvoiceTotals {
-  const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0)
+export function calculateTotals(
+  lineItems: LineItem[],
+  taxRate: number
+): InvoiceTotals {
+  const subtotal = lineItems.reduce(
+    (sum, item) => sum + item.quantity * item.rate,
+    0
+  )
   const taxAmount = subtotal * (taxRate / 100)
   const grandTotal = subtotal + taxAmount
   return { subtotal, taxAmount, grandTotal }
 }
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("de-DE", { style: "currency", currency: "ETB" }).format(amount)
+  return new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "ETB",
+  }).format(amount)
 }
 
+// Placeholder counter: resets every page load, so numbers repeat across sessions.
+// Replace with a persisted sequence (e.g. a Convex counter) when invoices become durable.
 let invoiceCounter = 1
 
 export function generateInvoiceNumber(): string {
@@ -38,5 +49,9 @@ export function generateInvoiceNumber(): string {
 }
 
 export function todayString(): string {
-  return new Date().toISOString().split("T")[0]
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, "0")
+  const day = String(now.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
 }

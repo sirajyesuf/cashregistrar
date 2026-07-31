@@ -1,0 +1,2090 @@
+{
+  "info": {
+    "_postman_id": "fc17e9f2-0658-46e3-9577-0e260381d69e",
+    "name": "EimsCoreApiMockCollection",
+    "description": "## **Collection Description**\n\nThis Postman collection provides complete integration with Ethiopia's e-invoicing system, covering:\n\n- Authentication (token generation)\n    \n- Single & bulk invoice registration\n    \n- Invoice verification\n    \n- Cancellation (single & bulk)\n    \n- Sales & withholding receipts\n    \n\nAll requests require Bearer Token authentication from the initial auth call.\n\n## **Required Variables**\n\n**Must be set before use:**\n\n### **1\\. Authentication Variables**\n\n- `clientId` - Your API client ID\n    \n- `clientSecret` - Your secret API key\n    \n- `apiKey` - Additional authentication key (if required)\n    \n- `sellerTin` - Your business Tax Identification Number\n    \n\n### **2\\. Seller Information Variables**\n\n### **Seller Information Variables for Invoices**\n\nThese variables **must be set** in your Postman collection before sending invoice requests:\n\n| Variable | Required | Description | Example Value |\n| --- | --- | --- | --- |\n| `sellerEmail` | ✅ | Seller's contact email | `\"accounting@company.com\"` |\n| `sellerLegalName` | ✅ | Registered business name | `\"ABC Trading PLC\"` |\n| `sellerPhone` | ✅ | Business contact phone | `\"0911223344\"` |\n| `sellerRegion` | ✅ | Business region code | `\"13\"` (Addis Ababa) |\n| `sellerTin` | ✅ | Tax Identification Number | `\"0016324478\"` |\n| `sellerVatNumber` | ✅ | VAT registration number | `\"3215840010\"` |\n| `sellerWoreda` | ✅ | Business woreda (district) code | `\"574\"` |\n\n### **Optional Variables**\n\n| Variable | Required | Description |\n| --- | --- | --- |\n| `City` | ❌ | Cab be null |\n| `HouseNumber` | ❌ | Can be `null` |\n| `Locality` | ❌ | Can be `null` |\n| `SubCity` | ❌ | Can be `null` |\n\n### **3\\. System Variables**\n\n- `systemNumber` - Your POS/ERP system ID\n    \n- `systemType` - Your system type (ERP/POS/MANUAL)\n    \n- `documentNumber` - Starting invoice number\n    \n- `invoiceCounter` - System transaction counter\n    \n\n**Note:** The collection automatically manages `bearer Token`, `previousIrn`, and counter variables during execution.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "28393794"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "login",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [""],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"set global variable\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    const jwt = jsonData.data.accessToken",
+                  "    console.log(jwt)",
+                  "    pm.collectionVariables.set(\"token\", jwt);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"clientId\": \"{{clientId}}\",\n    \"clientSecret\": \"{{clientSecret}}\",\n    \"apikey\": \"{{apiKey}}\",\n    \"tin\": \"{{sellerTin}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock_url}}/auth/login",
+              "host": ["{{mock_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": [
+            {
+              "name": "Login Successfull",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"request\": {\n        \"clientId\": \"a8d87762-d96d-4dd0-95d1-01753dba5181\",\n        \"clientSecret\": \"0cc1a9ba-0f7d-44e1-bad2-0d136572794b\",\n        \"apikey\": \"471555f9-6726-4786-9e53-f29f220819c3\",\n        \"tin\": \"0000034558\"\n    },\n    \"signature\": \"nwAAAIO0/kiq7qqt0e0ST5uqHA2umJMofT0x46PiW9Au/JAJOCBzX6ExFd8dmtiH3wHPm36er+KltLb/nZ4SnSmS4ZZL3X4Pjygu9dk7JWTqc5qe24j9e4oJbKWipkshTfCVXiyt7YVIDcwo39fkm0mwUMNh6HeM2GsTH/B1IzvDhd0HFHy0DP50zo4MLxsAXCnFQMB8creY79r+exBAbTHI8xJmBrTM0bhT0jdZ6muiLW8DFVKDB9L9Oqr0H57tEaZrDf6+ZZC/mFK/nyCdjVGVAQV6WZxrvhtZqFPSeBu6k7n7Ty6XDa6et5YBuPhQ2Sb7a6O1Km/mwVvpryt+G08BHVZNISoHMKckrZNez4b68/tOsdR00QVtzB1KyUeBFaSQ5p9mLLmWR4P9fJTU7ES68vQtvbXT0GAC4h2NjDFjVK71wEzmiVjzxp2g8ELZaEfEMbEVdHa7B/hg1c7Wyve1Nc5nlWDwTUD6RDVX+WO/4zIUfes/Rk1i\",\n    \"certificate\": \"U3ViamVjdDogQ049NjY2NjY2NjY2NixTTj1CMDM2MDE1NEJBLE9VPVRlc3QgNjYsTz1UZXN0IDY2LEw9QWRkaXMgQWJhYmEsU1Q9QWRkaXMgQWJhYmEsQz1FVApJc3N1ZXI6IENOPUlOU0EgSXNzdWluZyBDQSxPVT1QS0kgQ2VudGVyLE89SW5mb3JtYXRpb24gTmV0d29yayBTZWN1cml0eSBBZG1pbmlzdHJhdGlvbixTVD1BZGRpcyBBYmFiYSxDPUVUCi0tLS0tQkVHSU4gQ0VSVElGSUNBVEUtLS0tLQpNSUlGeHpDQ0JLK2dBd0lCQWdJVVJtMlRUbERvcTFLTXQxZmh4NzkxSjIxTno5SXdEUVlKS29aSWh2Y05BUUVOCkJRQXdnWWd4Q3pBSkJnTlZCQVlUQWtWVU1SUXdFZ1lEVlFRSURBdEJaR1JwY3lCQlltRmlZVEUwTURJR0ExVUUKQ2d3clNXNW1iM0p0WVhScGIyNGdUbVYwZDI5eWF5QlRaV04xY21sMGVTQkJaRzFwYm1semRISmhkR2x2YmpFVApNQkVHQTFVRUN3d0tVRXRKSUVObGJuUmxjakVZTUJZR0ExVUVBd3dQU1U1VFFTQkpjM04xYVc1bklFTkJNQjRYCkRUSTFNRE15TVRFeE5UVXpPVm9YRFRJMk1ETXlNVEV4TlRVek9Wb3dnWWN4RXpBUkJnTlZCQU1NQ2pZMk5qWTIKTmpZMk5qWXhFekFSQmdOVkJBVVRDa0l3TXpZd01UVTBRa0V4RURBT0JnTlZCQXNNQjFSbGMzUWdOall4RURBTwpCZ05WQkFvTUIxUmxjM1FnTmpZeEZEQVNCZ05WQkFjTUMwRmtaR2x6SUVGaVlXSmhNUlF3RWdZRFZRUUlEQXRCClpHUnBjeUJCWW1GaVlURUxNQWtHQTFVRUJoTUNSVlF3Z2dHY01BMEdDU3FHU0liM0RRRUJBUVVBQTRJQmlRQXcKZ2dHRUFvSUJld0R1TG5iOHUvZ3Q4U0todUFSajNjbUxOQkhhWXlYVFpEMjRnS3ZyVWQ2U3FVblNPYmNmVUtEUApJK1NnTTRlM3ZVVjVxazd1TytyRkl3RllMM2NMUm1xSEF4Y3hyQ2Q0SzRnNTJEajhycEk0S3lwNjV5bGpJVVRjCmpwMzhTYjIrNVRReldiZjdBSk9LUU1XbC8wT1VhYVNYdHJiVFVabWhFUFBUSHF0VENDbFFKNW55eXZrTXlnVUQKSkRCTVMvWGNLdC9JMStYRlFTUDdOYjQ0NFBFakxvVmxyYkp5V1BPV0FNL2t3d3RSQ3RNU2lmdGZ4eWdKZVlXMQppVDJsdDlaNHRsVW1CT2h1QW8xQStXelR3aWxidnI3NXBvOXl0cDVwSjJpekhqV3l0ODRNZERZNzYvM0xXQVdxCkFQT3d1ODNXVFJ5aXhJM2g4OE11YkhmeklBb2FHY2RGTlpIOXNlOE5MdjhqR0ZGeGdlRmd1Mnl6U2ttWHFkUGEKSTlaNGJLd2RFOFdsYzBIS3MzN2IzZFBLRUpudG5pQWlWZGpWY01QaWJ6Y2s3RGlWZWNpS0lpK01IcGdpN1R1cwpGMDVxOWdnQjBiQTNkSGhnb1o0eG9ldGxILy8yUjhLc0UvYTZkeTE0M1dxeC9pdE9CcC9GSzd2bXFYYkV5TUk4Ckpna0NBd0VBQWFPQ0Fhd3dnZ0dvTUF3R0ExVWRFd0VCL3dRQ01BQXdId1lEVlIwakJCZ3dGb0FVMDBJdnVDU3UKbUExb3ByR2N2NVdtcjFHN0dyWXdVUVlJS3dZQkJRVUhBUUVFUlRCRE1FRUdDQ3NHQVFVRkJ6QUJoalZvZEhSdwpPaTh2TVRrMkxqRTRPQzR4TmpndU1UVXdPamd3T0RBdmFYWmhMM0IxWW14cFkzZGxZaTl6ZEdGMGRYTXZiMk56CmNEQWRCZ05WSFNVRUZqQVVCZ2dyQmdFRkJRY0RBZ1lJS3dZQkJRVUhBd1F3Z2RVR0ExVWRId1NCelRDQnlqQ0IKeDZDQnhLQ0J3WWFCdnFCb2RIUndPaTh2TVRrMkxqRTRPQzR4TmpndU1UVXdPamd3T0RBdmFYWmhMM0IxWW14cApZM2RsWWk5M1pXSmthWE4wTDJObGNuUmthWE4wUDJOdFpEMWpjbXdtYVhOemRXVnlQVU5PUFVsT1UwRWxNakJKCmMzTjFhVzVuSlRJd1EwRXNUMVU5VUV0SkpUSXdRMlZ1ZEdWeUxFODlTVzVtYjNKdFlYUnBiMjRsTWpCT1pYUjMKYjNKckpUSXdVMlZqZFhKcGRIa2xNakJCWkcxcGJtbHpkSEpoZEdsdmJpeFRWRDFCWkdScGN5VXlNRUZpWVdKaApMRU05UlZRbE1qQXdIUVlEVlIwT0JCWUVGSU9Da1ltWkJFKytqSlowNE04bWd6LzZLbjhpTUE0R0ExVWREd0VCCi93UUVBd0lHd0RBTkJna3Foa2lHOXcwQkFRMEZBQU9DQVFFQUdKN1NacEN0WlFGemp3aGRlbERXaW80elptVnIKZlNpek5EdGtnZlFJUndnR3FHRlRQc21TMTZIQjMyY0VieEhvclIrY0YzWlVUMXJRbG0vUTBQUmFocWNweUp1cwpRd1NvRTVxU2JKYzZDK0lRS1ZveWV3SVRCb3ZUL1YvVVZWVmgva3JkZGgrdXNQL1FVYjllY09NS3N2NjRzK2VHCklTUmhDZk5yK3FUazhwa1lpQThaTjRkZlZLVWJFZnVhUWpKNEFMdXFzWXNOcjVNUlZnWWp2dy9lVm85RGNEVTEKNG5oOUNTWWVhLzlQbkthSTErU25IS3VNYU91Q3VPTWRzaE5UNlorL05GdUJiL3FCZmJRNDJKUTBGTDA4bHFLNgo5T0lQK2hLQk1kUlkwelo3NTkxUzROa29XQ2lGakFRU2xCbTQxR3hhK0xzZ0NxUCsxdENwZllYQmd3PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQpTdWJqZWN0OiBDTj1JTlNBIElzc3VpbmcgQ0EsT1U9UEtJIENlbnRlcixPPUluZm9ybWF0aW9uIE5ldHdvcmsgU2VjdXJpdHkgQWRtaW5pc3RyYXRpb24sU1Q9QWRkaXMgQWJhYmEsQz1FVApJc3N1ZXI6IENOPUV0aGlvcGlhbiBOYXRpb25hbCBSb290IENBLE89SW5mb3JtYXRpb24gTmV0d29yayBTZWN1cml0eSBBZG1pbmlzdHJhdGlvbixDPUVUCi0tLS0tQkVHSU4gQ0VSVElGSUNBVEUtLS0tLQpNSUlFMlRDQ0FzR2dBd0lCQWdJTFVyZlM3eHA5SWRRek9NQXdEUVlKS29aSWh2Y05BUUVOQlFBd2FERUxNQWtHCkExVUVCaE1DUlZReE5EQXlCZ05WQkFvTUswbHVabTl5YldGMGFXOXVJRTVsZEhkdmNtc2dVMlZqZFhKcGRIa2cKUVdSdGFXNXBjM1J5WVhScGIyNHhJekFoQmdOVkJBTU1Ha1YwYUdsdmNHbGhiaUJPWVhScGIyNWhiQ0JTYjI5MApJRU5CTUI0WERUSTBNVEV5TlRBNE1qWXlOVm9YRFRNME1URXlNekE0TWpZeU5Wb3dnWWd4Q3pBSkJnTlZCQVlUCkFrVlVNUlF3RWdZRFZRUUlEQXRCWkdScGN5QkJZbUZpWVRFME1ESUdBMVVFQ2d3clNXNW1iM0p0WVhScGIyNGcKVG1WMGQyOXlheUJUWldOMWNtbDBlU0JCWkcxcGJtbHpkSEpoZEdsdmJqRVRNQkVHQTFVRUN3d0tVRXRKSUVObApiblJsY2pFWU1CWUdBMVVFQXd3UFNVNVRRU0JKYzNOMWFXNW5JRU5CTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGCkFBT0NBUThBTUlJQkNnS0NBUUVBeWFsdU05VzV4VG9pa1NDOE8vSW0xV1BVckZGVlo3K1VZRzdIR2tDS0NCQU4KamdDS3Zqcy9haFNJSlNFeTBHcldONndIVGhrWURRNTVreXVpWElGcUw5TkNzOUpLSFI0U0ZlcWpVUk5jN2ErZwpaN3VRd2VGNHl2UTdZWC9DZ1RZSTJPR2RPcjFQYXMrTFJzRHpySThnNGtmMmsyWFZXbTZlNVplMGFFZllnMmo2CnBibVkyWmlRb0VlQ1IwTm5ueUhIYWpLaXMzWHRqamV0ZFZOVHNHZnlTZitSbzM1ZUZOMEIyZi9oN0RpbEhjRzcKWjE2MVlNUGFTdGRvRlRSYnFuckpPRC9zMkVtVSs3NTZXa0tnV2hLSjFBYlNaUkxINGRQc2t3bDh1TXdKOXlPagozL3JHb3ExKzllMk5STDRWWWRFeFlZSmRwNndkMXF1UXJzSFFielRwdFFJREFRQUJvMk13WVRBUEJnTlZIUk1FCkNEQUdBUUgvQWdFQU1CMEdBMVVkRGdRV0JCVFRRaSs0Sks2WURXaW1zWnkvbGFhdlVic2F0akFmQmdOVkhTTUUKR0RBV2dCUTVVdjhkV2VTVzRuK1kwZzk2aEptNGtsZTFXekFPQmdOVkhROEJBZjhFQkFNQ0FRWXdEUVlKS29aSQpodmNOQVFFTkJRQURnZ0lCQURDdS9NZURWaWtEYm94VWQwMitoRldPdmJNTGxRNjViVTNmL1B1NWpyMlh0THJqClN1Z3VRcFVUTzcrWldHK0QvcnBEeFdlclY2UXpMS2ZoZW9qa0tBUTVzbFVwVnpkbllNTk9IVTB5VjFDU1FBR1MKWXNsSmtMaG1EeEsyUVRNTnpQeGJ4T083V2VacVkzd2JyNFB4d1F2dUhGckt3Y0Y5bG5pTndxMzJwYng5WTEycgp0OS9iNXJJejAyRk9jaUcwT0lVRzY0cVlYelNRT2xFa1Nlb1NjUGRFeGVWcVlmYzlRMTJZbG5BZXpiK3p0UEtkCk5pajROTXR0TUZoRVB5V3pWQnd2eUJOTE82KzlyS0QvQTFiczNYUFRzL0xjVGVUZ2Y2VHU3RnVNYUhwL05hSzUKSUJ5bXV2bHhUWS9zL0NJWGN1VkNqVDg0ZWs1YStDU1A4dHBjbXRvZ0J3eUxjN1Arem9uOHI2VlZFVWxJV1IvNwptWWV6RUZZMFRTcWpkRWlWVm5Ra3VvOEhZdi9yd3ZHV21zSG5uUjJMK2RBNW1QYTliQUZsUHBFd0ttdHl5bEhBCjdDczIwQ0VPM0huUkVGTzNUcGNCK1VwZjFvWWhCa1JzaU5DaHMxRUxtM0tlVm54aHA5SEFWZFhESnM5RG1Qd2oKMHF2WjNNVmtxTWEzNDVvSWdzOWhWU3FTRVZIVWxuNnpMMzhSNFEvb0pXeFpjQTFKWnVNODJCTnNpRmt3T1ZrVgp4Z1BXR3h0N2dkUEhaWWhMUGdrTzF1aXBCTzhncjZ0SUE5NUJxMG5EQ21pa1AySHc1M1FuODUyQlEzcjdJZ0tECktocUpjUUxVTEYrRit6UW1xQmZ0NGxRbHJkYXl5R0puUWsxaVlDc1Jsa0hUbEZhaW1rQ0plNm10SHVFVAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tClN1YmplY3Q6IENOPUV0aGlvcGlhbiBOYXRpb25hbCBSb290IENBLE89SW5mb3JtYXRpb24gTmV0d29yayBTZWN1cml0eSBBZG1pbmlzdHJhdGlvbixDPUVUCklzc3VlcjogQ049RXRoaW9waWFuIE5hdGlvbmFsIFJvb3QgQ0EsTz1JbmZvcm1hdGlvbiBOZXR3b3JrIFNlY3VyaXR5IEFkbWluaXN0cmF0aW9uLEM9RVQKLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZ1RENDQTZDZ0F3SUJBZ0lMVXJmUzdiYzNxWFpDMGNvd0RRWUpLb1pJaHZjTkFRRU5CUUF3YURFTE1Ba0cKQTFVRUJoTUNSVlF4TkRBeUJnTlZCQW9NSzBsdVptOXliV0YwYVc5dUlFNWxkSGR2Y21zZ1UyVmpkWEpwZEhrZwpRV1J0YVc1cGMzUnlZWFJwYjI0eEl6QWhCZ05WQkFNTUdrVjBhR2x2Y0dsaGJpQk9ZWFJwYjI1aGJDQlNiMjkwCklFTkJNQjRYRFRJME1URXlOVEEzTlRreE5Gb1hEVFEwTVRFeU1EQTNOVGt4TkZvd2FERUxNQWtHQTFVRUJoTUMKUlZReE5EQXlCZ05WQkFvTUswbHVabTl5YldGMGFXOXVJRTVsZEhkdmNtc2dVMlZqZFhKcGRIa2dRV1J0YVc1cApjM1J5WVhScGIyNHhJekFoQmdOVkJBTU1Ha1YwYUdsdmNHbGhiaUJPWVhScGIyNWhiQ0JTYjI5MElFTkJNSUlDCklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FnOEFNSUlDQ2dLQ0FnRUF4WHB2eGZmYUlwQ2VVVkYveXNrUDZUcksKc3pqbzdYOExVdElBTnNwM2FEZWhrRUpmYno3dWpaYUFjRkl5RVBmQXc1WnRza0g3M2c1L0tlbHVLV09DWGhtSApFZkFTUjg1R1NjOFZ4OTNRM1EyR0ZhMGFXNXNYekhMbVlndmNBVUZ2RktmclNEck9TYkxkdStIZ2xSUzBaZGJwCkFTdWR1V2diVXFaeEt3Y3hmUTNpTTl6Nk04NW5SSWwvU3JUcC8xQ3NJTk5nK01SU2IxK0VxQ05URUNueHN2YSsKMTFEQkk5cXJybHlpSjhTNzVSeEhlYzFQNGY2aWJ3S0d2eVFwL2REc1dWb1dKUjUwbXY2Qk5lVmM5dTltSWI0RAp0SGt4cGhZWTBvdlg4a2pQRHdLK1l3d2htayt4RGRhM1ArNG43S0VwWm9VV1lienFPMVJSK3dvS0xlWlJLVFkwCnEwR3MwSnFrME9hc0p0VEI1dy8vbWpUZE1VdnZ4Sld5N3BnZnNncnlwUDQ5a2NuYmxWdE15T2dPeThwcjFuaWsKRmNNRVNpQTdhR3hUbmpSdEtSaW5yOE9kbnBXQlVISEZlRVFCeGV2YmxCOXdxcldDNTBTTUV4Z01lMnUwRVV2Zgp0Q0FpeWx4VzkyVjZNUmk0VVZHaHpBSUd6Rm8yUW9yamZrSlhCTU5YY3BUTzczZ0JVVTliWnVCNFZNY1BqM1VSCnJiYno5aGVwQ2FodFJ4VzR0ZVp2UUo0VEhlZStsZFE5NFQ5dHk5WC9zVXh4L1hZYWkvemFKY2VpNmcrNGphV3QKM0pKSXlvMXRuZWpTdVNYcldidVR5UUQ1VExsZFY1ajJEbURsSlNCVTFQNXpaVm9yYUJ4YzVTdmhQSk5uL2VBRwpTdHlTVStwMjMvZU83bFlySXhVQ0F3RUFBYU5qTUdFd0R3WURWUjBUQkFnd0JnRUIvd0lCQVRBZEJnTlZIUTRFCkZnUVVPVkwvSFZua2x1Si9tTklQZW9TWnVKSlh0VnN3SHdZRFZSMGpCQmd3Rm9BVU9WTC9IVm5rbHVKL21OSVAKZW9TWnVKSlh0VnN3RGdZRFZSMFBBUUgvQkFRREFnRUdNQTBHQ1NxR1NJYjNEUUVCRFFVQUE0SUNBUUJDckkvSQpzOXIxbEZnVWZXb1dmRGl6aWtHNHM0bnZWY3RYZ2p5K2Z3N3pCWlozZXcrTVd6ZmQrUllFM1JSWTNPTW1rUDA2CmZUaFpiS3J0UGtWWXhSVm1ncnVrckhmUlNKb1lydFlSZk1VZjMrekhTTzEwcEs3NXF4cDFRbWtFVDJzMGVmOTUKL2JobXA2Vnl2UXVBczhHWllFUkdDYmwxT3BIRmZrdlI1cnBuT3B6dy91dUFoYVFQMjd0RjI4QW04UEp5TzNiSQpBRHVsOW1XalprSHZGQisxdkdIUUoyY0lYOXRZenBwVUdLZTVUM21qYnJaaUZacTczeWliV3psNkxkSGRKRm1LCnV1ZFcyTlord3dtUXJoYlpmV2RmNURjT0djMVFLMUt3T3VuMGRZOXo2aEtoNDFKVEhRcVBZL3NYL200aVAvMDIKajU0SitPaHhOem1RV3IxUGhJejN0MVFBM0NDSGlmY3ZDMFY2K1VpRTZDTno0SmwrdnFta0I5WFViRER5SVdZaQpGdDBSVXQxamQwa29sQ2Z2bG51UXh3SW84d0doa1hIOHRWQVp0MldEVTBHTWw0dklCV0YzbGxoOHB3d2Jpb1JiCkYxNXhsMlkvYjhhUXJzbk55MWxRSFgxZE95UFJMSmdNaExxRitoL0FMUlVnTGx0dXVqa3RiWkorWHlRZlE3WlUKaGRaNENrVVl4UmtKQlVJQ0Z2TjM2VGZXQ0d4RnZmR3ZpcGNTSXBnQW5EMEZOMk1aalNOM3NpYzQ1aUJ1VHVaVgpPZnJsNzE5dWgvYWUyeEM0V0Vsd2tDSkxJaXMzTDBMV2diNmxCaEhCOW80Uk1XNGpZeFVaVzgrVFF2Z05LdW1rCmY2bi9uY2w5bFd0cDlSTFE0eFJHaitDanBVaXJtWHd1VG5XdkdBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://core.mor.gov.et/auth/login",
+                  "protocol": "https",
+                  "host": ["core", "mor", "gov", "et"],
+                  "path": ["auth", "login"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.18.0 (Ubuntu)"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 25 Mar 2025 09:03:46 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "2315"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Rate-Limit-Remaining",
+                  "value": "999"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000 ; includeSubDomains"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"accessToken\": \"eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJlZVZ5dF90MnUteFFlQXQ1cnlMLWtuUVhpd05CdTl1UnpncVFWNThBbEw0In0.eyJleHAiOjE3NDI4OTcwMjYsImlhdCI6MTc0Mjg5MzQyNiwianRpIjoiZmI5ZWQxZTYtMTExNC00ODBmLWJiMDQtMGU3YmJkYjRjZGUxIiwiaXNzIjoiaHR0cHM6Ly9pYW0ubW9yLmdvdi5ldC9yZWFsbXMvU291cmNlcyIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiI3ZTJiYWRmYi1jYjA2LTQ2YmEtYTNkYy1jYzA3YzY1NjFmMWMiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJMT0ctSU4iLCJzZXNzaW9uX3N0YXRlIjoiMjA2ODJiYTctMTljMi00YWRiLTg3NWUtNGE5MDFiMzY5MGY3IiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyJodHRwOi8vMTAuMS4wLjI0NjoqIiwiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtc291cmNlcyIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Imdyb3VwdG9zb3VyY2UgcHJvZmlsZSBlbWFpbCIsInNpZCI6IjIwNjgyYmE3LTE5YzItNGFkYi04NzVlLTRhOTAxYjM2OTBmNyIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJ0aW4iOiI2NjY2NjY2NjY2Iiwic3lzdGVtVHlwZSI6IlBPUyIsImNhbGxiYWNrIjoiaHR0cDovLzE3Mi4zMC4xNS42MTo5OTk5L2FwaS9wb3N0RGF0YSIsInN5c3RlbU51bWJlciI6IkIwMzYwMTU0QkEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJjMzAwZjA5Ni02YmM5LTQ4OGUtYTJlNi1kNGIzZmQ2YTQxYmIifQ.aQeh1cT9ocHuzWFFlS9HEttjrv_ERDHYWA_PR8juA1ibh0s6W2rZRalzWmPwbhXdht2emFF5wiAe2Nwf9xZWLDF2vx-3KAt3PCqtsCBKodFRvammesG-BH5CH8URuW03Pts76Nocbm_Q_fXSlcXTgifpl9O5uVMGc2-bWGh9UbNruEFPm-N4NPf_U3YC0HXgkROuk3x-MEKCnpf_8UoLNihn0gJ25xIOu98CC4v_zV4e1SHyTmV9UjWxMJqnbvIds-pRZ3uVFbh8a5twLLyl0dRKHsuE9BsmpZQxNpPolqZNJ4ttkhe7DjESs8m8OXQQwhFYB5VvgV8JJYT3PWsEBg\",\n        \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5MWNiYzNmZi03MjVhLTRjMGMtYmE0NS1jNzgxZTQ0ZGRmODAifQ.eyJleHAiOjE3NDI4OTcwMjYsImlhdCI6MTc0Mjg5MzQyNiwianRpIjoiM2IwYTJlMDctNzIyYS00ZTM0LWI0OTEtM2VmZmMzM2NkZWY3IiwiaXNzIjoiaHR0cHM6Ly9pYW0ubW9yLmdvdi5ldC9yZWFsbXMvU291cmNlcyIsImF1ZCI6Imh0dHBzOi8vaWFtLm1vci5nb3YuZXQvcmVhbG1zL1NvdXJjZXMiLCJzdWIiOiI3ZTJiYWRmYi1jYjA2LTQ2YmEtYTNkYy1jYzA3YzY1NjFmMWMiLCJ0eXAiOiJSZWZyZXNoIiwiYXpwIjoiTE9HLUlOIiwic2Vzc2lvbl9zdGF0ZSI6IjIwNjgyYmE3LTE5YzItNGFkYi04NzVlLTRhOTAxYjM2OTBmNyIsInNjb3BlIjoiZ3JvdXB0b3NvdXJjZSBwcm9maWxlIGVtYWlsIiwic2lkIjoiMjA2ODJiYTctMTljMi00YWRiLTg3NWUtNGE5MDFiMzY5MGY3In0.eYGGjRxdLHm0829mCZyhRPYi0_4YvJFgNuaf4imUq4U\",\n        \"encryptionKey\": \"d292bb58-5873-4a80-97b6-bf6cc42f44da\",\n        \"expiresIn\": 3600\n    },\n    \"status\": \"SUCCESS\"\n}"
+            },
+            {
+              "name": "Login Invalid Credentials",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"request\": {\n        \"clientId\": \"{{clientId}}\",\n        \"clientSecret\": \"{{clientSecret}}\",\n        \"apikey\": \"{{apiKey}}\",\n        \"tin\": \"{{sellerTin}}\"\n    },\n    \"signature\": \"{{signature}}\",\n    \"certificate\": \"{{certificate}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://core.mor.gov.et/auth/login",
+                  "protocol": "https",
+                  "host": ["core", "mor", "gov", "et"],
+                  "path": ["auth", "login"]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.18.0 (Ubuntu)"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 25 Mar 2025 09:03:46 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "2315"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Rate-Limit-Remaining",
+                  "value": "999"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000 ; includeSubDomains"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"GATEWAY ERROR\",\n    \"statusCode\": 401,\n    \"details\": [\n        {\n            \"errorMessage\": \"Invalid Credentials\"\n        }\n    ],\n    \"code\": \"4400\"\n}"
+            },
+            {
+              "name": "Login Missing some fields",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"request\": {\n        \"clientId\": \"{{clientId}}\",\n        \"clientSecret\": \"{{clientSecret}}\",\n        \"apikey\": \"{{apiKey}}\",\n        \"tin\": \"{{sellerTin}}\"\n    },\n    \"signature\": \"{{signature}}\",\n    \"certificate\": \"{{certificate}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://core.mor.gov.et/auth/login",
+                  "protocol": "https",
+                  "host": ["core", "mor", "gov", "et"],
+                  "path": ["auth", "login"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.18.0 (Ubuntu)"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 25 Mar 2025 09:03:46 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "2315"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Rate-Limit-Remaining",
+                  "value": "999"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "Strict-Transport-Security",
+                  "value": "max-age=31536000 ; includeSubDomains"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"GATEWAY ERROR\",\n    \"statusCode\": 400,\n    \"details\": [\n        {\n            \"errorMessage\": \"must not be null\",\n            \"field\": \"apikey\"\n        }\n    ],\n    \"code\": \"4001\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "RefreshToken",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"set global variable\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var jsonData = pm.response.json();",
+                  "    const jwt = jsonData.data.accessToken",
+                  "    console.log(jwt)",
+                  "    pm.collectionVariables.set(\"token\", jwt);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5MWNiYzNmZi03MjVhLTRjMGMtYmE0NS1jNzgxZTQ0ZGRmODAifQ.eyJleHAiOjE3NDI5MTM1MDYsImlhdCI6MTc0MjkwOTkwNiwianRpIjoiYzZiMWJmNjYtMWFlZi00NjY5LTk4YWItMTI2MzY1YzZkNmNlIiwiaXNzIjoiaHR0cHM6Ly9pYW0ubW9yLmdvdi5ldC9yZWFsbXMvU291cmNlcyIsImF1ZCI6Imh0dHBzOi8vaWFtLm1vci5nb3YuZXQvcmVhbG1zL1NvdXJjZXMiLCJzdWIiOiI3ZTJiYWRmYi1jYjA2LTQ2YmEtYTNkYy1jYzA3YzY1NjFmMWMiLCJ0eXAiOiJSZWZyZXNoIiwiYXpwIjoiTE9HLUlOIiwic2Vzc2lvbl9zdGF0ZSI6IjFiY2U5N2QxLTMwMDgtNDY4Yi1iODQ3LTNkZTE4YjhjY2NjMyIsInNjb3BlIjoiZ3JvdXB0b3NvdXJjZSBwcm9maWxlIGVtYWlsIiwic2lkIjoiMWJjZTk3ZDEtMzAwOC00NjhiLWI4NDctM2RlMThiOGNjY2MzIn0.AgZPp06oG6myQDzsl_fgM3eBiad7kxZwHM9Jm05JjJ8\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock_url}}/auth/refresh-token",
+              "host": ["{{mock_url}}"],
+              "path": ["auth", "refresh-token"]
+            },
+            "description": "Generated from cURL: curl --location 'http://core.mor.gov.et/auth/refresh-token' \\\n--header 'Content-Type: application/json' \\\n--data '{\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5MWNiYzNmZi03MjVhLTRjMGMtYmE0NS1jNzgxZTQ0ZGRmODAifQ.eyJleHAiOjE3NDI5MTM1MDYsImlhdCI6MTc0MjkwOTkwNiwianRpIjoiYzZiMWJmNjYtMWFlZi00NjY5LTk4YWItMTI2MzY1YzZkNmNlIiwiaXNzIjoiaHR0cHM6Ly9pYW0ubW9yLmdvdi5ldC9yZWFsbXMvU291cmNlcyIsImF1ZCI6Imh0dHBzOi8vaWFtLm1vci5nb3YuZXQvcmVhbG1zL1NvdXJjZXMiLCJzdWIiOiI3ZTJiYWRmYi1jYjA2LTQ2YmEtYTNkYy1jYzA3YzY1NjFmMWMiLCJ0eXAiOiJSZWZyZXNoIiwiYXpwIjoiTE9HLUlOIiwic2Vzc2lvbl9zdGF0ZSI6IjFiY2U5N2QxLTMwMDgtNDY4Yi1iODQ3LTNkZTE4YjhjY2NjMyIsInNjb3BlIjoiZ3JvdXB0b3NvdXJjZSBwcm9maWxlIGVtYWlsIiwic2lkIjoiMWJjZTk3ZDEtMzAwOC00NjhiLWI4NDctM2RlMThiOGNjY2MzIn0.AgZPp06oG6myQDzsl_fgM3eBiad7kxZwHM9Jm05JjJ8\"\n}'"
+          },
+          "response": [
+            {
+              "name": "Success Refresh Token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5MWNiYzNmZi03MjVhLTRjMGMtYmE0NS1jNzgxZTQ0ZGRmODAifQ.eyJleHAiOjE3NDI5MTM1MDYsImlhdCI6MTc0MjkwOTkwNiwianRpIjoiYzZiMWJmNjYtMWFlZi00NjY5LTk4YWItMTI2MzY1YzZkNmNlIiwiaXNzIjoiaHR0cHM6Ly9pYW0ubW9yLmdvdi5ldC9yZWFsbXMvU291cmNlcyIsImF1ZCI6Imh0dHBzOi8vaWFtLm1vci5nb3YuZXQvcmVhbG1zL1NvdXJjZXMiLCJzdWIiOiI3ZTJiYWRmYi1jYjA2LTQ2YmEtYTNkYy1jYzA3YzY1NjFmMWMiLCJ0eXAiOiJSZWZyZXNoIiwiYXpwIjoiTE9HLUlOIiwic2Vzc2lvbl9zdGF0ZSI6IjFiY2U5N2QxLTMwMDgtNDY4Yi1iODQ3LTNkZTE4YjhjY2NjMyIsInNjb3BlIjoiZ3JvdXB0b3NvdXJjZSBwcm9maWxlIGVtYWlsIiwic2lkIjoiMWJjZTk3ZDEtMzAwOC00NjhiLWI4NDctM2RlMThiOGNjY2MzIn0.AgZPp06oG6myQDzsl_fgM3eBiad7kxZwHM9Jm05JjJ8\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/auth/refresh-token",
+                  "host": ["{{mock_url}}"],
+                  "path": ["auth", "refresh-token"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.18.0 (Ubuntu)"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 25 Mar 2025 13:48:47 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "2281"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Rate-Limit-Remaining",
+                  "value": "999"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"accessToken\": \"eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJlZVZ5dF90MnUteFFlQXQ1cnlMLWtuUVhpd05CdTl1UnpncVFWNThBbEw0In0.eyJleHAiOjE3NDI5MTQxMjcsImlhdCI6MTc0MjkxMDUyNywianRpIjoiMDhhYjBjYzMtNjcyMS00ZTRlLWIzYjctMDdhMzUzMDliNmZjIiwiaXNzIjoiaHR0cHM6Ly9pYW0ubW9yLmdvdi5ldC9yZWFsbXMvU291cmNlcyIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiI3ZTJiYWRmYi1jYjA2LTQ2YmEtYTNkYy1jYzA3YzY1NjFmMWMiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJMT0ctSU4iLCJzZXNzaW9uX3N0YXRlIjoiMWJjZTk3ZDEtMzAwOC00NjhiLWI4NDctM2RlMThiOGNjY2MzIiwiYWNyIjoiMSIsImFsbG93ZWQtb3JpZ2lucyI6WyJodHRwOi8vMTAuMS4wLjI0NjoqIiwiLyoiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtc291cmNlcyIsIm9mZmxpbmVfYWNjZXNzIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6Imdyb3VwdG9zb3VyY2UgcHJvZmlsZSBlbWFpbCIsInNpZCI6IjFiY2U5N2QxLTMwMDgtNDY4Yi1iODQ3LTNkZTE4YjhjY2NjMyIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJ0aW4iOiI2NjY2NjY2NjY2Iiwic3lzdGVtVHlwZSI6IlBPUyIsImNhbGxiYWNrIjoiaHR0cDovLzE3Mi4zMC4xNS42MTo5OTk5L2FwaS9wb3N0RGF0YSIsInN5c3RlbU51bWJlciI6IkIwMzYwMTU0QkEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJjMzAwZjA5Ni02YmM5LTQ4OGUtYTJlNi1kNGIzZmQ2YTQxYmIifQ.PvIjMUVBXXE9c3_ZqnF-oSd7EAKp86ENp1XQVNUcwjyA_7cH30PqtkwuAyNDC3yCMLHl8lwRf5y4U7h1G02thY6TSI4RrPm83OTkHNT4Xubrz39YWl6cEbTV-IwvKKHkWC8qIspS23rv-OHNHz9BGHPyWf5oPdSefbCnb7_M-RzfG6uMunk0e3IW5bbL1fYPWnC4hzO-meCkKYoVKa9SKJNiVg4LBuUWGyqO2vxyfvhfbPLUuRR8vYBj2TeBiiG191Fd7STs_BdOTvyq-_Q1spKgrut_iEyQ1SlmQI4HvE-FKE4k1ImVbLpz7Yao63l8-nGkGs-eA-Cmey6E8R6h8A\",\n        \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5MWNiYzNmZi03MjVhLTRjMGMtYmE0NS1jNzgxZTQ0ZGRmODAifQ.eyJleHAiOjE3NDI5MTQxMjcsImlhdCI6MTc0MjkxMDUyNywianRpIjoiYzFhMTg1ZDktOWYwZi00M2Y2LWI5ZDQtOGQ4NDdjNjI3ZDc2IiwiaXNzIjoiaHR0cHM6Ly9pYW0ubW9yLmdvdi5ldC9yZWFsbXMvU291cmNlcyIsImF1ZCI6Imh0dHBzOi8vaWFtLm1vci5nb3YuZXQvcmVhbG1zL1NvdXJjZXMiLCJzdWIiOiI3ZTJiYWRmYi1jYjA2LTQ2YmEtYTNkYy1jYzA3YzY1NjFmMWMiLCJ0eXAiOiJSZWZyZXNoIiwiYXpwIjoiTE9HLUlOIiwic2Vzc2lvbl9zdGF0ZSI6IjFiY2U5N2QxLTMwMDgtNDY4Yi1iODQ3LTNkZTE4YjhjY2NjMyIsInNjb3BlIjoiZ3JvdXB0b3NvdXJjZSBwcm9maWxlIGVtYWlsIiwic2lkIjoiMWJjZTk3ZDEtMzAwOC00NjhiLWI4NDctM2RlMThiOGNjY2MzIn0.N2hAuaF8f25mXAtc9LjIP-BHmOGJxQhB_0q7q0Xe5II\",\n        \"encryptionKey\": null,\n        \"expiresIn\": 3600\n    },\n    \"status\": \"SUCCESS\"\n}"
+            },
+            {
+              "name": "Invalid RefreshToken",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICI5MWNiYzNmZi03MjVhLTRjMGMtYmE0NS1jNzgxZTQ0ZGRmODAifQ.eyJleHAiOjE3NDI5MTM1MDYsImlhdCI6MTc0MjkwOTkwNiwianRpIjoiYzZiMWJmNjYtMWFlZi00NjY5LTk4YWItMTI2MzY1YzZkNmNlIiwiaXNzIjoiaHR0cHM6Ly9pYW0ubW9yLmdvdi5ldC9yZWFsbXMvU291cmNlcyIsImF1ZCI6Imh0dHBzOi8vaWFtLm1vci5nb3YuZXQvcmVhbG1zL1NvdXJjZXMiLCJzdWIiOiI3ZTJiYWRmYi1jYjA2LTQ2YmEtYTNkYy1jYzA3YzY1NjFmMWMiLCJ0eXAiOiJSZWZyZXNoIiwiYXpwIjoiTE9HLUlOIiwic2Vzc2lvbl9zdGF0ZSI6IjFiY2U5N2QxLTMwMDgtNDY4Yi1iODQ3LTNkZTE4YjhjY2NjMyIsInNjb3BlIjoiZ3JvdXB0b3NvdXJjZSBwcm9maWxlIGVtYWlsIiwic2lkIjoiMWJjZTk3ZDEtMzAwOC00NjhiLWI4NDctM2RlMThiOGNjY2MzIn0.AgZPp06oG6myQDzsl_fgM3eBiad7kxZwHM9Jm05JjJ8\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/auth/refresh-token",
+                  "host": ["{{mock_url}}"],
+                  "path": ["auth", "refresh-token"]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Server",
+                  "value": "nginx/1.18.0 (Ubuntu)"
+                },
+                {
+                  "key": "Date",
+                  "value": "Tue, 25 Mar 2025 18:15:29 GMT"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "109"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "X-Rate-Limit-Remaining",
+                  "value": "999"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"GATEWAY ERROR\",\n    \"code\": \"4412\",\n    \"details\": [\n        {\n            \"errorMessage\": \"Invalid Credentials\"\n        }\n    ],\n    \"statusCode\": 401\n}"
+            }
+          ]
+        }
+      ],
+      "description": "# **Authentication & Token Management**\n\n## **1\\. Authentication Request**\n\nThis request generates a **Bearer Token** used to authorize all subsequent API calls in the collection (Registration,Cancellation,Verification and Receipt).\n\n### **Request Details**\n\n- **Method**: `POST`\n    \n- **Headers**:\n    \n    - `Content-Type: application/json`\n        \n\n### **Required Variables**\n\nThese **collection variables** must be set before running the authentication request:\n\n| Variable | Description | Example |\n| --- | --- | --- |\n| `clientId` | API client ID provided by the tax authority | `\"api-client-123\"` |\n| `clientSecret` | Secret key for authentication | `\"secr3tK3y!2024\"` |\n| `apiKey` | Additional API key if required | `\"x-api-key-12345\"` |\n| `sellerTin` | Seller's Tax Identification Number (TIN) | `\"0016324478\"` |\n\n---\n\n## **2\\. Token Handling in Postman**\n\n### **Test Script (Automatically Stores Token)**\n\nAfter successful authentication, the script extracts the token and stores it for future requests:\n\n``` bash\npm.test(\"Token Generated Successfully\", function () {\n    pm.response.to.have.status(200);\n    var response = pm.response.json();\n    var accessToken = response.access_token; // Adjust based on actual API response\n    // Store the token in a collection variable\n    pm.collectionVariables.set(\"token\", accessToken);\n    console.log(\"Bearer Token Set:\", accessToken);\n});\n\n ```\n\n### **Using the Token in Other Requests**\n\nAll subsequent requests (Single/Bulk Invoice Registration) include the token in the **Authorization** header:\n\nCopy\n\n``` bash\nAuthorization: Bearer {{token}}\n\n ```\n\n---\n\n## **3\\. Invoice Registration Variables**\n\nThese variables are used in the invoice requests (Single & Bulk):\n\n| Variable | Description | Example |\n| --- | --- | --- |\n| `systemType` | Type of invoicing system | `\"ERP\"` |\n| `systemNumber` | System identifier | `\"SYS-001\"` |\n| `sellerEmail` | Seller's contact email | `\"seller@example.com\"` |\n| `sellerRegion` | Seller's business region | `\"13\"` |\n| `sellerPhone` | Seller's contact phone | `\"0911223344\"` |\n| `sellerLegalName` | Seller's registered business name | `\"ABC Trading PLC\"` |\n| `sellerWoreda` | Seller's business woreda (district) | `\"574\"` |\n| `sellerVatNumber` | Seller's VAT registration number | `\"1234567810\"` |\n\n---\n\n## **4\\. Workflow Summary**\n\n1. **Set Required Variables** (`clientId`, `clientSecret`, `apiKey`, `sellerTin`)\n    \n2. **Run Authentication Request** → Stores `bearerToken`\n    \n3. **Use Token in Invoice Requests** (Single or Bulk)\n    \n    - Token is auto-injected via `{{token}}`\n        \n    - For **bulk requests**, manually update `previousIrn` after submission\n        \n\n### **Troubleshooting**\n\n- **Token Expired?** Re-run authentication to refresh.\n    \n- **403 Forbidden?** Check if `clientSecret` or `apiKey` changed.\n    \n- **Missing Variables?** Verify all required variables are set in the collection."
+    },
+    {
+      "name": "Registration",
+      "item": [
+        {
+          "name": "registration bulk",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n    {\n\t\"BuyerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"user804346@gmail.com\",\n\t\t\"HouseNumber\": \"NEW\",\n\t\t\"IdNumber\": \"11122222222222222\",\n\t\t\"IdType\": \"KID\",\n\t\t\"Tin\": \"0999930000\",\n\t\t\"LegalName\": \"ABC Trading\",\n\t\t\"Phone\": \"0912345678\",\n\t\t\"Region\": \"13\",\n\t\t\"Country\": \"70\",\n\t\t\"Zone\": \"SHA\",\n\t\t\"Kebele\": \"03\",\n\t\t\"VatNumber\":\"123475885858\",\n\t\t\"Wereda\":\"574\"\n\t},\n\t\"DocumentDetails\": {\n\t\t\"DocumentNumber\": \"{{documentNumber}}\",\n\t\t\"Date\": \"21-03-2025T00:00:00\",\n\t\t\"Type\": \"INV\"\n\t},\n\t\"ItemList\": [\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"string\",\n\t\t\t\"PreTaxValue\": 1000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 1,\n\t\t\t\"TaxAmount\": 150,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 1150,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 1000\n\t\t},\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"Phone\",\n\t\t\t\"PreTaxValue\": 10000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 2,\n\t\t\t\"TaxAmount\": 1500,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 11500,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 10000\n\t\t}\n\t],\n\t\"PaymentDetails\": {\n\t\t\"Mode\": \"CASH\",\n\t\t\"PaymentTerm\": \"IMMIDIATE\"\n\t},\n\t\"ReferenceDetails\": {\n\t\t\"PreviousIrn\": \"{{previousIrn}}\",\n\t\t\"RelatedDocument\":null\n\t},\n\t\"SellerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"{{sellerEmail}}\",\n\t\t\"HouseNumber\": null,\n\t\t\"LegalName\": \"{{sellerLegalName}}\",\n\t\t\"Locality\":null,\n\t\t\"Phone\": \"{{sellerPhone}}\",\n\t\t\"Region\": \"{{sellerRegion}}\",\n\t\t\"SubCity\": null,\n\t\t\"Tin\": \"{{sellerTin}}\",\n\t\t\"VatNumber\": \"{{sellerVatNumber}}\",\n\t\t\"Wereda\": \"{{sellerWoreda}}\"\n\t},\n\t\"SourceSystem\": {\n\t\t\"CashierName\": \"AAA\",\n\t\t\"InvoiceCounter\": {{invoiceCounter}},\n\t\t\"SalesPersonName\": \"AAA\",\n\t\t\"SystemNumber\": \"{{systemNumber}}\",\n\t\t\"SystemType\": \"{{systemType}}\"\n\t},\n\t\"TransactionType\": \"B2B\",\n\t\"ValueDetails\": {\n\t\t\"Discount\": null,\n\t\t\"ExciseValue\": 0,\n\t\t\"IncomeWithholdValue\": 220,\n\t\t\"TaxValue\": 1650,\n\t\t\"TotalValue\": 12650,\n\t\t\"TransactionWithholdValue\": 0,\n\t\t\"InvoiceCurrency\": \"ETB\"\n\t},\n\t\"Version\": \"1\"\n}\n\n,\n\n{\n\t\"BuyerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"user804346@gmail.com\",\n\t\t\"HouseNumber\": \"NEW\",\n\t\t\"IdNumber\": \"11122222222222222\",\n\t\t\"IdType\": \"KID\",\n\t\t\"Tin\": \"0999930000\",\n\t\t\"LegalName\": \"ABC Trading\",\n\t\t\"Phone\": \"0912345678\",\n\t\t\"Region\": \"13\",\n\t\t\"Country\": \"70\",\n\t\t\"Zone\": \"SHA\",\n\t\t\"Kebele\": \"03\",\n\t\t\"VatNumber\":\"123475885858\",\n\t\t\"Wereda\":\"574\"\n\t},\n\t\"DocumentDetails\": {\n\t\t\"DocumentNumber\": \"80\",\n\t\t\"Date\": \"21-03-2025T00:00:00\",\n\t\t\"Type\": \"INV\"\n\t},\n\t\"ItemList\": [\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"string\",\n\t\t\t\"PreTaxValue\": 1000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 1,\n\t\t\t\"TaxAmount\": 150,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 1150,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 1000\n\t\t},\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"Phone\",\n\t\t\t\"PreTaxValue\": 10000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 2,\n\t\t\t\"TaxAmount\": 1500,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 11500,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 10000\n\t\t}\n\t],\n\t\"PaymentDetails\": {\n\t\t\"Mode\": \"CASH\",\n\t\t\"PaymentTerm\": \"IMMIDIATE\"\n\t},\n\t\"ReferenceDetails\": {\n\t\t\"PreviousIrn\": \"\",\n\t\t\"RelatedDocument\":null\n\t},\n\t\"SellerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"{{sellerEmail}}\",\n\t\t\"HouseNumber\": null,\n\t\t\"LegalName\": \"{{sellerLegalName}}\",\n\t\t\"Locality\":null,\n\t\t\"Phone\": \"{{sellerPhone}}\",\n\t\t\"Region\": \"{{sellerRegion}}\",\n\t\t\"SubCity\": null,\n\t\t\"Tin\": \"{{sellerTin}}\",\n\t\t\"VatNumber\": \"{{sellerVatNumber}}\",\n\t\t\"Wereda\": \"{{sellerWoreda}}\"\n\t},\n\t\"SourceSystem\": {\n\t\t\"CashierName\": \"AAA\",\n\t\t\"InvoiceCounter\": {{invoiceCounter}},\n\t\t\"SalesPersonName\": \"AAA\",\n\t\t\"SystemNumber\": \"{{systemNumber}}\",\n\t\t\"SystemType\": \"{{systemType}}\"\n\t},\n\t\"TransactionType\": \"B2B\",\n\t\"ValueDetails\": {\n\t\t\"Discount\": null,\n\t\t\"ExciseValue\": 0,\n\t\t\"IncomeWithholdValue\": 220,\n\t\t\"TaxValue\": 1650,\n\t\t\"TotalValue\": 12650,\n\t\t\"TransactionWithholdValue\": 0,\n\t\t\"InvoiceCurrency\": \"ETB\"\n\t},\n\t\"Version\": \"1\"\n}\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock_url}}/v1/bulkRegister",
+              "host": ["{{mock_url}}"],
+              "path": ["v1", "bulkRegister"]
+            }
+          },
+          "response": [
+            {
+              "name": "Bulk Register Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "2345678901",
+                    "disabled": true
+                  },
+                  {
+                    "key": "callback",
+                    "value": "{{callback}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "disabled": true
+                  },
+                  {
+                    "key": "SYSTEM_NUMBER",
+                    "value": "112345678",
+                    "disabled": true
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "[\n    {\n\t\"BuyerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"user804346@gmail.com\",\n\t\t\"HouseNumber\": \"NEW\",\n\t\t\"IdNumber\": \"11122222222222222\",\n\t\t\"IdType\": \"KID\",\n\t\t\"Tin\": \"0999930000\",\n\t\t\"LegalName\": \"ABC Trading\",\n\t\t\"Phone\": \"0912345678\",\n\t\t\"Region\": \"13\",\n\t\t\"Country\": \"70\",\n\t\t\"Zone\": \"SHA\",\n\t\t\"Kebele\": \"03\",\n\t\t\"VatNumber\":\"123475885858\",\n\t\t\"Wereda\":\"574\"\n\t},\n\t\"DocumentDetails\": {\n\t\t\"DocumentNumber\": \"{{documentNumber}}\",\n\t\t\"Date\": \"21-03-2025T00:00:00\",\n\t\t\"Type\": \"INV\"\n\t},\n\t\"ItemList\": [\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"string\",\n\t\t\t\"PreTaxValue\": 1000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 1,\n\t\t\t\"TaxAmount\": 150,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 1150,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 1000\n\t\t},\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"Phone\",\n\t\t\t\"PreTaxValue\": 10000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 2,\n\t\t\t\"TaxAmount\": 1500,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 11500,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 10000\n\t\t}\n\t],\n\t\"PaymentDetails\": {\n\t\t\"Mode\": \"CASH\",\n\t\t\"PaymentTerm\": \"IMMIDIATE\"\n\t},\n\t\"ReferenceDetails\": {\n\t\t\"PreviousIrn\": \"{{previousIrn}}\",\n\t\t\"RelatedDocument\":null\n\t},\n\t\"SellerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"{{sellerEmail}}\",\n\t\t\"HouseNumber\": null,\n\t\t\"LegalName\": \"{{sellerLegalName}}\",\n\t\t\"Locality\":null,\n\t\t\"Phone\": \"{{sellerPhone}}\",\n\t\t\"Region\": \"{{sellerRegion}}\",\n\t\t\"SubCity\": null,\n\t\t\"Tin\": \"{{sellerTin}}\",\n\t\t\"VatNumber\": \"{{sellerVatNumber}}\",\n\t\t\"Wereda\": \"{{sellerWoreda}}\"\n\t},\n\t\"SourceSystem\": {\n\t\t\"CashierName\": \"AAA\",\n\t\t\"InvoiceCounter\": {{invoiceCounter}},\n\t\t\"SalesPersonName\": \"AAA\",\n\t\t\"SystemNumber\": \"{{systemNumber}}\",\n\t\t\"SystemType\": \"{{systemType}}\"\n\t},\n\t\"TransactionType\": \"B2B\",\n\t\"ValueDetails\": {\n\t\t\"Discount\": null,\n\t\t\"ExciseValue\": 0,\n\t\t\"IncomeWithholdValue\": 220,\n\t\t\"TaxValue\": 1650,\n\t\t\"TotalValue\": 12650,\n\t\t\"TransactionWithholdValue\": 0,\n\t\t\"InvoiceCurrency\": \"ETB\"\n\t},\n\t\"Version\": \"1\"\n}\n\n,\n\n{\n\t\"BuyerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"user804346@gmail.com\",\n\t\t\"HouseNumber\": \"NEW\",\n\t\t\"IdNumber\": \"11122222222222222\",\n\t\t\"IdType\": \"KID\",\n\t\t\"Tin\": \"0999930000\",\n\t\t\"LegalName\": \"ABC Trading\",\n\t\t\"Phone\": \"0912345678\",\n\t\t\"Region\": \"13\",\n\t\t\"Country\": \"70\",\n\t\t\"Zone\": \"SHA\",\n\t\t\"Kebele\": \"03\",\n\t\t\"VatNumber\":\"123475885858\",\n\t\t\"Wereda\":\"574\"\n\t},\n\t\"DocumentDetails\": {\n\t\t\"DocumentNumber\": \"80\",\n\t\t\"Date\": \"21-03-2025T00:00:00\",\n\t\t\"Type\": \"INV\"\n\t},\n\t\"ItemList\": [\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"string\",\n\t\t\t\"PreTaxValue\": 1000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 1,\n\t\t\t\"TaxAmount\": 150,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 1150,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 1000\n\t\t},\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"Phone\",\n\t\t\t\"PreTaxValue\": 10000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 2,\n\t\t\t\"TaxAmount\": 1500,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 11500,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 10000\n\t\t}\n\t],\n\t\"PaymentDetails\": {\n\t\t\"Mode\": \"CASH\",\n\t\t\"PaymentTerm\": \"IMMIDIATE\"\n\t},\n\t\"ReferenceDetails\": {\n\t\t\"PreviousIrn\": \"\",\n\t\t\"RelatedDocument\":null\n\t},\n\t\"SellerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"{{sellerEmail}}\",\n\t\t\"HouseNumber\": null,\n\t\t\"LegalName\": \"{{sellerLegalName}}\",\n\t\t\"Locality\":null,\n\t\t\"Phone\": \"{{sellerPhone}}\",\n\t\t\"Region\": \"{{sellerRegion}}\",\n\t\t\"SubCity\": null,\n\t\t\"Tin\": \"{{sellerTin}}\",\n\t\t\"VatNumber\": \"{{sellerVatNumber}}\",\n\t\t\"Wereda\": \"{{sellerWoreda}}\"\n\t},\n\t\"SourceSystem\": {\n\t\t\"CashierName\": \"AAA\",\n\t\t\"InvoiceCounter\": {{invoiceCounter}},\n\t\t\"SalesPersonName\": \"AAA\",\n\t\t\"SystemNumber\": \"{{systemNumber}}\",\n\t\t\"SystemType\": \"{{systemType}}\"\n\t},\n\t\"TransactionType\": \"B2B\",\n\t\"ValueDetails\": {\n\t\t\"Discount\": null,\n\t\t\"ExciseValue\": 0,\n\t\t\"IncomeWithholdValue\": 220,\n\t\t\"TaxValue\": 1650,\n\t\t\"TotalValue\": 12650,\n\t\t\"TransactionWithholdValue\": 0,\n\t\t\"InvoiceCurrency\": \"ETB\"\n\t},\n\t\"Version\": \"1\"\n}\n]",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/bulkRegister",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "bulkRegister"]
+                }
+              },
+              "status": "Accepted",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"conversationId\": \"2345678901-1735900502800-c04f8dd6-e6e2-4198-b871-c6e504fc14f5\",\n    \"status\": 202\n}"
+            },
+            {
+              "name": "Bulk Register Schema Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "2345678901"
+                  },
+                  {
+                    "key": "SYSTEM_NUMBER",
+                    "value": "GHEFR8ZYZO"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"BuyerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"user804346@gmail.com\",\n\t\t\"HouseNumber\": \"NEW\",\n\t\t\"IdNumber\": \"11122222222222222\",\n\t\t\"IdType\": \"KID\",\n\t\t\"Tin\": \"0999930000\",\n\t\t\"LegalName\": \"ABC Trading\",\n\t\t\"Phone\": \"0912345678\",\n\t\t\"Region\": \"13\",\n\t\t\"Country\": \"70\",\n\t\t\"Zone\": \"SHA\",\n\t\t\"Kebele\": \"03\",\n\t\t\"VatNumber\":\"123475885858\",\n\t\t\"Wereda\":\"574\"\n\t},\n\t\"DocumentDetails\": {\n\t\t\"DocumentNumber\": \"{{documentNumber}}\",\n\t\t\"Date\": \"21-03-2025T00:00:00\",\n\t\t\"Type\": \"INV\"\n\t},\n\t\"ItemList\": [\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"string\",\n\t\t\t\"PreTaxValue\": 1000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 1,\n\t\t\t\"TaxAmount\": 150,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 1150,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 1000\n\t\t},\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"Phone\",\n\t\t\t\"PreTaxValue\": 10000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 2,\n\t\t\t\"TaxAmount\": 1500,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 11500,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 10000\n\t\t}\n\t],\n\t\"PaymentDetails\": {\n\t\t\"Mode\": \"CASH\",\n\t\t\"PaymentTerm\": \"IMMIDIATE\"\n\t},\n\t\"ReferenceDetails\": {\n\t\t\"PreviousIrn\": \"{{previousIrn}}\",\n\t\t\"RelatedDocument\":null\n\t},\n\t\"SellerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"{{sellerEmail}}\",\n\t\t\"HouseNumber\": null,\n\t\t\"LegalName\": \"{{sellerLegalName}}\",\n\t\t\"Locality\":null,\n\t\t\"Phone\": \"{{sellerPhone}}\",\n\t\t\"Region\": \"{{sellerRegion}}\",\n\t\t\"SubCity\": null,\n\t\t\"Tin\": \"{{sellerTin}}\",\n\t\t\"VatNumber\": \"{{sellerVatNumber}}\",\n\t\t\"Wereda\": \"{{sellerWoreda}}\"\n\t},\n\t\"SourceSystem\": {\n\t\t\"CashierName\": \"AAA\",\n\t\t\"InvoiceCounter\": {{invoiceCounter}},\n\t\t\"SalesPersonName\": \"AAA\",\n\t\t\"SystemNumber\": \"{{systemNumber}}\",\n\t\t\"SystemType\": \"{{systemType}}\"\n\t},\n\t\"TransactionType\": \"B2B\",\n\t\"ValueDetails\": {\n\t\t\"Discount\": null,\n\t\t\"ExciseValue\": 0,\n\t\t\"IncomeWithholdValue\": 220,\n\t\t\"TaxValue\": 1650,\n\t\t\"TotalValue\": 12650,\n\t\t\"TransactionWithholdValue\": 0,\n\t\t\"InvoiceCurrency\": \"ETB\"\n\t},\n\t\"Version\": \"1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/register",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "register"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "transfer-encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "X-Rate-Limit-Remaining",
+                  "value": "999"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Mar 2025 08:33:32 GMT"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 400,\n    \"message\": \"SCHEMA ERROR\",\n    \"body\": [\n        {\n            \"type\": \"required\",\n            \"code\": \"1028\",\n            \"message\": \"$: required property 'Version' not found\",\n            \"instanceLocation\": \"$\",\n            \"property\": \"Version\",\n            \"evaluationPath\": \"$.required\",\n            \"schemaLocation\": \"http://www.mor.gov.et/einvoice#/required\",\n            \"messageKey\": \"required\",\n            \"arguments\": [\n                \"Version\"\n            ]\n        }\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "register single",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [""],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Used PreviousIRN\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "",
+                  "    var responseBody = pm.response.json();",
+                  "    var expectedpreviousIrn = pm.collectionVariables.get(\"previousIrn\");",
+                  "",
+                  "",
+                  "    var irnValue = responseBody.body.irn;",
+                  "    pm.collectionVariables.set(\"previousIrn\", irnValue);",
+                  "    console.log(expectedpreviousIrn)",
+                  "    console.log(irnValue)",
+                  "",
+                  "",
+                  "    var documentNumber = pm.collectionVariables.get(\"documentNumber\")",
+                  "    pm.collectionVariables.set(\"documentNumber\",++documentNumber)",
+                  "    console.log(\"Document Number :\",documentNumber)",
+                  "",
+                  "    var invoiceCounter = pm.collectionVariables.get(\"invoiceCounter\")",
+                  "    pm.collectionVariables.set(\"invoiceCounter\",++invoiceCounter)",
+                  "    console.log(\"Invoice counter is : \",invoiceCounter)",
+                  "    ",
+                  "})"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"BuyerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"user804346@gmail.com\",\n\t\t\"HouseNumber\": \"NEW\",\n\t\t\"IdNumber\": \"11122222222222222\",\n\t\t\"IdType\": \"KID\",\n\t\t\"Tin\": \"0999930000\",\n\t\t\"LegalName\": \"ABC Trading\",\n\t\t\"Phone\": \"0912345678\",\n\t\t\"Region\": \"13\",\n\t\t\"Country\": \"70\",\n\t\t\"Zone\": \"SHA\",\n\t\t\"Kebele\": \"03\",\n\t\t\"VatNumber\":\"123475885858\",\n\t\t\"Wereda\":\"574\"\n\t},\n\t\"DocumentDetails\": {\n\t\t\"DocumentNumber\": \"{{documentNumber}}\",\n\t\t\"Date\": \"21-03-2025T00:00:00\",\n\t\t\"Type\": \"INV\"\n\t},\n\t\"ItemList\": [\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"string\",\n\t\t\t\"PreTaxValue\": 1000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 1,\n\t\t\t\"TaxAmount\": 150,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 1150,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 1000\n\t\t},\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"Phone\",\n\t\t\t\"PreTaxValue\": 10000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 2,\n\t\t\t\"TaxAmount\": 1500,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 11500,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 10000\n\t\t}\n\t],\n\t\"PaymentDetails\": {\n\t\t\"Mode\": \"CASH\",\n\t\t\"PaymentTerm\": \"IMMIDIATE\"\n\t},\n\t\"ReferenceDetails\": {\n\t\t\"PreviousIrn\": \"{{previousIrn}}\",\n\t\t\"RelatedDocument\":null\n\t},\n\t\"SellerDetails\": {\n\t\t\"City\": null,\n\t\t\"Email\": \"{{sellerEmail}}\",\n\t\t\"HouseNumber\": null,\n\t\t\"LegalName\": \"{{sellerLegalName}}\",\n\t\t\"Locality\":null,\n\t\t\"Phone\": \"{{sellerPhone}}\",\n\t\t\"Region\": \"{{sellerRegion}}\",\n\t\t\"SubCity\": null,\n\t\t\"Tin\": \"{{sellerTin}}\",\n\t\t\"VatNumber\": \"{{sellerVatNumber}}\",\n\t\t\"Wereda\": \"{{sellerWoreda}}\"\n\t},\n\t\"SourceSystem\": {\n\t\t\"CashierName\": \"AAA\",\n\t\t\"InvoiceCounter\": {{invoiceCounter}},\n\t\t\"SalesPersonName\": \"AAA\",\n\t\t\"SystemNumber\": \"{{systemNumber}}\",\n\t\t\"SystemType\": \"{{systemType}}\"\n\t},\n\t\"TransactionType\": \"B2B\",\n\t\"ValueDetails\": {\n\t\t\"Discount\": null,\n\t\t\"ExciseValue\": 0,\n\t\t\"IncomeWithholdValue\": 220,\n\t\t\"TaxValue\": 1650,\n\t\t\"TotalValue\": 12650,\n\t\t\"TransactionWithholdValue\": 0,\n\t\t\"InvoiceCurrency\": \"ETB\"\n\t},\n\t\"Version\": \"1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock_url}}/v1/register",
+              "host": ["{{mock_url}}"],
+              "path": ["v1", "register"]
+            }
+          },
+          "response": [
+            {
+              "name": "Successful Register",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "2345678901"
+                  },
+                  {
+                    "key": "SYSTEM_NUMBER",
+                    "value": "GHEFR8ZYZO"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"BuyerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"user804346@gmail.com\",\n\t\t\"HouseNumber\": \"NEW\",\n\t\t\"IdNumber\": \"11122222222222222\",\n\t\t\"IdType\": \"KID\",\n\t\t\"Tin\": \"0999930000\",\n\t\t\"LegalName\": \"ABC Trading\",\n\t\t\"Phone\": \"0912345678\",\n\t\t\"Region\": \"13\",\n\t\t\"Country\": \"70\",\n\t\t\"Zone\": \"SHA\",\n\t\t\"Kebele\": \"03\",\n\t\t\"VatNumber\":\"123475885858\",\n\t\t\"Wereda\":\"574\"\n\t},\n\t\"DocumentDetails\": {\n\t\t\"DocumentNumber\": \"{{documentNumber}}\",\n\t\t\"Date\": \"21-03-2025T00:00:00\",\n\t\t\"Type\": \"INV\"\n\t},\n\t\"ItemList\": [\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"string\",\n\t\t\t\"PreTaxValue\": 1000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 1,\n\t\t\t\"TaxAmount\": 150,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 1150,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 1000\n\t\t},\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"Phone\",\n\t\t\t\"PreTaxValue\": 10000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 2,\n\t\t\t\"TaxAmount\": 1500,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 11500,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 10000\n\t\t}\n\t],\n\t\"PaymentDetails\": {\n\t\t\"Mode\": \"CASH\",\n\t\t\"PaymentTerm\": \"IMMIDIATE\"\n\t},\n\t\"ReferenceDetails\": {\n\t\t\"PreviousIrn\": \"{{previousIrn}}\",\n\t\t\"RelatedDocument\":null\n\t},\n\t\"SellerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"{{sellerEmail}}\",\n\t\t\"HouseNumber\": null,\n\t\t\"LegalName\": \"{{sellerLegalName}}\",\n\t\t\"Locality\":null,\n\t\t\"Phone\": \"{{sellerPhone}}\",\n\t\t\"Region\": \"{{sellerRegion}}\",\n\t\t\"SubCity\": null,\n\t\t\"Tin\": \"{{sellerTin}}\",\n\t\t\"VatNumber\": \"{{sellerVatNumber}}\",\n\t\t\"Wereda\": \"{{sellerWoreda}}\"\n\t},\n\t\"SourceSystem\": {\n\t\t\"CashierName\": \"AAA\",\n\t\t\"InvoiceCounter\": {{invoiceCounter}},\n\t\t\"SalesPersonName\": \"AAA\",\n\t\t\"SystemNumber\": \"{{systemNumber}}\",\n\t\t\"SystemType\": \"{{systemType}}\"\n\t},\n\t\"TransactionType\": \"B2B\",\n\t\"ValueDetails\": {\n\t\t\"Discount\": null,\n\t\t\"ExciseValue\": 0,\n\t\t\"IncomeWithholdValue\": 220,\n\t\t\"TaxValue\": 1650,\n\t\t\"TotalValue\": 12650,\n\t\t\"TransactionWithholdValue\": 0,\n\t\t\"InvoiceCurrency\": \"ETB\"\n\t},\n\t\"Version\": \"1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://core.mor.gov.et/v1/register",
+                  "protocol": "https",
+                  "host": ["core", "mor", "gov", "et"],
+                  "path": ["v1", "register"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "transfer-encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "X-Rate-Limit-Remaining",
+                  "value": "999"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Mar 2025 08:33:32 GMT"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 200,\n    \"message\": \"SUCCESS\",\n    \"body\": {\n        \"irn\": \"9fe9bbbece6ab76c112b617534e6aac7aa8b819d5be79f4d3d088ed2e887b2e0\",\n        \"ackDate\": \"2025-03-21T08:33:32.707753413Z[Etc/UTC]\",\n        \"signedQR\": \"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\",\n        \"status\": \"A\",\n        \"documentNumber\": \"24\",\n        \"signedInvoice\": \"XLtgGNBi5qe4/bHISYBeMd32fSHpj/oXY4eQhqcDwZoScxWbGbq0GMmr0Hr+BsiqpCL5skH+blBnGfqU1sNAQutxwa0AYZlAp4P07UaS97nG0Qh9V/KSqJnyUnn+ZzEdpWJ+QawYe/BLYJcbAttXlyR8VWFAygdkA/RK+3v3e4wccSYNzz2gDFEjeaedvjQjtS2pmzIIyWPBzINqaG0spvk/FwvxsRL9VAnoF1Xts1U+KQfqMBfxtTJ+QBEE1Y8JLpxWIJcejnGcvSbAnKvfRAYqQ1jlkvbox0u3X3HXfpvPFoWajoFU1JFDomKcOkX1bjSHg4+ZM4hX/OK+6v/hwQ==\",\n        \"errorMessage\": null\n    }\n}"
+            },
+            {
+              "name": "Single Register Rule Validation Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "2345678901"
+                  },
+                  {
+                    "key": "SYSTEM_NUMBER",
+                    "value": "GHEFR8ZYZO"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"BuyerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"user804346@gmail.com\",\n\t\t\"HouseNumber\": \"NEW\",\n\t\t\"IdNumber\": \"11122222222222222\",\n\t\t\"IdType\": \"KID\",\n\t\t\"Tin\": \"0999930000\",\n\t\t\"LegalName\": \"ABC Trading\",\n\t\t\"Phone\": \"0912345678\",\n\t\t\"Region\": \"13\",\n\t\t\"Country\": \"70\",\n\t\t\"Zone\": \"SHA\",\n\t\t\"Kebele\": \"03\",\n\t\t\"VatNumber\":\"123475885858\",\n\t\t\"Wereda\":\"574\"\n\t},\n\t\"DocumentDetails\": {\n\t\t\"DocumentNumber\": \"{{documentNumber}}\",\n\t\t\"Date\": \"21-03-2025T00:00:00\",\n\t\t\"Type\": \"INV\"\n\t},\n\t\"ItemList\": [\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"string\",\n\t\t\t\"PreTaxValue\": 1000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 1,\n\t\t\t\"TaxAmount\": 150,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 1150,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 1000\n\t\t},\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"Phone\",\n\t\t\t\"PreTaxValue\": 10000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 2,\n\t\t\t\"TaxAmount\": 1500,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 11500,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 10000\n\t\t}\n\t],\n\t\"PaymentDetails\": {\n\t\t\"Mode\": \"CASH\",\n\t\t\"PaymentTerm\": \"IMMIDIATE\"\n\t},\n\t\"ReferenceDetails\": {\n\t\t\"PreviousIrn\": \"{{previousIrn}}\",\n\t\t\"RelatedDocument\":null\n\t},\n\t\"SellerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"{{sellerEmail}}\",\n\t\t\"HouseNumber\": null,\n\t\t\"LegalName\": \"{{sellerLegalName}}\",\n\t\t\"Locality\":null,\n\t\t\"Phone\": \"{{sellerPhone}}\",\n\t\t\"Region\": \"{{sellerRegion}}\",\n\t\t\"SubCity\": null,\n\t\t\"Tin\": \"{{sellerTin}}\",\n\t\t\"VatNumber\": \"{{sellerVatNumber}}\",\n\t\t\"Wereda\": \"{{sellerWoreda}}\"\n\t},\n\t\"SourceSystem\": {\n\t\t\"CashierName\": \"AAA\",\n\t\t\"InvoiceCounter\": {{invoiceCounter}},\n\t\t\"SalesPersonName\": \"AAA\",\n\t\t\"SystemNumber\": \"{{systemNumber}}\",\n\t\t\"SystemType\": \"{{systemType}}\"\n\t},\n\t\"TransactionType\": \"B2B\",\n\t\"ValueDetails\": {\n\t\t\"Discount\": null,\n\t\t\"ExciseValue\": 0,\n\t\t\"IncomeWithholdValue\": 220,\n\t\t\"TaxValue\": 1650,\n\t\t\"TotalValue\": 12650,\n\t\t\"TransactionWithholdValue\": 0,\n\t\t\"InvoiceCurrency\": \"ETB\"\n\t},\n\t\"Version\": \"1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/register",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "register"]
+                }
+              },
+              "status": "OK",
+              "code": 406,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "transfer-encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "X-Rate-Limit-Remaining",
+                  "value": "999"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Mar 2025 08:33:32 GMT"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 406,\n    \"message\": \"RULE VALIDATION ERROR\",\n    \"body\": [\n        {\n            \"portion\": \"DocumentDetails\",\n            \"errorMessage\": [\n                \"DocumentDetails.documentNumber: Document number is not unique\"\n            ]\n        }\n    ]\n}"
+            },
+            {
+              "name": "Single Register Schema Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "2345678901"
+                  },
+                  {
+                    "key": "SYSTEM_NUMBER",
+                    "value": "GHEFR8ZYZO"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"BuyerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"user804346@gmail.com\",\n\t\t\"HouseNumber\": \"NEW\",\n\t\t\"IdNumber\": \"11122222222222222\",\n\t\t\"IdType\": \"KID\",\n\t\t\"Tin\": \"0999930000\",\n\t\t\"LegalName\": \"ABC Trading\",\n\t\t\"Phone\": \"0912345678\",\n\t\t\"Region\": \"13\",\n\t\t\"Country\": \"70\",\n\t\t\"Zone\": \"SHA\",\n\t\t\"Kebele\": \"03\",\n\t\t\"VatNumber\":\"123475885858\",\n\t\t\"Wereda\":\"574\"\n\t},\n\t\"DocumentDetails\": {\n\t\t\"DocumentNumber\": \"{{documentNumber}}\",\n\t\t\"Date\": \"21-03-2025T00:00:00\",\n\t\t\"Type\": \"INV\"\n\t},\n\t\"ItemList\": [\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"string\",\n\t\t\t\"PreTaxValue\": 1000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 1,\n\t\t\t\"TaxAmount\": 150,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 1150,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 1000\n\t\t},\n\t\t{\n\t\t\t\"Discount\": 0,\n\t\t\t\"ExciseTaxValue\": 0,\n\t\t\t\"HarmonizationCode\": null,\n\t\t\t\"NatureOfSupplies\": \"Goods\",\n\t\t\t\"ItemCode\": \"1111\",\n\t\t\t\"ProductDescription\": \"Phone\",\n\t\t\t\"PreTaxValue\": 10000,\n\t\t\t\"Quantity\": 1,\n\t\t\t\"LineNumber\": 2,\n\t\t\t\"TaxAmount\": 1500,\n\t\t\t\"TaxCode\": \"VAT15\",\n\t\t\t\"TotalLineAmount\": 11500,\n\t\t\t\"Unit\": \"PCS\",\n\t\t\t\"UnitPrice\": 10000\n\t\t}\n\t],\n\t\"PaymentDetails\": {\n\t\t\"Mode\": \"CASH\",\n\t\t\"PaymentTerm\": \"IMMIDIATE\"\n\t},\n\t\"ReferenceDetails\": {\n\t\t\"PreviousIrn\": \"{{previousIrn}}\",\n\t\t\"RelatedDocument\":null\n\t},\n\t\"SellerDetails\": {\n\t\t\"City\": \"0\",\n\t\t\"Email\": \"{{sellerEmail}}\",\n\t\t\"HouseNumber\": null,\n\t\t\"LegalName\": \"{{sellerLegalName}}\",\n\t\t\"Locality\":null,\n\t\t\"Phone\": \"{{sellerPhone}}\",\n\t\t\"Region\": \"{{sellerRegion}}\",\n\t\t\"SubCity\": null,\n\t\t\"Tin\": \"{{sellerTin}}\",\n\t\t\"VatNumber\": \"{{sellerVatNumber}}\",\n\t\t\"Wereda\": \"{{sellerWoreda}}\"\n\t},\n\t\"SourceSystem\": {\n\t\t\"CashierName\": \"AAA\",\n\t\t\"InvoiceCounter\": {{invoiceCounter}},\n\t\t\"SalesPersonName\": \"AAA\",\n\t\t\"SystemNumber\": \"{{systemNumber}}\",\n\t\t\"SystemType\": \"{{systemType}}\"\n\t},\n\t\"TransactionType\": \"B2B\",\n\t\"ValueDetails\": {\n\t\t\"Discount\": null,\n\t\t\"ExciseValue\": 0,\n\t\t\"IncomeWithholdValue\": 220,\n\t\t\"TaxValue\": 1650,\n\t\t\"TotalValue\": 12650,\n\t\t\"TransactionWithholdValue\": 0,\n\t\t\"InvoiceCurrency\": \"ETB\"\n\t},\n\t\"Version\": \"1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/register",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "register"]
+                }
+              },
+              "status": "OK",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "transfer-encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "X-Rate-Limit-Remaining",
+                  "value": "999"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Date",
+                  "value": "Fri, 21 Mar 2025 08:33:32 GMT"
+                },
+                {
+                  "key": "Referrer-Policy",
+                  "value": "no-referrer"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 400,\n    \"message\": \"SCHEMA ERROR\",\n    \"body\": [\n        {\n            \"type\": \"required\",\n            \"code\": \"1028\",\n            \"message\": \"$: required property 'Version' not found\",\n            \"instanceLocation\": \"$\",\n            \"property\": \"Version\",\n            \"evaluationPath\": \"$.required\",\n            \"schemaLocation\": \"http://www.mor.gov.et/einvoice#/required\",\n            \"messageKey\": \"required\",\n            \"arguments\": [\n                \"Version\"\n            ]\n        }\n    ]\n}"
+            }
+          ]
+        }
+      ],
+      "description": "# Collection Structure\n\nThis collection contains two main request types for invoice registration:\n\n1. **Single Invoice Registration**\n    \n    - Registers one invoice at a time\n        \n    - Automatically chains documents using `previousIrn`\n        \n    - Auto-increments counters\n        \n2. **Bulk Invoice Registration**\n    \n    - Registers multiple invoices in one request (2 invoices in the example)\n        \n    - Requires manual counter management\n        \n    - First invoice in bulk can reference previous chain\n        \n\n## Authentication\n\n- Uses Bearer Token authentication\n    \n- Token must be generated via authentication endpoint before using these requests\n    \n\n## Key Differences Between Request Types\n\n| Feature | Single Registration | Bulk Registration |\n| --- | --- | --- |\n| Request Count | 1 invoice per request | Multiple invoices per request |\n| Document Chaining | Automatic via script | Manual setup required |\n| Counter Management | Auto-incremented | Must set manually |\n| PreviousIRN Handling | Script updates automatically | Fixed in request body |\n| Complexity | Simple, automated | More manual configuration |\n\n## Bulk Request Specifics\n\n### Structure\n\n- The bulk request contains an array of invoice objects\n    \n- Each object has the same structure as single registration\n    \n- First invoice can use `{{previousIrn}}` to continue the chain\n    \n- Subsequent invoices in bulk must have their chaining configured manually\n    \n\n### Important Notes for Bulk:\n\n1. **Counter Management**:\n    \n    - DocumentNumber and InvoiceCounter must be set manually\n        \n    - No auto-increment happens for bulk requests\n        \n    - Must track and update these values yourself between bulk requests\n        \n2. **Chaining**:\n    \n    - Only the first invoice in bulk can reference the `previousIrn` variable\n        \n    - Subsequent invoices in the bulk payload must reference the prior invoice's IRN manually\n        \n    - After bulk submission, you should manually update `previousIrn` with the last invoice's IRN\n        \n\n### **Workflow**\n\n### **1\\. Bulk Submission Process**\n\n- **Endpoint**: `/bulk/register`\n    \n- **Method**: `POST`\n    \n- **Response**: Returns only a `conversationId` immediately\n    \n- **Processing**: Asynchronous (may take minutes/hours depending on volume)\n    \n\n### **2\\. Callback Mechanism**\n\nInstead of direct response, the system will push results to your configured webhook\n\n```\n{\n  \"conversationId\": \"a1b2c3d4-e5f6-7890\",\n  \"status\": 202\n}\n\n ```\n\n## **Callback Response Scenarios**\n\n### **1\\. All Documents Succeeded**\n\n**Structure**: Array with successful IRNs + conversion ID\n\njsonCopy\n\n```\n[\n    {\n        \"irn\": \"521b59688c22f9f857f3477bc2df01cf8562676b19510ad84e37bca01013cbd9\",\n        \"status\": \"A\",\n        \"documentNumber\": \"7391\",\n        \"signedQR\": \"iVBORw0KG...\", // Base64 encoded QR\n        \"signedInvoice\": \"FgFvh1aI...\" // Base64 signed invoice\n    },\n    {\n        \"irn\": \"4119bdb8bf049e38cdfb509e14d1a7458d87c5efea9976e56ac16d64346a3921\",\n        \"status\": \"A\",\n        \"documentNumber\": \"7899\"\n    },\n    {\n        \"conversionId\": \"2345678901-1735900693307-92487141-e211-46a3-b9cf-7b76706cc7a8\"\n    }\n]\n\n ```\n\n**Key Features**:\n\n- All documents processed successfully\n    \n- Each contains `irn`, `status=\"A\"`, and original `documentNumber`\n    \n- Includes digital signatures (`signedQR`, `signedInvoice`)\n    \n- Final element is always the `conversionId`\n    \n\n---\n\n### **2\\. Partial Success (Mixed Results)**\n\n**Structure**: Mix of successes and failures\n\njsonCopy\n\n```\n[\n    {\n        \"irn\": \"91126df366fddf58803ff028470e712186e0cc1645e0059e5cc812ea9fbd05cb\",\n        \"status\": \"A\",\n        \"documentNumber\": \"7390\"\n    },\n    {\n        \"ruleError\": [\n            {\n                \"portion\": \"DocumentDetails\",\n                \"errorMessage\": [\"DocumentDetails.date: Document creation time should be within 3 days\"]\n            }\n        ],\n        \"status\": \"ERROR\",\n        \"docNo\": \"7890\"\n    },\n    {\n        \"conversionId\": \"2345678901-1735900502800-c04f8dd6-e6e2-4198-b871-c6e504fc14f5\"\n    }\n]\n\n ```\n\n**Handling**:\n\n- Process successes first (store IRNs)\n    \n- Log errors for correction and resubmission\n    \n- Use `docNo` to map errors to original documents\n    \n\n---\n\n### **3\\. All Documents Failed**\n\n**Structure**: Error details for all documents\n\njsonCopy\n\n```\n[\n    {\n        \"ruleError\": [\n            {\n                \"portion\": \"DocumentDetails\",\n                \"errorMessage\": [\n                    \"DocumentDetails.documentNumber: Document number is not unique\",\n                    \"DocumentDetails.date: Document creation time should be within 3 days\"\n                ]\n            }\n        ],\n        \"status\": \"ERROR\",\n        \"docNo\": \"7380\"\n    },\n    {\n        \"conversionId\": \"2345678901-1735900328102-ddfa08b6-d7ac-4783-a765-5fe663d6a49d\"\n    }\n]\n\n ```\n\n**Common Errors**:\n\n- `Document number is not unique`\n    \n- `Document creation time should be within 3 days`\n    \n- Tax calculation mismatches\n    \n- Missing mandatory fields\n    \n\n---\n\n## **Response Field Reference**\n\n| Field | Description | Applies To |\n| --- | --- | --- |\n| `irn` | Invoice Reference Number | Successful docs |\n| `status` | \"A\" (ACTIVE) or \"ERROR\" | All |\n| `documentNumber` | Your original doc number | Successful docs |\n| `docNo` | Your original doc number | Failed docs |\n| `signedQR` | Base64 QR code image | Successful docs |\n| `signedInvoice` | Digital signature payload | Successful docs |\n| `ruleError` | Validation failure details | Failed docs |\n| `portion` | Document section with error | Failed docs |\n| `errorMessage` | Specific error(s) | Failed docs |\n| `conversionId` | Bulk operation tracking ID | All responses |\n\n## **Best Practices**\n\n1. **For Successes**:\n    \n    - Immediately store `irn` and digital signatures\n        \n    - Verify via `/verify` if needed\n        \n2. **For Failures**:\n    \n    - Correct errors using `ruleError` details\n        \n    - Resubmit corrected documents in new batch\n        \n3. **Always**:\n    \n    - Log the `conversionId` for audit trails\n        \n    - Implement retry logic for network issues\n        \n\n**Note**: The `conversionId` element always appears last in the array and applies to the entire batch.\n\n## **Configuration Required**\n\n### **1\\. Webhook Setup**\n\nYou must provide:\n\n- A publicly accessible HTTP endpoint\n    \n- JSON payload acceptance\n    \n\n## **Workflow**\n\n1. Submit bulk invoices → get `conversationId`\n    \n2. Await callback with results\n    \n3. Store/process the responses\n    \n4. For failures: use `/verify` endpoint for details\n    \n\n**Support Contact**:  \nPlease reach out through the official support channels provided in your onboarding documentation to configure your callback endpoint.\n\n**Note**: Callbacks may be delayed during high system loads. Implement status polling as backup if needed.\n\n## Troubleshooting Tips\n\n1. **Broken Chains**:\n    \n    - Verify `previousIrn` is correctly set after bulk operations\n        \n    - Check console logs for single requests\n        \n2. **Counter Issues**:\n    \n    - For bulk: Double-check manual values are sequential\n        \n    - For single: Verify test script is executing\n        \n3. **Authentication**:\n    \n    - Ensure token is fresh and included in headers\n        \n    - Check token expiration time\n        \n4. **Bulk Responses**:\n    \n    - Each invoice in bulk will have its own status/IRN\n        \n\n**Note**: Callbacks may be delayed during high system loads. Implement status polling as backup if needed."
+    },
+    {
+      "name": "Cancellation",
+      "item": [
+        {
+          "name": "single Cancel",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"Irn\": \"034ca4e2a3d34b823f56022cb897e2b6c0c0fa58c43d4b7cf705b156560fde65\",\n\t\"ReasonCode\": \"1\",\n    \"Remark\":\"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock_url}}/v1/cancel",
+              "host": ["{{mock_url}}"],
+              "path": ["v1", "cancel"]
+            }
+          },
+          "response": [
+            {
+              "name": "single Cancel sucess",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "3456789012"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"Irn\": \"034ca4e2a3d34b823f56022cb897e2b6c0c0fa58c43d4b7cf705b156560fde65\",\n\t\"ReasonCode\": \"1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://core.mor.gov.et/mock/v1/cancel",
+                  "protocol": "https",
+                  "host": ["core", "mor", "gov", "et"],
+                  "path": ["mock", "v1", "cancel"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 200,\n    \"message\": \"Success\",\n    \"body\": {\n        \"cancellationDate\": \"Sun Dec 22 21:55:03 EAT 2024\"\n    }\n}"
+            },
+            {
+              "name": "single Cancel Schema Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "3456789012"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"Irn\": \"034ca4e2a3d34b823f56022cb897e2b6c0c0fa58c43d4b7cf705b156560fde65\",\n\t\"ReasonCode\": \"1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/cancel",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "cancel"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 400,\n    \"message\": \"SCHEMA_ERROR\",\n    \"body\": [\n        {\n            \"type\": \"minLength\",\n            \"code\": \"1017\",\n            \"message\": \"$.Irn: must be at least 64 characters long\",\n            \"instanceLocation\": \"$.Irn\",\n            \"evaluationPath\": \"$.properties.Irn.minLength\",\n            \"schemaLocation\": \"http://www.insa.gov.et/einvoice#/properties/Irn/minLength\",\n            \"messageKey\": \"minLength\",\n            \"arguments\": [\n                64\n            ]\n        }\n    ]\n}"
+            },
+            {
+              "name": "Single Cancel  Rule Validation Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "3456789012"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"Irn\": \"034ca4e2a3d34b823f56022cb897e2b6c0c0fa58c43d4b7cf705b156560fde65\",\n\t\"ReasonCode\": \"1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/cancel",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "cancel"]
+                }
+              },
+              "status": "Not Acceptable",
+              "code": 406,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 406,\n    \"message\": \"Rule_validation_Error\",\n    \"body\": [\n        \"CancellationRequest.irn: Cancellation request is not within allowed time frame. | Reason  : Cancellation request is not within default timerame \"\n    ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Bulk Cancel",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "TIN",
+                "value": "1234567899"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n\t{\n\t\t\"Irn\": \"0037a84f295fe431ad33b35607529d3b7c7bb165d19dc5674c1b4e1fc26fa4a8\",\n\t\t\"ReasonCode\": \"6\",\n\t\t\"Remark\": \"Calculation Error\"\n\t},\n\t{\n\t\t\"Irn\": \"7b8f4ad1d42adef7ca4e903a2cc835ed7eabf1a8da61da2d1b5157f39a636940\",\n\t\t\"ReasonCode\": \"6\",\n\t\t\"Remark\": \"Calculation Error\"\n\t}\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock_url}}/v1/bulkCancel",
+              "host": ["{{mock_url}}"],
+              "path": ["v1", "bulkCancel"]
+            }
+          },
+          "response": [
+            {
+              "name": "Bulk Cancel Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "1234567899"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "[\n\t{\n\t\t\"Irn\": \"0037a84f295fe431ad33b35607529d3b7c7bb165d19dc5674c1b4e1fc26fa4a8\",\n\t\t\"ReasonCode\": \"6\",\n\t\t\"Remark\": \"Calculation Error\"\n\t},\n\t{\n\t\t\"Irn\": \"7b8f4ad1d42adef7ca4e903a2cc835ed7eabf1a8da61da2d1b5157f39a636940\",\n\t\t\"ReasonCode\": \"6\",\n\t\t\"Remark\": \"Calculation Error\"\n\t}\n]",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://core.mor.gov.et/mock/v1/bulkCancel",
+                  "protocol": "https",
+                  "host": ["core", "mor", "gov", "et"],
+                  "path": ["mock", "v1", "bulkCancel"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 200,\n    \"message\": \"Received\",\n    \"body\": [\n        {\n            \"id\": 2978,\n            \"tin\": \"2345678901\",\n            \"status\": \"C\",\n            \"mode\": \"bulk\",\n            \"Irn\": \"5127697fc29c1063c410146b6863b9288317e95c6d6b029fa60f970cf6c27f8a\",\n            \"ReasonCode\": \"1\",\n            \"Remark\": \"Something happen\"\n        },\n        {\n            \"id\": 2979,\n            \"tin\": \"2345678901\",\n            \"status\": \"C\",\n            \"mode\": \"bulk\",\n            \"Irn\": \"0af579eaef6f1e2d39fa77bd21cf8ecc64e26869275ae1c04eaa9ffea78b6c06\",\n            \"ReasonCode\": \"1\",\n            \"Remark\": \"Something happen\"\n        }\n    ]\n}"
+            },
+            {
+              "name": "Bulk Cancel Partially successful",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "1234567899"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "[\n\t{\n\t\t\"Irn\": \"0037a84f295fe431ad33b35607529d3b7c7bb165d19dc5674c1b4e1fc26fa4a8\",\n\t\t\"ReasonCode\": \"6\",\n\t\t\"Remark\": \"Calculation Error\"\n\t},\n\t{\n\t\t\"Irn\": \"7b8f4ad1d42adef7ca4e903a2cc835ed7eabf1a8da61da2d1b5157f39a636940\",\n\t\t\"ReasonCode\": \"6\",\n\t\t\"Remark\": \"Calculation Error\"\n\t}\n]",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/bulkCancel",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "bulkCancel"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 200,\n    \"message\": \"Received\",\n    \"body\": [\n        {\n            \"id\": 2976,\n            \"tin\": \"2345678901\",\n            \"status\": \"C\",\n            \"mode\": \"bulk\",\n            \"Irn\": \"257fe7b87e22a8bdbfa09f4d37a1cde0ef47255e7a3cd50362077436a1b3ba67\",\n            \"ReasonCode\": \"1\",\n            \"Remark\": \"Something happen\"\n        },\n        {\n            \"Status\": \"Processing_Error\",\n            \"msg\": \"IRN already Canceled.\",\n            \"Irn\": \"d8b468f1309b81a73a349f62f03a0bd7c36a51f79fd292eb3a9e3979dd4a92be\"\n        }\n    ]\n}"
+            },
+            {
+              "name": "Bulk Cancel All Failed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "1234567899"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "[\n\t{\n\t\t\"Irn\": \"0037a84f295fe431ad33b35607529d3b7c7bb165d19dc5674c1b4e1fc26fa4a8\",\n\t\t\"ReasonCode\": \"6\",\n\t\t\"Remark\": \"Calculation Error\"\n\t},\n\t{\n\t\t\"Irn\": \"7b8f4ad1d42adef7ca4e903a2cc835ed7eabf1a8da61da2d1b5157f39a636940\",\n\t\t\"ReasonCode\": \"6\",\n\t\t\"Remark\": \"Calculation Error\"\n\t}\n]",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/bulkCancel",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "bulkCancel"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 200,\n    \"message\": \"Received\",\n    \"body\": [\n        {\n            \"Status\": \"Processing_Error\",\n            \"msg\": \"IRN not registered under the requesting tax payer's TIN \",\n            \"Irn\": \"024ad34fe4295b4fce8392ce134d72a63d6b15e61898717b711f2a563c22a020\"\n        },\n        {\n            \"Status\": \"Processing_Error\",\n            \"msg\": \"IRN already Canceled.\",\n            \"Irn\": \"d8b468f1309b81a73a349f62f03a0bd7c36a51f79fd292eb3a9e3979dd4a92be\"\n        }\n    ]\n}"
+            },
+            {
+              "name": "Bulk Cancel Schema Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "TIN",
+                    "value": "1234567899"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "[\n\t{\n\t\t\"Irn\": \"0037a84f295fe431ad33b35607529d3b7c7bb165d19dc5674c1b4e1fc26fa4a8\",\n\t\t\"ReasonCode\": \"6\",\n\t\t\"Remark\": \"Calculation Error\"\n\t},\n\t{\n\t\t\"Irn\": \"7b8f4ad1d42adef7ca4e903a2cc835ed7eabf1a8da61da2d1b5157f39a636940\",\n\t\t\"ReasonCode\": \"6\",\n\t\t\"Remark\": \"Calculation Error\"\n\t}\n]",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/bulkCancel",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "bulkCancel"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 400,\n    \"message\": \"SCHEMA_ERROR\",\n    \"body\": [\n        {\n            \"Irn\": \"7b8f4ad1d42adef7ca4e903a2cc835ed7eabf1a8da61da2d1b5157f39a636940\",\n            \"body\": [\n                {\n                    \"type\": \"required\",\n                    \"code\": \"1028\",\n                    \"message\": \"$: required property 'ReasonCode' not found\",\n                    \"instanceLocation\": \"$\",\n                    \"property\": \"ReasonCode\",\n                    \"evaluationPath\": \"$.required\",\n                    \"schemaLocation\": \"http://www.insa.gov.et/einvoice#/required\",\n                    \"messageKey\": \"required\",\n                    \"arguments\": [\n                        \"ReasonCode\"\n                    ]\n                }\n            ]\n        },\n        {\n            \"Irn\": \"7b8f4ad1d42adef7ca4e903a2cc835ed7eabf1a8da61da2d1b5157f39a636940\",\n            \"body\": [\n                {\n                    \"type\": \"required\",\n                    \"code\": \"1028\",\n                    \"message\": \"$: required property 'ReasonCode' not found\",\n                    \"instanceLocation\": \"$\",\n                    \"property\": \"ReasonCode\",\n                    \"evaluationPath\": \"$.required\",\n                    \"schemaLocation\": \"http://www.insa.gov.et/einvoice#/required\",\n                    \"messageKey\": \"required\",\n                    \"arguments\": [\n                        \"ReasonCode\"\n                    ]\n                }\n            ]\n        }\n    ]\n}"
+            }
+          ]
+        }
+      ],
+      "description": "# **Invoice Cancellation API**\n\nThis section covers **Single & Bulk Invoice Cancellation** requests, which require a valid **Bearer Token** (from the Authentication request) for authorization.\n\n---\n\n## **1\\. Single Invoice Cancellation**\n\n### **Request Details**\n\n- **Endpoint**: `/v1/cancel`\n    \n- **Method**: `POST`\n    \n- **Headers**:\n    \n    - `Authorization: Bearer {{token}}`\n        \n    - `Content-Type: application/json`\n        \n\n### **Field Descriptions**\n\n| Field | Required | Description | Possible Values |\n| --- | --- | --- | --- |\n| `Irn` | ✅ | Invoice Reference Number (from registration response) | Valid IRN (e.g., `\"034ca4e2a3d...\"`) |\n| `ReasonCode` | ✅ | Reason for cancellation (numeric code) | `\"1\"` (Duplicate), `\"2\"` (Data Error), etc. |\n| `Remark` | ❌ | Additional cancellation notes | Free text (e.g., `\"Duplicate submission\"`) |\n\n---\n\n## **2\\. Bulk Invoice Cancellation**\n\n### **Request Details**\n\n- **Endpoint**: `/v1/bulkCancel`\n    \n- **Method**: `POST`\n    \n- **Headers**: Same as single cancellation.\n    \n\n### **Key Notes for Bulk Cancellation**\n\n1. **Array Format**: Submit multiple cancellations in a single request.\n    \n2. **Error Handling**:\n    \n    - If one cancellation fails, others may still process.\n        \n    - Check response for individual statuses.\n        \n3. **Reason Codes**: Must be valid (e.g., `\"6\"` for Calculation Errors).\n    \n\n## **3\\. Required Variables**\n\nEnsure these are set in your Postman collection:\n\n| Variable | Description | Example |\n| --- | --- | --- |\n| `token` | From Authentication request | `\"eyJhbGciOiJ...\"` |\n|  |  |  |\n\n## **4\\. Workflow Summary**\n\n1. **Authenticate** → Get token.\n    \n2. **Cancel Single Invoice**:\n    \n    - Pass IRN + ReasonCode.\n        \n    - Verify `200 OK` response.\n        \n3. **Bulk Cancel**:\n    \n    - Submit array of IRNs.\n        \n    - Check individual statuses in response.\n        \n\n**Note**: Cancellations are typically irreversible. Double-check IRNs before submission!",
+      "auth": {
+        "type": "noauth"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "exec": [""]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "exec": [""]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verification",
+      "item": [
+        {
+          "name": "verification",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"irn\": \"034ca4e2a3d34b823f56022cb897e2b6c0c0fa58c43d4b7cf705b156560fde65\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock_url}}/v1/verify",
+              "host": ["{{mock_url}}"],
+              "path": ["v1", "verify"]
+            }
+          },
+          "response": [
+            {
+              "name": "Verification Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"irn\": \"034ca4e2a3d34b823f56022cb897e2b6c0c0fa58c43d4b7cf705b156560fde65\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "https://core.mor.gov.et/mock/v1/verify",
+                  "protocol": "https",
+                  "host": ["core", "mor", "gov", "et"],
+                  "path": ["mock", "v1", "verify"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 200,\n    \"message\": \"SUCCESS\",\n    \"body\": {\n        \"Irn\": \"024ad34fe4295b4fce8392ce134d72a63d6b15e61898717b711f2a563c22a020\",\n        \"TransactionType\": \"B2C\",\n        \"DocumentDetails\": {\n            \"Type\": \"INV\",\n            \"DocumentNumber\": \"100101\",\n            \"Date\": \"29-11-2024T00:55:52\"\n        },\n        \"SellerDetails\": {\n            \"Tin\": \"5201418197\",\n            \"SubTin\": \"234567891123454\",\n            \"VatNumber\": \"1234567890\",\n            \"LegalName\": \"AAA\",\n            \"City\": \"AAA\",\n            \"SubCity\": \"AAA\",\n            \"TaxCenter\": 1,\n            \"Wereda\": \"AAA\",\n            \"HouseNumber\": \"AAA\",\n            \"Locality\": \"AAA\",\n            \"Region\": \"AAA\",\n            \"Phone\": \"251911111111\",\n            \"Email\": \"AA@xyz.com\"\n        },\n        \"BuyerDetails\": {\n            \"Tin\": \"1234567890\",\n            \"IdType\": \"KID\",\n            \"IdNumber\": \"11122222222222222\",\n            \"LegalName\": \"Kebeda Balcha Safo\",\n            \"City\": \"AAB\",\n            \"TaxCenter\": 1005,\n            \"Kebele\": \"002\",\n            \"Zone\": \"SHA\",\n            \"HouseNumber\": \"111\",\n            \"Region\": \"AAA\",\n            \"Phone\": \"251929909090\",\n            \"Email\": \"AA@xyz.com.et\"\n        },\n        \"ItemList\": [\n            {\n                \"LineNumber\": 1,\n                \"ProductDescription\": \"string\",\n                \"HarmonizationCode\": \"1111\",\n                \"Quantity\": 2,\n                \"Unit\": \"PCS\",\n                \"UnitPrice\": 100,\n                \"Discount\": 0,\n                \"PreTaxValue\": 200,\n                \"ExciseTaxValue\": 10,\n                \"TaxCode\": \"VAT15\",\n                \"TaxAmount\": 40,\n                \"TotalLineAmount\": 240,\n                \"ItemCode\": \"1111\",\n                \"NatureOfSupplies\": \"Service\"\n            }\n        ],\n        \"ValueDetails\": {\n            \"TotalValue\": 240,\n            \"TaxValue\": 40,\n            \"ExciseValue\": 10,\n            \"TransactionWithholdValue\": 0,\n            \"IncomeWithholdValue\": 0,\n            \"InvoiceCurrency\": \"ETB\",\n            \"ExchangeRate\": 1\n        },\n        \"PaymentDetails\": {\n            \"Mode\": \"CASH\",\n            \"PaymentTerm\": \"IMMIDIATE\"\n        },\n        \"ReferenceDetails\": {\n            \"RelatedDocument\": \"1234\",\n            \"PreviousIrn\": \"30696dc9cfae1613543cba95404e58604edd55dcc2b615cf4a532fc68f237013\"\n        },\n        \"Version\": \"1\"\n    }\n}"
+            },
+            {
+              "name": "Verification Not Registered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"irn\": \"034ca4e2a3d34b823f56022cb897e2b6c0c0fa58c43d4b7cf705b156560fde65\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/verify",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "verify"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 400,\n    \"message\": \"VERIFICATION ERROR\",\n    \"body\": {\n        \"message\": \"Invoice is not registered\"\n    }\n}"
+            },
+            {
+              "name": "Verification Schema Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"irn\": \"034ca4e2a3d34b823f56022cb897e2b6c0c0fa58c43d4b7cf705b156560fde65\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/verify",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "verify"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 400,\n    \"message\": \"SCHEMA ERROR\",\n    \"body\": [\n        {\n            \"type\": \"required\",\n            \"code\": \"1028\",\n            \"message\": \"$: required property 'irn' not found\",\n            \"instanceLocation\": \"$\",\n            \"property\": \"irn\",\n            \"evaluationPath\": \"$.required\",\n            \"schemaLocation\": \"http://www.insa.gov.et/einvoice#/required\",\n            \"messageKey\": \"required\",\n            \"arguments\": [\n                \"irn\"\n            ]\n        }\n    ]\n}"
+            }
+          ]
+        }
+      ],
+      "description": "# **Invoice Verification API**\n\n## **1\\. Verification Request Overview**\n\nThis API allows you to verify the status and details of a previously submitted invoice using its Invoice Reference Number (IRN).\n\n### **Request Details**\n\n- **Endpoint**: `/v1/verify`\n    \n- **Method**: `POST`\n    \n- **Headers**:\n    \n    - `Authorization: Bearer {{token}}`\n        \n    - `Content-Type: application/json`\n        \n\n## **2\\. Field Description**\n\n| Field | Required | Description | Example |\n| --- | --- | --- | --- |\n| `irn` | ✅ | The unique Invoice Reference Number to verify | `\"034ca4e2a3d...\"` |\n\n## **3\\. Common Verification Statuses**\n\n| Status | Description |\n| --- | --- |\n| `ACTIVE` | Invoice is active and valid. It returns the whole invoice data |\n| `CANCELLED` | Invoice has been cancelled |\n| `NOT REGISTERED` | IRN not found |\n|  |  |"
+    },
+    {
+      "name": "Receipt",
+      "item": [
+        {
+          "name": "Sales Receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var template = `",
+                  "<style type=\"text/css\">",
+                  "    .tftable {font-size:14px;color:#333333;width:100%;border-width: 1px;border-color: #87ceeb;border-collapse: collapse;}",
+                  "    .tftable th {font-size:18px;background-color:#87ceeb;border-width: 1px;padding: 8px;border-style: solid;border-color: #87ceeb;text-align:left;}",
+                  "    .tftable tr {background-color:#ffffff;}",
+                  "    .tftable td {font-size:14px;border-width: 1px;padding: 8px;border-style: solid;border-color: #87ceeb;}",
+                  "    .tftable tr:hover {background-color:#e0ffff;}",
+                  "</style>",
+                  "",
+                  "<table class=\"tftable\" border=\"1\">",
+                  "    <tr>",
+                  "        <th>Status Code</th>",
+                  "        <th>Message</th>",
+                  "        <th>Body</th>",
+                  "    </tr>",
+                  "    <tr>",
+                  "        <td>{{response.statusCode}}</td>",
+                  "        <td>{{response.message}}</td>",
+                  "        <td>{{response.body}}</td>",
+                  "    </tr>",
+                  "</table>",
+                  "`;",
+                  "",
+                  "function constructVisualizerPayload() {",
+                  "    return { response: pm.response.json() }",
+                  "}",
+                  "",
+                  "pm.visualizer.set(template, constructVisualizerPayload());"
+                ],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [""],
+                "type": "text/javascript",
+                "packages": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"ReceiptNumber\": \"REC1234567890123465\",\n\t\"ReceiptType\": \"Sales Receipts\",\n\t\"Reason\": \"Payment for goods purchased\",\n\t\"ReceiptDate\": \"2025-01-10T14:30:00.000+03:00\",\n\t\"ReceiptCounter\": \"12345\",\n\t\"ManualReceiptNumber\": \"98765\",\n\t\"SourceSystemType\": \"{{systemType}}\",\n\t\"SourceSystemNumber\": \"{{systemNumber}}\",\n\t\"ReceiptCurrency\": \"UST\",\n\t\"ExchangeRate\": null,\n\t\"CollectedAmount\": 240,\n\t\"SellerTIN\": \"{{sellerTin}}\",\n\t\"Invoices\": [\n\t\t{\n\t\t\t\"InvoiceIRN\": \"4c484b18fb0770c9dc3290a4dd15999f8a682a7d79e5610d1d89bd79007c0d7r\",\n\t\t\t\"PaymentCoverage\": \"FULL\",\n\t\t\t\"InvoicePaidAmount\": 1000,\n\t\t\t\"DiscountAmount\": null,\n\t\t\t\"RemainingAmount\": null,\n\t\t\t\"TotalAmount\": 240\n\t\t}\n\t],\n\t\"TransactionDetails\": {\n\t\t\"ModeOfPayment\": \"CASH\",\n\t\t\"ChequeNumber\": null,\n\t\t\"CPONumber\": null,\n\t\t\"DocumentNumber\": null,\n\t\t\"CollectorName\": \"Jane Doe\",\n\t\t\"PaymentServiceProvider\": \"Bank\",\n\t\t\"OtherPaymentServiceProviderName\": null,\n\t\t\"AccountNumber\": \"123456789\",\n\t\t\"TransactionNumber\": \"TRX987654321\"\n\t}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock_url}}/v1/receipt/sales",
+              "host": ["{{mock_url}}"],
+              "path": ["v1", "receipt", "sales"]
+            }
+          },
+          "response": [
+            {
+              "name": "Sales Receipt schema error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"ReceiptNumber\": \"REC1234567890123465\",\n\t\"ReceiptType\": \"Sales Receipts\",\n\t\"Reason\": \"Payment for goods purchased\",\n\t\"ReceiptDate\": \"2025-01-10T14:30:00.000+03:00\",\n\t\"ReceiptCounter\": \"12345\",\n\t\"ManualReceiptNumber\": \"98765\",\n\t\"SourceSystemType\": \"{{systemType}}\",\n\t\"SourceSystemNumber\": \"{{systemNumber}}\",\n\t\"ReceiptCurrency\": \"USD\",\n\t\"ExchangeRate\": null,\n\t\"CollectedAmount\": 240,\n\t\"SellerTIN\": \"{{sellerTin}}\",\n\t\"Invoices\": [\n\t\t{\n\t\t\t\"InvoiceIRN\": \"4c484b18fb0770c9dc3290a4dd15999f8a682a7d79e5610d1d89bd79007c0d7r\",\n\t\t\t\"PaymentCoverage\": \"FULL\",\n\t\t\t\"InvoicePaidAmount\": 1000,\n\t\t\t\"DiscountAmount\": null,\n\t\t\t\"RemainingAmount\": null,\n\t\t\t\"TotalAmount\": 240\n\t\t}\n\t],\n\t\"TransactionDetails\": {\n\t\t\"ModeOfPayment\": \"CASH\",\n\t\t\"ChequeNumber\": null,\n\t\t\"CPONumber\": null,\n\t\t\"DocumentNumber\": null,\n\t\t\"CollectorName\": \"Jane Doe\",\n\t\t\"PaymentServiceProvider\": \"Bank\",\n\t\t\"OtherPaymentServiceProviderName\": null,\n\t\t\"AccountNumber\": \"123456789\",\n\t\t\"TransactionNumber\": \"TRX987654321\"\n\t}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/receipt/sales",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "receipt", "sales"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 400,\n    \"message\": \"SCHEMA ERROR\",\n    \"body\": [\n        {\n            \"type\": \"enum\",\n            \"code\": \"1008\",\n            \"message\": \"$.TransactionDetails.ModeOfPayment: does not have a value in the enumeration [CASH, CHEQUE, CPO, Local Bank Transfer, SWIFT, Wire Transfer, Letter of Credit, Card]\",\n            \"instanceLocation\": \"$.TransactionDetails.ModeOfPayment\",\n            \"evaluationPath\": \"$.properties.TransactionDetails.properties.ModeOfPayment.enum\",\n            \"schemaLocation\": \"#/properties/TransactionDetails/properties/ModeOfPayment/enum\",\n            \"messageKey\": \"enum\",\n            \"arguments\": [\n                \"[CASH, CHEQUE, CPO, Local Bank Transfer, SWIFT, Wire Transfer, Letter of Credit, Card]\"\n            ]\n        }\n    ]\n}"
+            },
+            {
+              "name": "Sales Receipt success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"ReceiptNumber\": \"REC1234567890123465\",\n\t\"ReceiptType\": \"Sales Receipts\",\n\t\"Reason\": \"Payment for goods purchased\",\n\t\"ReceiptDate\": \"2025-01-10T14:30:00.000+03:00\",\n\t\"ReceiptCounter\": \"12345\",\n\t\"ManualReceiptNumber\": \"98765\",\n\t\"SourceSystemType\": \"{{systemType}}\",\n\t\"SourceSystemNumber\": \"{{systemNumber}}\",\n\t\"ReceiptCurrency\": \"USD\",\n\t\"ExchangeRate\": null,\n\t\"CollectedAmount\": 240,\n\t\"SellerTIN\": \"{{sellerTin}}\",\n\t\"Invoices\": [\n\t\t{\n\t\t\t\"InvoiceIRN\": \"4c484b18fb0770c9dc3290a4dd15999f8a682a7d79e5610d1d89bd79007c0d7r\",\n\t\t\t\"PaymentCoverage\": \"FULL\",\n\t\t\t\"InvoicePaidAmount\": 1000,\n\t\t\t\"DiscountAmount\": null,\n\t\t\t\"RemainingAmount\": null,\n\t\t\t\"TotalAmount\": 240\n\t\t}\n\t],\n\t\"TransactionDetails\": {\n\t\t\"ModeOfPayment\": \"CASH\",\n\t\t\"ChequeNumber\": null,\n\t\t\"CPONumber\": null,\n\t\t\"DocumentNumber\": null,\n\t\t\"CollectorName\": \"Jane Doe\",\n\t\t\"PaymentServiceProvider\": \"Bank\",\n\t\t\"OtherPaymentServiceProviderName\": null,\n\t\t\"AccountNumber\": \"123456789\",\n\t\t\"TransactionNumber\": \"TRX987654321\"\n\t}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/receipt/sales",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "receipt", "sales"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 200,\n    \"message\": \"Success\",\n    \"body\": {\n        \"status\": \"A\",\n        \"rrn\": \"cceb777f5f6308f639a5756765ab8731850541b5d30d0c526f2edb1399a5bda2\",\n        \"qr\": \"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\"\n    }\n}"
+            },
+            {
+              "name": "Sales Receipt Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"ReceiptNumber\": \"REC1234567890123465\",\n\t\"ReceiptType\": \"Sales Receipts\",\n\t\"Reason\": \"Payment for goods purchased\",\n\t\"ReceiptDate\": \"2025-01-10T14:30:00.000+03:00\",\n\t\"ReceiptCounter\": \"12345\",\n\t\"ManualReceiptNumber\": \"98765\",\n\t\"SourceSystemType\": \"{{systemType}}\",\n\t\"SourceSystemNumber\": \"{{systemNumber}}\",\n\t\"ReceiptCurrency\": \"USD\",\n\t\"ExchangeRate\": null,\n\t\"CollectedAmount\": 240,\n\t\"SellerTIN\": \"{{sellerTin}}\",\n\t\"Invoices\": [\n\t\t{\n\t\t\t\"InvoiceIRN\": \"4c484b18fb0770c9dc3290a4dd15999f8a682a7d79e5610d1d89bd79007c0d7r\",\n\t\t\t\"PaymentCoverage\": \"FULL\",\n\t\t\t\"InvoicePaidAmount\": 1000,\n\t\t\t\"DiscountAmount\": null,\n\t\t\t\"RemainingAmount\": null,\n\t\t\t\"TotalAmount\": 240\n\t\t}\n\t],\n\t\"TransactionDetails\": {\n\t\t\"ModeOfPayment\": \"CASH\",\n\t\t\"ChequeNumber\": null,\n\t\t\"CPONumber\": null,\n\t\t\"DocumentNumber\": null,\n\t\t\"CollectorName\": \"Jane Doe\",\n\t\t\"PaymentServiceProvider\": \"Bank\",\n\t\t\"OtherPaymentServiceProviderName\": null,\n\t\t\"AccountNumber\": \"123456789\",\n\t\t\"TransactionNumber\": \"TRX987654321\"\n\t}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/receipt/sales",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "receipt", "sales"]
+                }
+              },
+              "status": "Not Acceptable",
+              "code": 406,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 406,\n    \"message\": \"NOT_ACCEPTABLE\",\n    \"body\": {\n        \"status\": \"F\",\n        \"unknownIrn\": [\n            \"4c484b18fb0770c9dc3290a4dd15999f8a682a7d79e5610d1d89bd79007c0d7r\"\n        ],\n        \"dataMissMuch\": [\n            {\n                \"tag\": \"totalSumAmount\",\n                \"errorMessage\": [\n                    \"Invoice total amount sum mismatch with receipt collectedAmount\"\n                ]\n            }\n        ],\n        \"ruleErrorDto\": [\n            {\n                \"portion\": \"Receipt\",\n                \"errorMessage\": [\n                    \"Currency should be ETB, USD, CAD\",\n                    \"Source System Type should be either POS,MAN,CRM,EFD,SYS\",\n                    \"Receipt currency is not found.  : Invoice currency is not found\"\n                ]\n            }\n        ]\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Receipt withhold",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\t\"ReceiptNumber\": \"REC1234567890123456\",\n\t\"Reason\": \"Withold for goods purchased\",\n\t\"ReceiptCounter\": \"12345\",\n\t\"ManualReceiptNumber\": \"98765\",\n\t\"SourceSystemType\": \"MAN\",\n\t\"SourceSystemNumber\": \"112345678\",\n\t\"InvoiceDetail\": {\n\t\t\"InvoiceIRN\": \"4c484b18fb0770c9dc3290a4dd15999f8a682a7d79e5610d1d89bd79007c0d7d\",\n\t\t\"Currency\": \"ETB\",\n\t\t\"ExchangeRate\": null\n\t},\n\t\"WithholdDetail\": {\n\t\t\"Type\": \"TWHT\",\n\t\t\"Rate\": null,\n\t\t\"PreTaxAmount\": 6000,\n\t\t\"WithholdingAmount\": 120\n\t}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{mock_url}}/v1/receipt/withholding",
+              "host": ["{{mock_url}}"],
+              "path": ["v1", "receipt", "withholding"]
+            }
+          },
+          "response": [
+            {
+              "name": "Sales Receipt schema error Copy",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"ReceiptNumber\": \"REC1234567890123456\",\n\t\"Reason\": \"Withold for goods purchased\",\n\t\"ReceiptCounter\": \"12345\",\n\t\"ManualReceiptNumber\": \"98765\",\n\t\"SourceSystemType\": \"MAN\",\n\t\"SourceSystemNumber\": \"112345678\",\n\t\"InvoiceDetail\": {\n\t\t\"InvoiceIRN\": \"4c484b18fb0770c9dc3290a4dd15999f8a682a7d79e5610d1d89bd79007c0d7d\",\n\t\t\"Currency\": \"ETB\",\n\t\t\"ExchangeRate\": null\n\t},\n\t\"WithholdDetail\": {\n\t\t\"Type\": \"TWHT\",\n\t\t\"Rate\": null,\n\t\t\"PreTaxAmount\": 6000,\n\t\t\"WithholdingAmount\": 120\n\t}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/receipt/withholding",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "receipt", "withholding"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 400,\n    \"message\": \"SCHEMA ERROR\",\n    \"body\": [\n        {\n            \"type\": \"enum\",\n            \"code\": \"1008\",\n            \"message\": \"$.TransactionDetails.ModeOfPayment: does not have a value in the enumeration [CASH, CHEQUE, CPO, Local Bank Transfer, SWIFT, Wire Transfer, Letter of Credit, Card]\",\n            \"instanceLocation\": \"$.TransactionDetails.ModeOfPayment\",\n            \"evaluationPath\": \"$.properties.TransactionDetails.properties.ModeOfPayment.enum\",\n            \"schemaLocation\": \"#/properties/TransactionDetails/properties/ModeOfPayment/enum\",\n            \"messageKey\": \"enum\",\n            \"arguments\": [\n                \"[CASH, CHEQUE, CPO, Local Bank Transfer, SWIFT, Wire Transfer, Letter of Credit, Card]\"\n            ]\n        }\n    ]\n}"
+            },
+            {
+              "name": "Sales Receipt success Copy",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"ReceiptNumber\": \"REC1234567890123456\",\n\t\"Reason\": \"Withold for goods purchased\",\n\t\"ReceiptCounter\": \"12345\",\n\t\"ManualReceiptNumber\": \"98765\",\n\t\"SourceSystemType\": \"MAN\",\n\t\"SourceSystemNumber\": \"112345678\",\n\t\"InvoiceDetail\": {\n\t\t\"InvoiceIRN\": \"4c484b18fb0770c9dc3290a4dd15999f8a682a7d79e5610d1d89bd79007c0d7d\",\n\t\t\"Currency\": \"ETB\",\n\t\t\"ExchangeRate\": null\n\t},\n\t\"WithholdDetail\": {\n\t\t\"Type\": \"TWHT\",\n\t\t\"Rate\": null,\n\t\t\"PreTaxAmount\": 6000,\n\t\t\"WithholdingAmount\": 120\n\t}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/receipt/withholding",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "receipt", "withholding"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 200,\n    \"message\": \"Success\",\n    \"body\": {\n        \"status\": \"A\",\n        \"rrn\": \"cceb777f5f6308f639a5756765ab8731850541b5d30d0c526f2edb1399a5bda2\",\n        \"qr\": \"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\"\n    }\n}"
+            },
+            {
+              "name": "WTH Receipt Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n\t\"ReceiptNumber\": \"REC1234567890123456\",\n\t\"Reason\": \"Withold for goods purchased\",\n\t\"ReceiptCounter\": \"12345\",\n\t\"ManualReceiptNumber\": \"98765\",\n\t\"SourceSystemType\": \"MAN\",\n\t\"SourceSystemNumber\": \"112345678\",\n\t\"InvoiceDetail\": {\n\t\t\"InvoiceIRN\": \"4c484b18fb0770c9dc3290a4dd15999f8a682a7d79e5610d1d89bd79007c0d7d\",\n\t\t\"Currency\": \"ETB\",\n\t\t\"ExchangeRate\": null\n\t},\n\t\"WithholdDetail\": {\n\t\t\"Type\": \"TWHT\",\n\t\t\"Rate\": null,\n\t\t\"PreTaxAmount\": 6000,\n\t\t\"WithholdingAmount\": 120\n\t}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{mock_url}}/v1/receipt/withholding",
+                  "host": ["{{mock_url}}"],
+                  "path": ["v1", "receipt", "withholding"]
+                }
+              },
+              "status": "Not Acceptable",
+              "code": 406,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "name": "Content-Type",
+                  "description": "",
+                  "type": "text"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 406,\n    \"message\": \"NOT_ACCEPTABLE\",\n    \"body\": {\n        \"status\": \"F\",\n        \"unknownIrn\": [],\n        \"dataMissMuch\": [],\n        \"ruleErrorDto\": []\n    }\n}"
+            }
+          ]
+        }
+      ],
+      "description": "# **Receipts API**\n\n## **1\\. Sales Receipt API**\n\n**Endpoint:** `/v1/receipt/sales`  \n**Method:** `POST`\n\n### **Purpose**\n\nRecords payments received against issued invoices, linking payment transactions to specific tax documents.\n\n### **Request Structure**\n\njsonCopy\n\n```\n{\n    \"ReceiptNumber\": \"REC1234567890123466\",\n    \"ReceiptType\": \"Sales Receipts\",\n    \"Reason\": \"Payment for goods purchased\",\n    \"ReceiptDate\": \"2025-01-10T14:30:00.000+03:00\",\n    \"ReceiptCounter\": \"12345\",\n    \"ManualReceiptNumber\": \"98765\",\n    \"SourceSystemType\": \"{{systemType}}\",\n    \"SourceSystemNumber\": \"{{systemNumber}}\",\n    \"ReceiptCurrency\": \"UST\",\n    \"ExchangeRate\": null,\n    \"CollectedAmount\": 240,\n    \"SellerTIN\": \"{{sellerTin}}\",\n    \"Invoices\": [\n        {\n            \"InvoiceIRN\": \"4c484b18fb0770c9dc3290a4dd15999f8a682a7d79e5610d1d89bd79007c0d7r\",\n            \"PaymentCoverage\": \"FULL\",\n            \"InvoicePaidAmount\": 1000,\n            \"DiscountAmount\": null,\n            \"RemainingAmount\": null,\n            \"TotalAmount\": 240\n        }\n    ],\n    \"TransactionDetails\": {\n        \"ModeOfPayment\": \"CASL\",\n        \"ChequeNumber\": null,\n        \"CPONumber\": null,\n        \"DocumentNumber\": null,\n        \"CollectorName\": \"Jane Doe\",\n        \"PaymentServiceProvider\": \"Bank\",\n        \"OtherPaymentServiceProviderName\": null,\n        \"AccountNumber\": \"123456789\",\n        \"TransactionNumber\": \"TRX987654321\"\n    }\n}\n\n ```\n\n### **Key Fields**\n\n| Field | Description | Required |\n| --- | --- | --- |\n| `ReceiptNumber` | Unique receipt identifier | ✅ |\n| `InvoiceIRN` | Reference to the paid invoice | ✅ |\n| `PaymentCoverage` | FULL/PARTIAL payment status | ✅ |\n| `ModeOfPayment` | Payment method (CASL=Cash, etc.) | ✅ |\n| `CollectedAmount` | Total amount received | ✅ |\n\n### **When to Use**\n\n- When receiving customer payments\n    \n- To reconcile invoices with bank deposits\n    \n- For partial/full payment recording\n    \n\n---\n\n## **2\\. Withholding Receipt API**\n\n**Endpoint:** `/v1/receipt/withholding`  \n**Method:** `POST`\n\n### **Purpose**\n\nRecords tax withholdings applied to payments (e.g., 2% withholding tax on invoices).\n\n### **Request Structure**\n\n### **Key Fields**\n\n| Field | Description | Required |\n| --- | --- | --- |\n| `Type` | Withholding type (TWHT=Tax Withholding) | ✅ |\n| `PreTaxAmount` | Amount before withholding | ✅ |\n| `WithholdingAmount` | Calculated withheld tax | ✅ |\n| `InvoiceIRN` | Reference to the original invoice | ✅ |\n\n### **When to Use**\n\n- When deducting withholding tax from payments\n    \n- For compliance with tax authority requirements\n    \n- To document tax deductions at source\n    \n\n---\n\n## **Comparison Table**\n\n| Feature | Sales Receipt | Withholding Receipt |\n| --- | --- | --- |\n| **Purpose** | Record payments | Record tax deductions |\n| **Linked To** | Customer invoices | Supplier invoices |\n| **Amount Flow** | Income received | Tax withheld |\n| **Payment Method** | Required (CASL/BANK/etc.) | Not applicable |\n| **Tax Impact** | Records revenue | Records tax liability |\n\n---\n\n## **Workflow Integration**\n\n1. **After Invoice Issuance** → Generate Sales Receipt when paid\n    \n2. **When Withholding Tax Applies** → Submit Withholding Receipt\n    \n3. **Reconciliation** → Use both receipts for tax reporting\n    \n\n**Note:** Both APIs require valid `token` in headers for authentication.",
+      "auth": {
+        "type": "noauth"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "exec": [""]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "exec": [""]
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "sellerTin",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "systemType",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "systemNumber",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "clientId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerRegion",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerPhone",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerLegalName",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerWoreda",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "clientSecret",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sellerVatNumber",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "previousIrn",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "documentNumber",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "invoiceCounter",
+      "value": ""
+    },
+    {
+      "key": "mock_url",
+      "value": "http://core.mor.gov.et",
+      "type": "string"
+    }
+  ]
+}

@@ -11,7 +11,10 @@ export default function InvoicesPage() {
   if (invoiceData) {
     return (
       <div className="p-6">
-        <InvoicePreview data={invoiceData} onBack={() => setInvoiceData(null)} />
+        <InvoicePreview
+          data={invoiceData}
+          onBack={() => setInvoiceData(null)}
+        />
       </div>
     )
   }

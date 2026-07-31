@@ -3,8 +3,14 @@
 import { useState, useCallback } from "react"
 import { Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import type { LineItem, InvoiceData } from "@/lib/invoice"
-import { calculateTotals, formatCurrency, generateInvoiceNumber, todayString } from "@/lib/invoice"
+import {
+  calculateTotals,
+  formatCurrency,
+  generateInvoiceNumber,
+  todayString,
+} from "@/lib/invoice"
 
 function createLineItem(): LineItem {
   return { id: crypto.randomUUID(), description: "", quantity: 1, rate: 0 }
@@ -21,11 +27,16 @@ export function InvoiceForm({ onSubmit }: Props) {
   const [lineItems, setLineItems] = useState<LineItem[]>([createLineItem()])
   const [taxRate, setTaxRate] = useState(10)
 
-  const updateLineItem = useCallback((id: string, field: keyof Omit<LineItem, "id">, value: string | number) => {
-    setLineItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
-    )
-  }, [])
+  const updateLineItem = useCallback(
+    (id: string, field: keyof Omit<LineItem, "id">, value: string | number) => {
+      setLineItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, [field]: value } : item
+        )
+      )
+    },
+    []
+  )
 
   const removeLineItem = useCallback((id: string) => {
     setLineItems((prev) => prev.filter((item) => item.id !== id))
@@ -35,7 +46,10 @@ export function InvoiceForm({ onSubmit }: Props) {
     setLineItems((prev) => [...prev, createLineItem()])
   }, [])
 
-  const { subtotal, taxAmount, grandTotal } = calculateTotals(lineItems, taxRate)
+  const { subtotal, taxAmount, grandTotal } = calculateTotals(
+    lineItems,
+    taxRate
+  )
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,11 +63,10 @@ export function InvoiceForm({ onSubmit }: Props) {
           <label htmlFor="invoiceNumber" className="text-sm font-medium">
             Invoice #
           </label>
-          <input
+          <Input
             id="invoiceNumber"
             value={invoiceNumber}
             onChange={(e) => setInvoiceNumber(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
             required
           />
         </div>
@@ -61,12 +74,11 @@ export function InvoiceForm({ onSubmit }: Props) {
           <label htmlFor="date" className="text-sm font-medium">
             Date
           </label>
-          <input
+          <Input
             id="date"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
             required
           />
         </div>
@@ -76,11 +88,10 @@ export function InvoiceForm({ onSubmit }: Props) {
         <label htmlFor="customerName" className="text-sm font-medium">
           Customer Name
         </label>
-        <input
+        <Input
           id="customerName"
           value={customerName}
           onChange={(e) => setCustomerName(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
           placeholder="e.g. Acme Corp"
           required
         />
@@ -89,7 +100,12 @@ export function InvoiceForm({ onSubmit }: Props) {
       <div>
         <div className="mb-2 flex items-center justify-between">
           <span className="text-sm font-medium">Line Items</span>
-          <Button type="button" variant="outline" size="sm" onClick={addLineItem}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addLineItem}
+          >
             <Plus className="mr-1 h-4 w-4" />
             Add Item
           </Button>
@@ -112,7 +128,9 @@ export function InvoiceForm({ onSubmit }: Props) {
                   <td className="px-3 py-1.5">
                     <input
                       value={item.description}
-                      onChange={(e) => updateLineItem(item.id, "description", e.target.value)}
+                      onChange={(e) =>
+                        updateLineItem(item.id, "description", e.target.value)
+                      }
                       className="w-full bg-transparent px-1 py-1 outline-none"
                       placeholder="Item description"
                       required
@@ -123,7 +141,13 @@ export function InvoiceForm({ onSubmit }: Props) {
                       type="number"
                       min="1"
                       value={item.quantity}
-                      onChange={(e) => updateLineItem(item.id, "quantity", Number(e.target.value))}
+                      onChange={(e) =>
+                        updateLineItem(
+                          item.id,
+                          "quantity",
+                          Number(e.target.value)
+                        )
+                      }
                       className="w-full bg-transparent px-1 py-1 text-right outline-none"
                       required
                     />
@@ -134,7 +158,9 @@ export function InvoiceForm({ onSubmit }: Props) {
                       min="0"
                       step="0.01"
                       value={item.rate}
-                      onChange={(e) => updateLineItem(item.id, "rate", Number(e.target.value))}
+                      onChange={(e) =>
+                        updateLineItem(item.id, "rate", Number(e.target.value))
+                      }
                       className="w-full bg-transparent px-1 py-1 text-right outline-none"
                       required
                     />
@@ -166,14 +192,13 @@ export function InvoiceForm({ onSubmit }: Props) {
           <label htmlFor="taxRate" className="text-sm font-medium">
             Tax Rate (%)
           </label>
-          <input
+          <Input
             id="taxRate"
             type="number"
             min="0"
             max="100"
             value={taxRate}
             onChange={(e) => setTaxRate(Number(e.target.value))}
-            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
       </div>
