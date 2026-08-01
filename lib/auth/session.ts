@@ -1,4 +1,4 @@
-import { SignJWT, importPKCS8, jwtVerify } from "jose"
+import { SignJWT, importJWK, importPKCS8, jwtVerify } from "jose"
 
 export const SESSION_COOKIE = "session"
 
@@ -22,6 +22,19 @@ async function getSigningKey() {
   return importPKCS8(pem, "RS256")
 }
 
+async function getVerifyingKey() {
+  const jwks = process.env.JWKS
+  if (!jwks) {
+    throw new Error(
+      "JWKS is not set. Generate one with: node scripts/genkeys.mjs"
+    )
+  }
+  const { keys } = JSON.parse(jwks) as { keys: unknown[] }
+  const key = keys[0]
+  if (!key) throw new Error("JWKS contains no keys")
+  return importJWK(key as JsonWebKey, "RS256")
+}
+
 export async function createSessionToken(user: SessionUser): Promise<string> {
   const key = await getSigningKey()
   return new SignJWT({ email: user.email, name: user.name })
@@ -38,7 +51,7 @@ export async function verifySessionToken(
   token: string
 ): Promise<SessionUser | null> {
   try {
-    const key = await getSigningKey()
+    const key = await getVerifyingKey()
     const { payload } = await jwtVerify(token, key, {
       issuer: ISSUER,
       audience: AUDIENCE,
