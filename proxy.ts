@@ -1,22 +1,29 @@
-import {
-  convexAuthNextjsMiddleware,
-  createRouteMatcher,
-  nextjsMiddlewareRedirect,
-} from "@convex-dev/auth/nextjs/server"
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session"
 
-const isAuthRoute = createRouteMatcher(["/login", "/register"])
-const isProtectedRoute = createRouteMatcher(["/dashboard", "/invoices"])
+const AUTH_ROUTES = ["/login", "/register"]
+const PROTECTED_ROUTES = ["/dashboard", "/invoices"]
 
-export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
-  const isAuthenticated = await convexAuth.isAuthenticated()
+function matches(pathname: string, prefixes: string[]): boolean {
+  return prefixes.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )
+}
 
-  if (isAuthRoute(request) && isAuthenticated) {
-    return nextjsMiddlewareRedirect(request, "/dashboard")
+export async function proxy(request: NextRequest) {
+  const token = request.cookies.get(SESSION_COOKIE)?.value
+  const sessionUser = token ? await verifySessionToken(token) : null
+  const { pathname } = request.nextUrl
+
+  if (sessionUser && (pathname === "/" || matches(pathname, AUTH_ROUTES))) {
+    return NextResponse.redirect(new URL("/dashboard", request.url))
   }
-  if (isProtectedRoute(request) && !isAuthenticated) {
-    return nextjsMiddlewareRedirect(request, "/login")
+  if (!sessionUser && matches(pathname, PROTECTED_ROUTES)) {
+    return NextResponse.redirect(new URL("/login", request.url))
   }
-})
+  return NextResponse.next()
+}
 
 export const config = {
   matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],

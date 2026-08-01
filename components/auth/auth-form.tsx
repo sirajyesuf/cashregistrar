@@ -3,7 +3,6 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useAuthActions } from "@convex-dev/auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -13,7 +12,6 @@ type AuthFormProps = {
 
 export function AuthForm({ mode }: AuthFormProps) {
   const isSignUp = mode === "signUp"
-  const { signIn } = useAuthActions()
   const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -26,12 +24,24 @@ export function AuthForm({ mode }: AuthFormProps) {
     setError(null)
     setPending(true)
     try {
-      await signIn("password", {
-        ...(isSignUp ? { name } : {}),
-        email,
-        password,
-        flow: isSignUp ? "signUp" : "signIn",
+      const res = await fetch(`/api/auth/${isSignUp ? "register" : "login"}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(isSignUp ? { name } : {}),
+          email,
+          password,
+        }),
       })
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string
+        }
+        throw new Error(
+          body.error ??
+            `${isSignUp ? "Sign up" : "Sign in"} failed (${res.status})`
+        )
+      }
       router.push("/dashboard")
     } catch (err) {
       setError(

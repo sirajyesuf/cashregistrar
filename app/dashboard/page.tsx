@@ -1,31 +1,45 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react"
-import { useQuery } from "convex/react"
-import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
 
+type SessionUser = {
+  id: string
+  email: string
+  name: string | null
+}
+
 export default function DashboardPage() {
-  const { isAuthenticated, isLoading } = useConvexAuth()
-  const { signOut } = useAuthActions()
-  const user = useQuery(api.users.current)
   const router = useRouter()
+  const [user, setUser] = useState<SessionUser | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [signingOut, setSigningOut] = useState(false)
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/login")
-    }
-  }, [isAuthenticated, isLoading, router])
-
-  if (isLoading) return null
+    fetch("/api/auth/me")
+      .then(async (res) => {
+        if (!res.ok) {
+          router.push("/login")
+          return
+        }
+        setUser(await res.json())
+      })
+      .catch(() => router.push("/login"))
+      .finally(() => setLoading(false))
+  }, [router])
 
   const handleSignOut = async () => {
-    await signOut()
-    router.push("/login")
+    setSigningOut(true)
+    try {
+      await fetch("/api/auth/logout", { method: "POST" })
+    } finally {
+      router.push("/login")
+    }
   }
+
+  if (loading) return null
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -33,7 +47,12 @@ export default function DashboardPage() {
         <h1 className="text-lg font-bold">CashRegistrar</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">{user?.email}</span>
-          <Button variant="outline" size="sm" onClick={handleSignOut}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSignOut}
+            disabled={signingOut}
+          >
             Sign Out
           </Button>
         </div>

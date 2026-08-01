@@ -34,9 +34,6 @@ pnpm-debug.log*
 # locally generated auth keys
 .keys/
 
-# convex generated bindings
-convex/_generated/
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts

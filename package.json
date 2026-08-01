@@ -4,20 +4,23 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "convex dev --start \"next dev\"",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
-    "@auth/core": "^0.41.1",
     "@base-ui/react": "^1.6.0",
-    "@convex-dev/auth": "^0.0.94",
+    "@prisma/client": "^6.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "convex": "^1.42.3",
+    "jose": "^6.2.4",
     "lucide-react": "^1.26.0",
     "next": "16.2.6",
     "next-themes": "^0.4.6",
@@ -30,6 +33,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "prisma": "^6.7.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
@@ -38,5 +42,10 @@
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "prisma@6.19.3": true,
+    "@prisma/engines@6.19.3": true
   }
 }

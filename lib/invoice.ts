@@ -40,7 +40,8 @@ export function formatCurrency(amount: number): string {
 }
 
 // Placeholder counter: resets every page load, so numbers repeat across sessions.
-// Replace with a persisted sequence (e.g. a Convex counter) when invoices become durable.
+// Replace with a persisted sequence (e.g. an Invoice table counter) when invoices
+// become durable.
 let invoiceCounter = 1
 
 export function generateInvoiceNumber(): string {

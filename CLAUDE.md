@@ -1,9 +1,3 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
-
 This project uses **MySQL (via Prisma)** as its backend with **standard Next.js API routes** (Route Handlers in `app/api/.../route.ts`).
 
 - Run `npx prisma generate` after editing `prisma/schema.prisma`.
