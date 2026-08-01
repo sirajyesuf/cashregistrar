@@ -3,34 +3,26 @@
 import { useEffect } from "react"
 import { Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { InvoiceData } from "@/lib/invoice"
-import { calculateTotals, formatCurrency } from "@/lib/invoice"
+import type { PreviewInvoice, SellerInfo } from "@/lib/invoice"
+import { formatCents } from "@/lib/invoice"
 
 type Props = {
-  data: InvoiceData
-  onBack: () => void
+  data: PreviewInvoice
+  seller: SellerInfo
 }
 
-export function InvoicePreview({ data, onBack }: Props) {
-  const { subtotal, taxAmount, grandTotal } = calculateTotals(
-    data.lineItems,
-    data.taxRate
-  )
-
+export function InvoicePreview({ data, seller }: Props) {
   useEffect(() => {
     const original = document.title
-    document.title = `Invoice ${data.invoiceNumber}`
+    document.title = `Invoice ${data.number}`
     return () => {
       document.title = original
     }
-  }, [data.invoiceNumber])
+  }, [data.number])
 
   return (
     <div className="mx-auto max-w-4xl">
-      <div className="mb-6 flex gap-3 print:hidden">
-        <Button variant="outline" onClick={onBack}>
-          &larr; Edit
-        </Button>
+      <div className="mb-6 flex justify-end gap-3 print:hidden">
         <Button onClick={() => window.print()}>
           <Printer className="mr-2 h-4 w-4" />
           Print / Save PDF
@@ -41,12 +33,16 @@ export function InvoicePreview({ data, onBack }: Props) {
         <div className="flex items-start justify-between border-b pb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">INVOICE</h1>
-            <p className="mt-1 text-sm text-gray-500">{data.invoiceNumber}</p>
+            <p className="mt-1 text-sm text-gray-500">{data.number}</p>
           </div>
           <div className="text-right text-sm text-gray-600">
-            <p className="font-medium">Your Business Name</p>
-            <p>123 Business Street</p>
-            <p>City, Country</p>
+            <p className="font-medium">{seller.businessName || "—"}</p>
+            <p>{seller.street}</p>
+            <p>
+              {seller.city}
+              {seller.city && seller.country ? ", " : ""}
+              {seller.country}
+            </p>
           </div>
         </div>
 
@@ -55,9 +51,7 @@ export function InvoicePreview({ data, onBack }: Props) {
             <p className="text-xs font-medium tracking-wider text-gray-500 uppercase">
               Bill To
             </p>
-            <p className="mt-1 font-medium text-gray-900">
-              {data.customerName}
-            </p>
+            <p className="mt-1 font-medium text-gray-900">{data.customerName}</p>
           </div>
           <div className="text-right">
             <p className="text-xs font-medium tracking-wider text-gray-500 uppercase">
@@ -75,7 +69,7 @@ export function InvoicePreview({ data, onBack }: Props) {
               </th>
               <th className="pb-2 text-right font-medium text-gray-500">Qty</th>
               <th className="pb-2 text-right font-medium text-gray-500">
-                Rate
+                Unit Price
               </th>
               <th className="pb-2 text-right font-medium text-gray-500">
                 Total
@@ -90,10 +84,10 @@ export function InvoicePreview({ data, onBack }: Props) {
                   {item.quantity}
                 </td>
                 <td className="py-3 text-right text-gray-900 tabular-nums">
-                  {formatCurrency(item.rate)}
+                  {formatCents(item.unitPriceCents)}
                 </td>
                 <td className="py-3 text-right text-gray-900 tabular-nums">
-                  {formatCurrency(item.quantity * item.rate)}
+                  {formatCents(item.totalCents)}
                 </td>
               </tr>
             ))}
@@ -103,15 +97,15 @@ export function InvoicePreview({ data, onBack }: Props) {
         <div className="mt-4 ml-auto w-64 space-y-1.5 text-sm">
           <div className="flex justify-between text-gray-600">
             <span>Subtotal</span>
-            <span className="tabular-nums">{formatCurrency(subtotal)}</span>
+            <span className="tabular-nums">{formatCents(data.subtotalCents)}</span>
           </div>
           <div className="flex justify-between text-gray-600">
             <span>Tax ({data.taxRate}%)</span>
-            <span className="tabular-nums">{formatCurrency(taxAmount)}</span>
+            <span className="tabular-nums">{formatCents(data.taxAmountCents)}</span>
           </div>
           <div className="flex justify-between border-t border-gray-200 pt-1.5 text-base font-bold text-gray-900">
             <span>Total</span>
-            <span className="tabular-nums">{formatCurrency(grandTotal)}</span>
+            <span className="tabular-nums">{formatCents(data.grandTotalCents)}</span>
           </div>
         </div>
 

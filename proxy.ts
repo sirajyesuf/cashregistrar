@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session"
 
 const AUTH_ROUTES = ["/login", "/register"]
-const PROTECTED_ROUTES = ["/dashboard", "/invoices"]
+const PROTECTED_ROUTES = ["/dashboard", "/invoices", "/settings"]
 
 function matches(pathname: string, prefixes: string[]): boolean {
   return prefixes.some(

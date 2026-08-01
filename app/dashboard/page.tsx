@@ -64,8 +64,13 @@ export default function DashboardPage() {
             What would you like to do?
           </p>
           <div className="mt-6 flex gap-4">
-            <Link href="/invoices">
+            <Link href="/invoices/new">
               <Button size="lg">Create Invoice</Button>
+            </Link>
+            <Link href="/invoices">
+              <Button variant="outline" size="lg">
+                My Invoices
+              </Button>
             </Link>
           </div>
         </div>
