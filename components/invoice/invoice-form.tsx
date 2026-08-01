@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { uid } from "@/lib/utils"
 import {
   calculateTotalsCents,
   formatCents,
@@ -21,7 +22,7 @@ type LineInput = {
 }
 
 function createLineItem(): LineInput {
-  return { id: crypto.randomUUID(), description: "", quantity: "1", unitPrice: "" }
+  return { id: uid(), description: "", quantity: "1", unitPrice: "" }
 }
 
 function isFutureDate(date: string): boolean {
