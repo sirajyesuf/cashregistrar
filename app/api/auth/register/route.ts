@@ -6,6 +6,7 @@ import {
   SESSION_COOKIE,
   MAX_AGE_SECONDS,
   createSessionToken,
+  isSecureRequest,
 } from "@/lib/auth/session"
 
 export async function POST(request: Request) {
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureRequest(request),
     path: "/",
     maxAge: MAX_AGE_SECONDS,
   })

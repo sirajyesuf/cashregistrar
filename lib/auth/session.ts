@@ -22,6 +22,14 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(secret)
 }
 
+export function isSecureRequest(request: Request): boolean {
+  const forwardedProto = request.headers.get("x-forwarded-proto")
+  if (forwardedProto) {
+    return forwardedProto.split(",")[0].trim() === "https"
+  }
+  return request.url.startsWith("https://")
+}
+
 export async function createSessionToken(user: SessionUser): Promise<string> {
   return new SignJWT({ email: user.email, name: user.name })
     .setProtectedHeader({ alg: "HS256" })
