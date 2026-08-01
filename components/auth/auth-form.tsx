@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ThemeSwitcher } from "@/components/theme-switcher"
 
 type AuthFormProps = {
   mode: "signIn" | "signUp"
@@ -54,7 +55,10 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center p-6">
+    <div className="relative flex min-h-svh items-center justify-center p-6">
+      <div className="absolute right-4 top-4">
+        <ThemeSwitcher />
+      </div>
       <div className="w-full max-w-sm">
         <h1 className="mb-8 text-center text-2xl font-bold">
           {isSignUp ? "Create Account" : "Sign In"}

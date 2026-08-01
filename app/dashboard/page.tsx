@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { ThemeSwitcher } from "@/components/theme-switcher"
 
 type SessionUser = {
   id: string
@@ -47,6 +48,7 @@ export default function DashboardPage() {
         <h1 className="text-lg font-bold">CashRegistrar</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">{user?.email}</span>
+          <ThemeSwitcher />
           <Button
             variant="outline"
             size="sm"

@@ -11,7 +11,7 @@ npx prisma migrate dev
 npm run dev
 ```
 
-Set `DATABASE_URL` (MySQL) and `JWT_PRIVATE_KEY` (RSA PEM used to sign session cookies) in `.env.local`.
+Set `DATABASE_URL` (MySQL) and `AUTH_SECRET` (used to sign session cookies) in `.env.local`.
 
 ## Scripts
 
@@ -33,7 +33,7 @@ Set `DATABASE_URL` (MySQL) and `JWT_PRIVATE_KEY` (RSA PEM used to sign session c
 - `lib/` — domain logic (`invoice.ts`), Prisma client (`db.ts`), auth helpers (`auth/`)
 - `prisma/schema.prisma` — MySQL data model
 - `proxy.ts` — route protection (session-cookie check)
-- `scripts/genkeys.mjs` — generates RS256 keypair for session-cookie signing into `.keys/`
+- `scripts/genkeys.mjs` — generates a random `AUTH_SECRET` for session-cookie signing
 - `scripts/eims-keys.mjs` / `scripts/eims-sign.mjs` — EIMS certificate/CSR generation and request signing
 
 ## Adding UI components
