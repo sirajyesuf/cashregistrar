@@ -21,28 +21,41 @@ async function requireUser() {
   return user
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await requireUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const invoices = await prisma.invoice.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      number: true,
-      date: true,
-      customerName: true,
-      taxRate: true,
-      grandTotal: true,
-      createdAt: true,
-      _count: { select: { lines: true } },
-    },
-  })
+  const url = new URL(request.url)
+  const page = Math.max(1, Number(url.searchParams.get("page")) || 1)
+  const pageSize = Math.min(
+    50,
+    Math.max(1, Number(url.searchParams.get("pageSize")) || 10)
+  )
 
-  return NextResponse.json({ invoices })
+  const where = { userId: user.id }
+  const [invoices, total] = await Promise.all([
+    prisma.invoice.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        number: true,
+        date: true,
+        customerName: true,
+        taxRate: true,
+        grandTotal: true,
+        createdAt: true,
+        _count: { select: { lines: true } },
+      },
+    }),
+    prisma.invoice.count({ where }),
+  ])
+
+  return NextResponse.json({ invoices, total, page, pageSize })
 }
 
 export async function POST(request: Request) {
