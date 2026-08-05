@@ -6,9 +6,19 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ThemeSwitcher } from "@/components/theme-switcher"
+import { authClient } from "@/lib/auth-client"
 
 type AuthFormProps = {
   mode: "signIn" | "signUp"
+}
+
+function errorMessage(error: unknown): string | null {
+  if (error && typeof error === "object") {
+    const e = error as { message?: unknown; code?: unknown }
+    if (typeof e.message === "string" && e.message) return e.message
+    if (typeof e.code === "string" && e.code) return e.code
+  }
+  return null
 }
 
 export function AuthForm({ mode }: AuthFormProps) {
@@ -25,23 +35,12 @@ export function AuthForm({ mode }: AuthFormProps) {
     setError(null)
     setPending(true)
     try {
-      const res = await fetch(`/api/auth/${isSignUp ? "register" : "login"}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(isSignUp ? { name } : {}),
-          email,
-          password,
-        }),
-      })
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as {
-          error?: string
-        }
-        throw new Error(
-          body.error ??
-            `${isSignUp ? "Sign up" : "Sign in"} failed (${res.status})`
-        )
+      const result = isSignUp
+        ? await authClient.signUp.email({ name, email, password })
+        : await authClient.signIn.email({ email, password })
+      const message = errorMessage(result.error)
+      if (result.error || !result.data) {
+        throw new Error(message ?? `${isSignUp ? "Sign up" : "Sign in"} failed`)
       }
       router.push("/dashboard")
     } catch (err) {
@@ -56,7 +55,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <div className="relative flex min-h-svh items-center justify-center p-6">
-      <div className="absolute right-4 top-4">
+      <div className="absolute top-4 right-4">
         <ThemeSwitcher />
       </div>
       <div className="w-full max-w-sm">

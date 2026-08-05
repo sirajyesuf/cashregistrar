@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Menu } from "@base-ui/react/menu"
 import { useTheme } from "@/components/theme-provider"
 import { ChevronDown, LogOut, Moon, Settings, Sun } from "lucide-react"
+import { authClient } from "@/lib/auth-client"
 
 type Props = {
   name: string | null
@@ -29,7 +30,7 @@ export function UserMenu({ name, email }: Props) {
   const handleSignOut = async () => {
     setSigningOut(true)
     try {
-      await fetch("/api/auth/logout", { method: "POST" })
+      await authClient.signOut()
     } finally {
       router.push("/login")
     }

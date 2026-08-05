@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session"
+import { auth } from "@/lib/auth"
 
 const AUTH_ROUTES = ["/login", "/register"]
 const PROTECTED_ROUTES = ["/dashboard", "/invoices", "/settings"]
@@ -12,14 +12,22 @@ function matches(pathname: string, prefixes: string[]): boolean {
 }
 
 export async function proxy(request: NextRequest) {
-  const token = request.cookies.get(SESSION_COOKIE)?.value
-  const sessionUser = token ? await verifySessionToken(token) : null
   const { pathname } = request.nextUrl
 
-  if (sessionUser && (pathname === "/" || matches(pathname, AUTH_ROUTES))) {
+  let authenticated = false
+  if (!pathname.startsWith("/api/")) {
+    try {
+      const session = await auth.api.getSession({ headers: request.headers })
+      authenticated = Boolean(session?.user)
+    } catch {
+      authenticated = false
+    }
+  }
+
+  if (authenticated && (pathname === "/" || matches(pathname, AUTH_ROUTES))) {
     return NextResponse.redirect(new URL("/dashboard", request.url))
   }
-  if (!sessionUser && matches(pathname, PROTECTED_ROUTES)) {
+  if (!authenticated && matches(pathname, PROTECTED_ROUTES)) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
   return NextResponse.next()

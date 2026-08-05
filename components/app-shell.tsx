@@ -1,11 +1,12 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Menu } from "@base-ui/react/menu"
 import { Menu as MenuIcon, Receipt } from "lucide-react"
 import { UserMenu } from "@/components/user-menu"
+import { authClient } from "@/lib/auth-client"
 
 type SessionUser = {
   id: string
@@ -28,16 +29,14 @@ export function useUser() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const [user, setUser] = useState<SessionUser | null>(null)
+  const { data: session, isPending } = authClient.useSession()
+  const user = session?.user ?? null
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Not authenticated")
-        setUser(await res.json())
-      })
-      .catch(() => router.push("/login"))
-  }, [router])
+    if (!isPending && !user) {
+      router.push("/login")
+    }
+  }, [isPending, user, router])
 
   const isActive = (href: string) =>
     href === "/dashboard"
@@ -50,7 +49,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-6">
-              <Link href="/dashboard" className="flex shrink-0 items-center gap-2">
+              <Link
+                href="/dashboard"
+                className="flex shrink-0 items-center gap-2"
+              >
                 <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Receipt className="size-4" />
                 </span>
@@ -78,13 +80,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Menu.Root>
                 <Menu.Trigger
                   aria-label="Open navigation"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg outline-none transition-colors select-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-muted md:hidden"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors outline-none select-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-muted md:hidden"
                 >
                   <MenuIcon className="size-4" />
                 </Menu.Trigger>
                 <Menu.Portal>
-                  <Menu.Positioner className="outline-none" sideOffset={8} align="end">
-                    <Menu.Popup className="relative z-50 w-44 origin-[var(--transform-origin)] rounded-xl border bg-popover p-1 text-popover-foreground shadow-md outline-none transition-[scale,opacity] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0">
+                  <Menu.Positioner
+                    className="outline-none"
+                    sideOffset={8}
+                    align="end"
+                  >
+                    <Menu.Popup className="relative z-50 w-44 origin-[var(--transform-origin)] rounded-xl border bg-popover p-1 text-popover-foreground shadow-md transition-[scale,opacity] duration-100 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
                       {NAV.map((item) => (
                         <Menu.LinkItem
                           key={item.href}
