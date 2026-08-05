@@ -34,6 +34,7 @@ model Counter {
 enum RegistrationStatus {
   PENDING
   REGISTERED
+  CANCELLED
   FAILED
 }
 

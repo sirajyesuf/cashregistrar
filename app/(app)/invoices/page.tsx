@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Pagination } from "@/components/ui/pagination"
 import { RegisterButton } from "@/components/invoice/register-button"
+import { CancelButton } from "@/components/invoice/cancel-button"
 import { formatCents, moneyToCents } from "@/lib/invoice"
 
 type InvoiceRow = {
@@ -35,6 +36,9 @@ function StatusBadge({
         Registered
       </Badge>
     )
+  }
+  if (status === "CANCELLED") {
+    return <Badge variant="outline">Cancelled</Badge>
   }
   if (status === "FAILED") {
     return <Badge variant="destructive">Failed</Badge>
@@ -67,9 +71,7 @@ export default function InvoicesPage() {
       .catch((err) => {
         if (cancelled) return
         setInvoices(null)
-        setError(
-          err instanceof Error ? err.message : "Failed to load invoices"
-        )
+        setError(err instanceof Error ? err.message : "Failed to load invoices")
       })
     return () => {
       cancelled = true
@@ -77,23 +79,41 @@ export default function InvoicesPage() {
   }, [page, reloadKey])
 
   const handleRegistered = (id: string) => {
-    setInvoices((prev) =>
-      prev?.map((invoice) =>
-        invoice.id === id
-          ? { ...invoice, registrationStatus: "REGISTERED" }
-          : invoice
-      ) ?? prev
+    setInvoices(
+      (prev) =>
+        prev?.map((invoice) =>
+          invoice.id === id
+            ? { ...invoice, registrationStatus: "REGISTERED" }
+            : invoice
+        ) ?? prev
+    )
+  }
+
+  const handleCancelled = (id: string) => {
+    setInvoices(
+      (prev) =>
+        prev?.map((invoice) =>
+          invoice.id === id
+            ? { ...invoice, registrationStatus: "CANCELLED" }
+            : invoice
+        ) ?? prev
     )
   }
 
   const handleDelete = async (invoice: InvoiceRow) => {
-    if (!window.confirm(`Delete invoice ${invoice.number}? This cannot be undone.`)) {
+    if (
+      !window.confirm(
+        `Delete invoice ${invoice.number}? This cannot be undone.`
+      )
+    ) {
       return
     }
     setDeletingId(invoice.id)
     setError(null)
     try {
-      const res = await fetch(`/api/invoices/${invoice.id}`, { method: "DELETE" })
+      const res = await fetch(`/api/invoices/${invoice.id}`, {
+        method: "DELETE",
+      })
       if (!res.ok) throw new Error(`Failed to delete invoice (${res.status})`)
       if (invoices && invoices.length === 1 && page > 1) {
         setPage((prev) => prev - 1)
@@ -101,9 +121,7 @@ export default function InvoicesPage() {
         setReloadKey((key) => key + 1)
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to delete invoice"
-      )
+      setError(err instanceof Error ? err.message : "Failed to delete invoice")
     } finally {
       setDeletingId(null)
     }
@@ -193,6 +211,14 @@ export default function InvoicesPage() {
                           disabled={invoice.registrationStatus === "REGISTERED"}
                           onRegistered={() => handleRegistered(invoice.id)}
                         />
+                        {invoice.registrationStatus === "REGISTERED" && (
+                          <CancelButton
+                            invoiceId={invoice.id}
+                            invoiceNumber={invoice.number}
+                            size="sm"
+                            onCancelled={() => handleCancelled(invoice.id)}
+                          />
+                        )}
                         <Link href={`/invoices/${invoice.id}`}>
                           <Button variant="outline" size="sm">
                             View

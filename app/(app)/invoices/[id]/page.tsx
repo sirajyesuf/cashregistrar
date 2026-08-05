@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { InvoicePreview } from "@/components/invoice/invoice-preview"
 import { RegisterButton } from "@/components/invoice/register-button"
+import { CancelButton } from "@/components/invoice/cancel-button"
 import { invoiceFromApi } from "@/lib/invoice"
 import type { PreviewInvoice, SellerInfo } from "@/lib/invoice"
 
@@ -42,10 +43,7 @@ export default function InvoiceDetailPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/invoices/${id}`),
-      fetch("/api/settings/seller"),
-    ])
+    Promise.all([fetch(`/api/invoices/${id}`), fetch("/api/settings/seller")])
       .then(async ([invoiceRes, sellerRes]) => {
         if (!invoiceRes.ok) {
           if (invoiceRes.status === 404) setNotFound(true)
@@ -70,6 +68,14 @@ export default function InvoiceDetailPage() {
       prev ? { ...prev, irn, registrationStatus: "REGISTERED" } : prev
     )
   }
+
+  const handleCancelled = () => {
+    setInvoice((prev) =>
+      prev ? { ...prev, registrationStatus: "CANCELLED" } : prev
+    )
+  }
+
+  const cannotRegister = invoice?.registrationStatus === "REGISTERED"
 
   return (
     <div className="mx-auto max-w-4xl p-6">
@@ -98,18 +104,30 @@ export default function InvoiceDetailPage() {
                 <Badge variant="success">
                   {invoice.irn ? `Registered · ${invoice.irn}` : "Registered"}
                 </Badge>
+              ) : invoice.registrationStatus === "CANCELLED" ? (
+                <Badge variant="outline">Cancelled</Badge>
               ) : invoice.registrationStatus === "FAILED" ? (
                 <Badge variant="destructive">Failed</Badge>
               ) : (
                 <Badge variant="outline">Unregistered</Badge>
               )}
             </div>
-            <RegisterButton
-              invoiceId={invoice.id}
-              size="sm"
-              disabled={invoice.registrationStatus === "REGISTERED"}
-              onRegistered={handleRegistered}
-            />
+            <div className="flex items-center gap-2">
+              <RegisterButton
+                invoiceId={invoice.id}
+                size="sm"
+                disabled={cannotRegister}
+                onRegistered={handleRegistered}
+              />
+              {invoice.registrationStatus === "REGISTERED" && (
+                <CancelButton
+                  invoiceId={invoice.id}
+                  invoiceNumber={invoice.number}
+                  size="sm"
+                  onCancelled={handleCancelled}
+                />
+              )}
+            </div>
           </div>
           <InvoicePreview data={invoice} seller={seller} />
         </div>

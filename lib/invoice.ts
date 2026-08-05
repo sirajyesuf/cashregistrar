@@ -86,7 +86,8 @@ export type SellerInfo = {
   locality?: string
 }
 
-export type RegistrationStatus = "PENDING" | "REGISTERED" | "FAILED"
+export type RegistrationStatus =
+  "PENDING" | "REGISTERED" | "CANCELLED" | "FAILED"
 
 export type PreviewInvoice = {
   id: string
@@ -187,13 +188,14 @@ export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
         ? invoice.transactionType
         : undefined,
     buyer: invoice.buyerLegalName
-      ? { legalName: invoice.buyerLegalName, tin: invoice.buyerTin ?? undefined }
+      ? {
+          legalName: invoice.buyerLegalName,
+          tin: invoice.buyerTin ?? undefined,
+        }
       : undefined,
     irn: invoice.irn ?? null,
     registrationStatus: invoice.registrationStatus as
-      | RegistrationStatus
-      | null
-      | undefined,
+      RegistrationStatus | null | undefined,
     subtotalCents: moneyToCents(invoice.subtotal),
     taxAmountCents: moneyToCents(invoice.taxAmount),
     grandTotalCents: moneyToCents(invoice.grandTotal),
