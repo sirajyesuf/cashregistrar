@@ -134,9 +134,6 @@ export default function InvoicesPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Invoices</h1>
         <div className="flex flex-wrap gap-2">
-          <Link href="/settings">
-            <Button variant="outline">Business Settings</Button>
-          </Link>
           <Link href="/invoices/new">
             <Button>
               <Plus className="mr-1 h-4 w-4" />

@@ -21,6 +21,7 @@ import {
   todayString,
   EMPTY_BUYER,
   TEST_BUYER,
+  TEST_BUYER_B2C,
   type BuyerDetails,
   type TransactionType,
 } from "@/lib/invoice"
@@ -95,6 +96,11 @@ export function InvoiceForm() {
   const fillTestBuyer = useCallback(() => {
     setTransactionType("B2B")
     setBuyer({ ...TEST_BUYER })
+  }, [])
+
+  const fillTestBuyerB2C = useCallback(() => {
+    setTransactionType("B2C")
+    setBuyer({ ...TEST_BUYER_B2C })
   }, [])
 
   const derived = useMemo(
@@ -300,7 +306,19 @@ export function InvoiceForm() {
                 fillTestBuyer()
               }}
             >
-              Test buyer detail
+              Test B2B buyer
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                fillTestBuyerB2C()
+              }}
+            >
+              Test B2C buyer
             </Button>
             <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
           </span>

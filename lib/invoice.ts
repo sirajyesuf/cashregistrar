@@ -51,6 +51,23 @@ export const TEST_BUYER: BuyerDetails = {
   houseNumber: "101",
 }
 
+export const TEST_BUYER_B2C: BuyerDetails = {
+  legalName: "Test Customer",
+  tin: "0089238373",
+  vatNumber: "1000000000",
+  idType: "KID",
+  idNumber: "999999999999",
+  email: "customer@test.com",
+  phone: "251911111111",
+  region: "13",
+  city: "101",
+  country: "70",
+  zone: "A",
+  kebele: "01",
+  wereda: "574",
+  houseNumber: "101",
+}
+
 export type LineItemCents = {
   id: string
   description: string
