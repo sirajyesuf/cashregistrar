@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { forceLogin, maskToken } from "@/lib/eims/token"
+import { forceLogin, maskToken } from "@/lib/einvoice/token"
 
 export const runtime = "nodejs"
 

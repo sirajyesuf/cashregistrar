@@ -1,12 +1,13 @@
 import { execFileSync } from "node:child_process"
 import { generateKeyPairSync } from "node:crypto"
 import { existsSync, mkdirSync, writeFileSync } from "node:fs"
+import { dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
-const OUT_DIR = new URL("../.keys/eims/", import.meta.url)
-const CONF_PATH = new URL("einvoice.cnf", OUT_DIR)
-const KEY_PATH = new URL("private_key.key", OUT_DIR)
-const CSR_PATH = new URL("csr.pem", OUT_DIR)
+const DEFAULT_DIR = fileURLToPath(new URL("../.keys/einvoice/", import.meta.url))
+const KEY_PATH = process.env.EINVOICE_KEY_PATH ?? `${DEFAULT_DIR}private_key.key`
+const CONF_PATH = process.env.EINVOICE_CNF_PATH ?? `${DEFAULT_DIR}einvoice.cnf`
+const CSR_PATH = process.env.EINVOICE_CSR_PATH ?? `${DEFAULT_DIR}csr.pem`
 
 const KEY_BITS = 3024
 
@@ -16,7 +17,7 @@ const config = {
   locality: process.env.EIMS_LOCALITY ?? "Addis Ababa",
   org: process.env.EIMS_ORG,
   ou: process.env.EIMS_OU ?? process.env.EIMS_ORG,
-  tin: process.env.EIMS_TIN,
+  tin: process.env.EINVOICE_TIN,
   systemNumber: process.env.EIMS_SYSTEM_NUMBER,
   email: process.env.EIMS_EMAIL,
 }
@@ -27,7 +28,7 @@ const missing = Object.entries(config)
 if (missing.length > 0) {
   console.error(
     `Missing required env vars: ${missing.join(", ")}\n` +
-      "  EIMS_ORG, EIMS_TIN, EIMS_SYSTEM_NUMBER, EIMS_EMAIL are required.\n" +
+      "  EIMS_ORG, EINVOICE_TIN, EIMS_SYSTEM_NUMBER, EIMS_EMAIL are required.\n" +
       "  Optional: EIMS_OU, EIMS_COUNTRY, EIMS_STATE, EIMS_LOCALITY"
   )
   process.exit(1)
@@ -40,14 +41,16 @@ try {
   process.exit(1)
 }
 
-mkdirSync(fileURLToPath(OUT_DIR), { recursive: true })
+for (const p of [KEY_PATH, CONF_PATH, CSR_PATH]) {
+  mkdirSync(dirname(p), { recursive: true })
+}
 
 const { privateKey } = generateKeyPairSync("rsa", {
   modulusLength: KEY_BITS,
   publicExponent: 0x10001,
 })
 writeFileSync(KEY_PATH, privateKey.export({ type: "pkcs8", format: "pem" }))
-console.log(`Wrote ${fileURLToPath(KEY_PATH)} (${KEY_BITS}-bit RSA, no passphrase)`)
+console.log(`Wrote ${KEY_PATH} (${KEY_BITS}-bit RSA, no passphrase)`)
 
 const cnf = [
   "[ req ]",
@@ -66,7 +69,7 @@ const cnf = [
   "",
 ].join("\n")
 writeFileSync(CONF_PATH, cnf)
-console.log(`Wrote ${fileURLToPath(CONF_PATH)}`)
+console.log(`Wrote ${CONF_PATH}`)
 
 execFileSync(
   "openssl",
@@ -74,11 +77,11 @@ execFileSync(
     "req",
     "-new",
     "-key",
-    fileURLToPath(KEY_PATH),
+    KEY_PATH,
     "-out",
-    fileURLToPath(CSR_PATH),
+    CSR_PATH,
     "-config",
-    fileURLToPath(CONF_PATH),
+    CONF_PATH,
   ],
   { stdio: "inherit" }
 )
@@ -89,7 +92,6 @@ if (!existsSync(CSR_PATH)) {
 }
 
 console.log("\nDone. Next steps:")
-console.log(`  1. Email ${fileURLToPath(CSR_PATH)} + the Certificate Request Form to ica@insa.gov.et`)
-console.log("  2. Save the issued certificate as .keys/eims/certificate.crt")
-console.log("  3. Deploy .keys/eims/ (private_key.key + certificate.crt) to the VPS")
-console.log("     as a Docker-mounted volume (e.g. /app/storage/eims-cert/).")
+console.log(`  1. Email ${CSR_PATH} + the Certificate Request Form to ica@insa.gov.et`)
+console.log(`  2. Save the issued certificate and set EINVOICE_CERT_PATH to it`)
+console.log(`  3. Deploy the key/cert files and set EINVOICE_KEY_PATH / EINVOICE_CERT_PATH on the VPS`)

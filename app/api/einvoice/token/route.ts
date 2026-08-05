@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { forceRefresh, maskToken } from "@/lib/eims/token"
+import { forceRefresh, maskToken } from "@/lib/einvoice/token"
 
 export const runtime = "nodejs"
 

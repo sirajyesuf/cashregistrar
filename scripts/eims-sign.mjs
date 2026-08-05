@@ -1,11 +1,12 @@
 import { createSign } from "node:crypto"
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
-const KEYS_DIR = new URL("../.keys/eims/", import.meta.url)
-const KEY_PATH = new URL("private_key.key", KEYS_DIR)
-const CERT_PATH = new URL("certificate.crt", KEYS_DIR)
-const TOKEN_PATH = new URL("token.json", KEYS_DIR)
+const DEFAULT_DIR = fileURLToPath(new URL("../.keys/einvoice/", import.meta.url))
+const KEY_PATH = process.env.EINVOICE_KEY_PATH ?? `${DEFAULT_DIR}private_key.key`
+const CERT_PATH = process.env.EINVOICE_CERT_PATH ?? `${DEFAULT_DIR}certificate.crt`
+const TOKEN_PATH = `${dirname(KEY_PATH)}/token.json`
 
 const DEFAULT_BASE_URL = "https://core.mor.gov.et"
 
@@ -30,7 +31,7 @@ function parseArgs(argv) {
 }
 
 function resolvePath(flagPath, defaultPath) {
-  return flagPath ? flagPath : fileURLToPath(defaultPath)
+  return flagPath ? flagPath : defaultPath
 }
 
 function readSecret(path, name) {
@@ -47,11 +48,11 @@ function buildConfig(args) {
 
   const value = (name, flag) => args[flag] ?? process.env[name] ?? ""
   const cfg = {
-    baseUrl: (value("EIMS_BASE_URL", "base-url") || DEFAULT_BASE_URL).replace(/\/+$/, ""),
-    clientId: value("EIMS_CLIENT_ID", "client-id"),
-    clientSecret: value("EIMS_CLIENT_SECRET", "client-secret"),
-    apiKey: value("EIMS_API_KEY", "api-key"),
-    tin: value("EIMS_TIN", "tin"),
+    baseUrl: (value("EINVOICE_BASE_URL", "base-url") || DEFAULT_BASE_URL).replace(/\/+$/, ""),
+    clientId: value("EINVOICE_CLIENT_ID", "client-id"),
+    clientSecret: value("EINVOICE_CLIENT_SECRET", "client-secret"),
+    apiKey: value("EINVOICE_API_KEY", "api-key"),
+    tin: value("EINVOICE_TIN", "tin"),
   }
 
   return { privateKey, certificate, cfg }
@@ -68,12 +69,12 @@ function signAndWrap(privateKey, certificatePem, requestObj) {
 }
 
 function loadToken() {
-  if (!existsSync(fileURLToPath(TOKEN_PATH))) return null
-  return JSON.parse(readFileSync(fileURLToPath(TOKEN_PATH), "utf8"))
+  if (!existsSync(TOKEN_PATH)) return null
+  return JSON.parse(readFileSync(TOKEN_PATH, "utf8"))
 }
 
 function saveToken(token) {
-  writeFileSync(fileURLToPath(TOKEN_PATH), JSON.stringify(token, null, 2))
+  writeFileSync(TOKEN_PATH, JSON.stringify(token, null, 2))
 }
 
 function readRequestData(dataFlag) {
@@ -95,7 +96,7 @@ function printResponse(res, body) {
 
 async function doLogin({ privateKey, certificate, cfg }) {
   if (!cfg.clientId || !cfg.clientSecret || !cfg.apiKey || !cfg.tin) {
-    console.error("Login needs EIMS_CLIENT_ID, EIMS_CLIENT_SECRET, EIMS_API_KEY, EIMS_TIN (env or --client-id/--client-secret/--api-key/--tin).")
+    console.error("Login needs EINVOICE_CLIENT_ID, EINVOICE_CLIENT_SECRET, EINVOICE_API_KEY, EINVOICE_TIN (env or --client-id/--client-secret/--api-key/--tin).")
     process.exit(1)
   }
   const requestObj = {
@@ -119,7 +120,7 @@ async function doLogin({ privateKey, certificate, cfg }) {
     const accessToken = parsed?.data?.accessToken ?? parsed?.accessToken
     if (accessToken) {
       saveToken({ ...parsed.data, obtainedAt: new Date().toISOString() })
-      console.log("Login OK. Token cached at .keys/eims/token.json")
+      console.log(`Login OK. Token cached at ${TOKEN_PATH}`)
       console.log(`accessToken: ${accessToken.slice(0, 40)}...`)
       return
     }
@@ -161,10 +162,10 @@ function doWrap({ privateKey, certificate }, args) {
     requestObj = readRequestData(args["data"])
   } else {
     requestObj = {
-      clientId: args["client-id"] ?? process.env.EIMS_CLIENT_ID ?? "{{clientId}}",
-      clientSecret: args["client-secret"] ?? process.env.EIMS_CLIENT_SECRET ?? "{{clientSecret}}",
-      apikey: args["api-key"] ?? process.env.EIMS_API_KEY ?? "{{apiKey}}",
-      tin: args["tin"] ?? process.env.EIMS_TIN ?? "{{tin}}",
+      clientId: args["client-id"] ?? process.env.EINVOICE_CLIENT_ID ?? "{{clientId}}",
+      clientSecret: args["client-secret"] ?? process.env.EINVOICE_CLIENT_SECRET ?? "{{clientSecret}}",
+      apikey: args["api-key"] ?? process.env.EINVOICE_API_KEY ?? "{{apiKey}}",
+      tin: args["tin"] ?? process.env.EINVOICE_TIN ?? "{{tin}}",
     }
   }
   console.log(JSON.stringify(signAndWrap(privateKey, certificate, requestObj), null, 2))

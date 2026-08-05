@@ -12,10 +12,10 @@ export function getConfig(): EimsConfig {
   const value = (name: string) => process.env[name]?.trim()
 
   const required = {
-    EIMS_CLIENT_ID: value("EIMS_CLIENT_ID"),
-    EIMS_CLIENT_SECRET: value("EIMS_CLIENT_SECRET"),
-    EIMS_API_KEY: value("EIMS_API_KEY"),
-    EIMS_TIN: value("EIMS_TIN"),
+    EINVOICE_CLIENT_ID: value("EINVOICE_CLIENT_ID"),
+    EINVOICE_CLIENT_SECRET: value("EINVOICE_CLIENT_SECRET"),
+    EINVOICE_API_KEY: value("EINVOICE_API_KEY"),
+    EINVOICE_TIN: value("EINVOICE_TIN"),
   }
 
   const missing = Object.entries(required)
@@ -23,16 +23,16 @@ export function getConfig(): EimsConfig {
     .map(([k]) => k)
   if (missing.length > 0) {
     throw new Error(
-      `Missing required EIMS env vars: ${missing.join(", ")}. ` +
+      `Missing required EINVOICE env vars: ${missing.join(", ")}. ` +
         "See the EIMS integration doc for where to get them."
     )
   }
 
   return {
-    baseUrl: (value("EIMS_BASE_URL") ?? DEFAULT_BASE_URL).replace(/\/+$/, ""),
-    clientId: required.EIMS_CLIENT_ID!,
-    clientSecret: required.EIMS_CLIENT_SECRET!,
-    apiKey: required.EIMS_API_KEY!,
-    tin: required.EIMS_TIN!,
+    baseUrl: (value("EINVOICE_BASE_URL") ?? DEFAULT_BASE_URL).replace(/\/+$/, ""),
+    clientId: required.EINVOICE_CLIENT_ID!,
+    clientSecret: required.EINVOICE_CLIENT_SECRET!,
+    apiKey: required.EINVOICE_API_KEY!,
+    tin: required.EINVOICE_TIN!,
   }
 }

@@ -1,4 +1,4 @@
-import { eimsRouteHandler } from "@/lib/eims/client"
+import { eimsRouteHandler } from "@/lib/einvoice/client"
 
 export const runtime = "nodejs"
 
