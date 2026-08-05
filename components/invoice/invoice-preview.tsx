@@ -66,9 +66,6 @@ export function InvoicePreview({ data, seller }: Props) {
               Date
             </p>
             <p className="mt-1 text-gray-900">{data.date}</p>
-            {data.irn && (
-              <p className="mt-1 text-xs text-gray-500">IRN: {data.irn}</p>
-            )}
           </div>
         </div>
 
