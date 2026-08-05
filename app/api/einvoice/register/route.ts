@@ -90,6 +90,16 @@ export async function POST(request: Request) {
     )
   }
 
+  if (invoice.lines.some((line) => line.description.trim().length < 3)) {
+    return NextResponse.json(
+      {
+        error:
+          "Every line item description must be at least 3 characters (required by EIMS)",
+      },
+      { status: 400 }
+    )
+  }
+
   const seller = await prisma.sellerProfile.findFirst()
   let counter = await prisma.counter.findUnique({ where: { name: "eims" } })
   if (!counter) {

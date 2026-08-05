@@ -43,7 +43,7 @@ function ToastViewport() {
   const manager = ToastPrimitive.Toast.useToastManager()
 
   return (
-    <ToastPrimitive.Toast.Viewport className="fixed right-0 bottom-0 z-[100] flex w-full flex-col gap-2 p-4 sm:right-4 sm:bottom-4 sm:max-w-sm print:hidden">
+    <ToastPrimitive.Toast.Viewport className="pointer-events-none fixed right-0 bottom-0 z-[100] flex w-full flex-col gap-2 p-4 sm:right-4 sm:bottom-4 sm:max-w-sm print:hidden">
       {manager.toasts.map((item) => {
         const variant = (item.type as ToastVariant) ?? "default"
         return (

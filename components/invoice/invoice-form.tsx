@@ -114,10 +114,16 @@ export function InvoiceForm() {
           rawUnitPrice: item.unitPrice,
           itemCode: item.itemCode,
           unit: item.unit,
+          descriptionTooShort: item.description.trim().length < 3,
+          priceInvalid:
+            item.unitPrice.trim() !== "" &&
+            !Number.isFinite(Number(item.unitPrice)),
           valid:
-            item.description.trim() !== "" &&
+            item.description.trim().length >= 3 &&
             quantityNum > 0 &&
-            unitPriceCents >= 0,
+            unitPriceCents >= 0 &&
+            (item.unitPrice.trim() === "" ||
+              Number.isFinite(Number(item.unitPrice))),
         }
       }),
     [lineItems]
@@ -144,9 +150,51 @@ export function InvoiceForm() {
     [date, taxRate, buyerValid, derived]
   )
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!valid || pending) return
+  const validationError = useMemo(() => {
+    const problems: string[] = []
+    if (!date) problems.push("a date")
+    else if (isFutureDate(date))
+      problems.push("a date that is not in the future")
+    if (Number.isFinite(taxRate) === false || taxRate < 0 || taxRate > 100) {
+      problems.push("a tax rate between 0 and 100")
+    }
+    if (buyer.legalName.trim() === "") problems.push("the buyer's legal name")
+    if (transactionType === "B2B" && buyer.tin.trim() === "") {
+      problems.push("the buyer's TIN")
+    }
+    if (derived.length === 0) {
+      problems.push("at least one line item")
+    } else {
+      const short = derived.filter((item) => item.descriptionTooShort)
+      if (short.length > 0) {
+        problems.push(
+          `item descriptions of at least 3 characters (${short.length} item${short.length > 1 ? "s" : ""})`
+        )
+      }
+      const badQty = derived.filter(
+        (item) => !Number.isFinite(item.quantity) || item.quantity <= 0
+      )
+      if (badQty.length > 0) {
+        problems.push(
+          `quantities greater than zero (${badQty.length} item${badQty.length > 1 ? "s" : ""})`
+        )
+      }
+      const badPrice = derived.filter((item) => item.priceInvalid)
+      if (badPrice.length > 0) {
+        problems.push(
+          `valid unit prices (${badPrice.length} item${badPrice.length > 1 ? "s" : ""})`
+        )
+      }
+    }
+    return problems
+  }, [date, taxRate, transactionType, buyer, derived])
+
+  const submitInvoice = async () => {
+    if (pending) return
+    if (!valid) {
+      setError(`Please fill in: ${validationError.join(", ")}.`)
+      return
+    }
     setError(null)
     setPending(true)
     try {
@@ -182,6 +230,11 @@ export function InvoiceForm() {
       setError(err instanceof Error ? err.message : "Failed to save invoice")
       setPending(false)
     }
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    await submitInvoice()
   }
 
   return (
@@ -479,7 +532,7 @@ export function InvoiceForm() {
                         updateLineItem(item.id, "itemCode", e.target.value)
                       }
                       aria-label="Item code"
-                      className="w-full bg-transparent px-1 py-1 outline-none"
+                      className="w-full rounded-md border border-input bg-transparent px-2 py-1 outline-none focus:border-ring"
                       placeholder="SKU"
                     />
                   </td>
@@ -490,7 +543,7 @@ export function InvoiceForm() {
                         updateLineItem(item.id, "description", e.target.value)
                       }
                       aria-label="Description"
-                      className="w-full bg-transparent px-1 py-1 outline-none"
+                      className="w-full rounded-md border border-input bg-transparent px-2 py-1 outline-none focus:border-ring"
                       placeholder="Item description"
                       required
                     />
@@ -505,37 +558,42 @@ export function InvoiceForm() {
                         updateLineItem(item.id, "quantity", e.target.value)
                       }
                       aria-label="Quantity"
-                      className="w-full bg-transparent px-1 py-1 text-right outline-none"
+                      className="w-full rounded-md border border-input bg-transparent px-2 py-1 text-right outline-none focus:border-ring"
                       required
                     />
                   </td>
                   <td className="px-3 py-1.5">
-                    <select
+                    <Select
                       value={item.unit}
-                      onChange={(e) =>
-                        updateLineItem(item.id, "unit", e.target.value)
+                      onValueChange={(value) =>
+                        updateLineItem(item.id, "unit", value ?? "PCS")
                       }
-                      aria-label="Unit"
-                      className="w-full bg-transparent px-1 py-1 text-right outline-none"
                     >
-                      {UNITS.map((u) => (
-                        <option key={u} value={u}>
-                          {u}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger
+                        aria-label="Unit"
+                        className="h-7 w-full rounded-md border border-input bg-transparent p-0 px-2 text-right shadow-none focus:ring-0 data-[popup-open]:border-ring"
+                      >
+                        <SelectValue placeholder="Unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {UNITS.map((u) => (
+                          <SelectItem key={u} value={u}>
+                            {u}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </td>
                   <td className="px-3 py-1.5">
                     <input
-                      type="number"
-                      min="0"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       value={item.rawUnitPrice}
                       onChange={(e) =>
                         updateLineItem(item.id, "unitPrice", e.target.value)
                       }
                       aria-label="Unit price"
-                      className="w-full bg-transparent px-1 py-1 text-right outline-none"
+                      className="w-full rounded-md border border-input bg-transparent px-2 py-1 text-right outline-none focus:border-ring"
                       placeholder="0.00"
                       required
                     />
@@ -560,6 +618,16 @@ export function InvoiceForm() {
             </tbody>
           </table>
         </div>
+        {derived.some((item) => item.descriptionTooShort) && (
+          <p className="mt-2 text-xs text-destructive">
+            Item descriptions must be at least 3 characters.
+          </p>
+        )}
+        {derived.some((item) => item.priceInvalid) && (
+          <p className="mt-2 text-xs text-destructive">
+            Unit prices must be valid numbers.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-4">
@@ -608,7 +676,12 @@ export function InvoiceForm() {
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <div className="flex justify-end">
-        <Button type="submit" size="lg" disabled={!valid || pending}>
+        <Button
+          type="button"
+          size="lg"
+          disabled={pending}
+          onClick={() => submitInvoice()}
+        >
           {pending ? "Saving…" : "Save Invoice"}
         </Button>
       </div>

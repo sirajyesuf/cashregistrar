@@ -148,9 +148,12 @@ export async function POST(request: Request) {
   })
 
   for (const line of parsedLines) {
-    if (!line.description) {
+    if (line.description.length < 3) {
       return NextResponse.json(
-        { error: "Every line item needs a description" },
+        {
+          error:
+            "Every line item description must be at least 3 characters (required by EIMS)",
+        },
         { status: 400 }
       )
     }
