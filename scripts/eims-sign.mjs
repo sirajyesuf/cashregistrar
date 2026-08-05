@@ -60,7 +60,7 @@ function buildConfig(args) {
 
 function signAndWrap(privateKey, certificatePem, requestObj) {
   const requestJson = JSON.stringify(requestObj)
-  const signer = createSign("RSA-SHA256")
+  const signer = createSign("RSA-SHA512")
   signer.update(requestJson)
   signer.end()
   const signature = signer.sign(privateKey, "base64")

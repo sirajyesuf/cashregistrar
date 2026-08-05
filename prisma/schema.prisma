@@ -19,8 +19,8 @@ model User {
 
 model EimsToken {
   id           String    @id @default(cuid())
-  accessToken  String
-  refreshToken String?
+  accessToken  String    @db.Text
+  refreshToken String?   @db.Text
   expiresAt    DateTime
   updatedAt    DateTime  @updatedAt
 }

@@ -12,7 +12,7 @@ export function signAndWrap(
   request: unknown
 ): SignedRequest {
   const requestJson = JSON.stringify(request)
-  const signer = createSign("RSA-SHA256")
+  const signer = createSign("RSA-SHA512")
   signer.update(requestJson)
   signer.end()
   const signature = signer.sign(privateKey, "base64")
