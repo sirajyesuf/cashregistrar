@@ -14,9 +14,21 @@ type AuthFormProps = {
 
 function errorMessage(error: unknown): string | null {
   if (error && typeof error === "object") {
-    const e = error as { message?: unknown; code?: unknown }
+    const e = error as {
+      message?: unknown
+      code?: unknown
+      status?: unknown
+      statusText?: unknown
+    }
     if (typeof e.message === "string" && e.message) return e.message
     if (typeof e.code === "string" && e.code) return e.code
+    if (typeof e.status === "number") {
+      const statusText =
+        typeof e.statusText === "string" && e.statusText
+          ? ` ${e.statusText}`
+          : ""
+      return `${e.status}${statusText}`
+    }
   }
   return null
 }
