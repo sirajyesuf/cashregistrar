@@ -51,7 +51,7 @@ export async function GET(request: Request) {
         id: true,
         number: true,
         date: true,
-        customerName: true,
+        buyerLegalName: true,
         taxRate: true,
         grandTotal: true,
         irn: true,
@@ -74,7 +74,6 @@ export async function POST(request: Request) {
 
   let body: {
     date?: unknown
-    customerName?: unknown
     taxRate?: unknown
     transactionType?: unknown
     buyer?: Record<string, unknown> | null
@@ -90,8 +89,6 @@ export async function POST(request: Request) {
   }
 
   const date = typeof body.date === "string" ? body.date : ""
-  const customerName =
-    typeof body.customerName === "string" ? body.customerName.trim() : ""
   const taxRate = Number(body.taxRate)
   const transactionType = body.transactionType === "B2C" ? "B2C" : "B2B"
   const incomeWithholdRate = Math.min(
@@ -101,6 +98,7 @@ export async function POST(request: Request) {
   const cashierName = str(body.cashierName) || "AAA"
   const salesPersonName = str(body.salesPersonName) || "AAA"
   const buyer = body.buyer && typeof body.buyer === "object" ? body.buyer : {}
+  const buyerLegalName = str(buyer.legalName)
   const buyerTin = str(buyer.tin)
   const lines = Array.isArray(body.lines) ? body.lines : []
 
@@ -110,9 +108,9 @@ export async function POST(request: Request) {
       { status: 400 }
     )
   }
-  if (!customerName) {
+  if (!buyerLegalName) {
     return NextResponse.json(
-      { error: "Customer name is required" },
+      { error: "Customer legal name is required" },
       { status: 400 }
     )
   }
@@ -188,7 +186,7 @@ export async function POST(request: Request) {
     data: {
       number,
       date,
-      customerName,
+      buyerLegalName,
       taxRate: new Prisma.Decimal(taxRate),
       subtotal: centsToDecimal(subtotalCents),
       taxAmount: centsToDecimal(taxAmountCents),
@@ -197,7 +195,6 @@ export async function POST(request: Request) {
       incomeWithholdRate: new Prisma.Decimal(incomeWithholdRate),
       cashierName,
       salesPersonName,
-      buyerLegalName: str(buyer.legalName),
       buyerTin: buyerTin,
       buyerVatNumber: str(buyer.vatNumber),
       buyerIdType: str(buyer.idType),

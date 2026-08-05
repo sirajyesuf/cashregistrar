@@ -14,7 +14,6 @@ type ApiInvoice = {
   id: string
   number: string
   date: string
-  customerName: string
   taxRate: string
   subtotal: string
   taxAmount: string

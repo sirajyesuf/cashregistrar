@@ -13,7 +13,7 @@ type InvoiceRow = {
   id: string
   number: string
   date: string
-  customerName: string
+  buyerLegalName: string | null
   grandTotal: string
   _count: { lines: number }
   irn?: string | null
@@ -169,7 +169,9 @@ export default function InvoicesPage() {
                         {invoice.number}
                       </Link>
                     </td>
-                    <td className="px-4 py-2">{invoice.customerName}</td>
+                    <td className="px-4 py-2">
+                      {invoice.buyerLegalName || "—"}
+                    </td>
                     <td className="px-4 py-2">{invoice.date.slice(0, 10)}</td>
                     <td className="px-4 py-2 text-right tabular-nums">
                       {invoice._count.lines}

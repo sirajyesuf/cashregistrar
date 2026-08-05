@@ -20,6 +20,7 @@ import {
   moneyToCents,
   todayString,
   EMPTY_BUYER,
+  TEST_BUYER,
   type BuyerDetails,
   type TransactionType,
 } from "@/lib/invoice"
@@ -55,7 +56,6 @@ const UNITS = ["PCS", "KG", "M", "L", "BOX", "EA", "Other"]
 export function InvoiceForm() {
   const router = useRouter()
   const [date, setDate] = useState(todayString())
-  const [customerName, setCustomerName] = useState("")
   const [lineItems, setLineItems] = useState<LineInput[]>([createLineItem()])
   const [taxRate, setTaxRate] = useState(15)
   const [transactionType, setTransactionType] = useState<TransactionType>("B2B")
@@ -92,6 +92,11 @@ export function InvoiceForm() {
     []
   )
 
+  const fillTestBuyer = useCallback(() => {
+    setTransactionType("B2B")
+    setBuyer({ ...TEST_BUYER })
+  }, [])
+
   const derived = useMemo(
     () =>
       lineItems.map((item) => {
@@ -121,25 +126,22 @@ export function InvoiceForm() {
   const totals = calculateTotalsCents(derived, taxRate)
 
   const buyerValid = useMemo(() => {
-    if (transactionType === "B2C") return true
-    return (
-      buyer.tin.trim() !== "" &&
-      (buyer.idType.trim() !== "" || buyer.idNumber.trim() !== "")
-    )
+    const legalNameOk = buyer.legalName.trim() !== ""
+    if (transactionType === "B2C") return legalNameOk
+    return legalNameOk && buyer.tin.trim() !== ""
   }, [transactionType, buyer])
 
   const valid = useMemo(
     () =>
       date !== "" &&
       !isFutureDate(date) &&
-      customerName.trim() !== "" &&
       Number.isFinite(taxRate) &&
       taxRate >= 0 &&
       taxRate <= 100 &&
       buyerValid &&
       derived.length > 0 &&
       derived.every((item) => item.valid),
-    [date, customerName, taxRate, buyerValid, derived]
+    [date, taxRate, buyerValid, derived]
   )
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -153,7 +155,6 @@ export function InvoiceForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date,
-          customerName: customerName.trim(),
           taxRate,
           transactionType,
           buyer,
@@ -202,16 +203,6 @@ export function InvoiceForm() {
           )}
         </div>
         <div className="flex-1">
-          <Label htmlFor="customerName">Customer Name</Label>
-          <Input
-            id="customerName"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="e.g. Acme Corp"
-            required
-          />
-        </div>
-        <div className="w-40">
           <Label htmlFor="transactionType">Transaction Type</Label>
           <Select
             value={transactionType}
@@ -246,6 +237,18 @@ export function InvoiceForm() {
                 TIN: {buyer.tin}
               </span>
             )}
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                fillTestBuyer()
+              }}
+            >
+              Test buyer detail
+            </Button>
             <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
           </span>
         </summary>
@@ -258,6 +261,7 @@ export function InvoiceForm() {
                 value={buyer.legalName}
                 onChange={(e) => updateBuyer("legalName", e.target.value)}
                 placeholder="Buyer registered name"
+                required
               />
             </div>
             <div>

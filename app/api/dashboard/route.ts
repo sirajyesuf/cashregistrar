@@ -25,7 +25,7 @@ export async function GET() {
       id: true,
       number: true,
       date: true,
-      customerName: true,
+      buyerLegalName: true,
       taxRate: true,
       taxAmount: true,
       grandTotal: true,
@@ -40,7 +40,7 @@ export async function GET() {
   const monthlyMap = new Map<string, { revenueCents: number; count: number }>()
 
   for (const inv of invoices) {
-    customers.add(inv.customerName)
+    if (inv.buyerLegalName) customers.add(inv.buyerLegalName)
     const key = inv.date.slice(0, 7)
     const bucket = monthlyMap.get(key) ?? { revenueCents: 0, count: 0 }
     bucket.revenueCents += toCents(inv.grandTotal)
@@ -103,7 +103,7 @@ export async function GET() {
       id: inv.id,
       number: inv.number,
       date: inv.date,
-      customerName: inv.customerName,
+      customerName: inv.buyerLegalName,
       grandTotal: inv.grandTotal,
       createdAt: inv.createdAt,
       _count: inv._count,

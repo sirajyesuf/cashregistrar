@@ -52,7 +52,7 @@ export function InvoicePreview({ data, seller }: Props) {
               Bill To
             </p>
             <p className="mt-1 font-medium text-gray-900">
-              {data.buyer?.legalName || data.customerName}
+              {data.buyer?.legalName || "—"}
             </p>
             {data.buyer?.tin && (
               <p className="text-sm text-gray-600">TIN: {data.buyer.tin}</p>

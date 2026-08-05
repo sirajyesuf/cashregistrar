@@ -34,6 +34,23 @@ export const EMPTY_BUYER: BuyerDetails = {
   wereda: "",
 }
 
+export const TEST_BUYER: BuyerDetails = {
+  legalName: "Taxpayer A",
+  tin: "0089238373",
+  vatNumber: "1000000001",
+  idType: "KID",
+  idNumber: "111222333444",
+  email: "codethicaet@gmail.com",
+  phone: "251911091245",
+  region: "13",
+  city: "101",
+  country: "70",
+  zone: "A",
+  kebele: "Near Airport",
+  wereda: "574",
+  houseNumber: "101",
+}
+
 export type LineItemCents = {
   id: string
   description: string
@@ -75,7 +92,6 @@ export type PreviewInvoice = {
   id: string
   number: string
   date: string
-  customerName: string
   taxRate: number
   lineItems: PreviewLineItem[]
   transactionType?: TransactionType
@@ -138,15 +154,14 @@ type ApiInvoice = {
   id: string
   number: string
   date: string
-  customerName: string
   taxRate: ApiMoney
   subtotal: ApiMoney
   taxAmount: ApiMoney
   grandTotal: ApiMoney
   lines: ApiLine[]
   transactionType?: string | null
-  buyerTin?: string | null
   buyerLegalName?: string | null
+  buyerTin?: string | null
   irn?: string | null
   registrationStatus?: string | null
 }
@@ -165,7 +180,6 @@ export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
     id: invoice.id,
     number: invoice.number,
     date: invoice.date.slice(0, 10),
-    customerName: invoice.customerName,
     taxRate: Number(invoice.taxRate),
     lineItems,
     transactionType:

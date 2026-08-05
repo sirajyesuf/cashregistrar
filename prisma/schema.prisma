@@ -46,7 +46,6 @@ model Invoice {
   id           String        @id @default(cuid())
   number       String        @unique
   date         String        @db.VarChar(10)
-  customerName String
   taxRate      Decimal       @db.Decimal(5, 2)
   subtotal     Decimal       @db.Decimal(14, 2)
   taxAmount    Decimal       @db.Decimal(14, 2)
