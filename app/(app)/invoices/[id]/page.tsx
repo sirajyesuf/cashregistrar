@@ -4,7 +4,9 @@ import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { InvoicePreview } from "@/components/invoice/invoice-preview"
+import { RegisterButton } from "@/components/invoice/register-button"
 import { invoiceFromApi } from "@/lib/invoice"
 import type { PreviewInvoice, SellerInfo } from "@/lib/invoice"
 
@@ -64,6 +66,12 @@ export default function InvoiceDetailPage() {
       )
   }, [id])
 
+  const handleRegistered = (irn: string | null) => {
+    setInvoice((prev) =>
+      prev ? { ...prev, irn, registrationStatus: "REGISTERED" } : prev
+    )
+  }
+
   return (
     <div className="mx-auto max-w-4xl p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -82,7 +90,31 @@ export default function InvoiceDetailPage() {
         <p className="text-sm text-muted-foreground">Loading…</p>
       )}
 
-      {invoice && <InvoicePreview data={invoice} seller={seller} />}
+      {invoice && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 px-4 py-3 print:hidden">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium">EIMS Registration</span>
+              {invoice.registrationStatus === "REGISTERED" ? (
+                <Badge variant="success">
+                  {invoice.irn ? `Registered · ${invoice.irn}` : "Registered"}
+                </Badge>
+              ) : invoice.registrationStatus === "FAILED" ? (
+                <Badge variant="destructive">Failed</Badge>
+              ) : (
+                <Badge variant="outline">Unregistered</Badge>
+              )}
+            </div>
+            <RegisterButton
+              invoiceId={invoice.id}
+              size="sm"
+              disabled={invoice.registrationStatus === "REGISTERED"}
+              onRegistered={handleRegistered}
+            />
+          </div>
+          <InvoicePreview data={invoice} seller={seller} />
+        </div>
+      )}
     </div>
   )
 }

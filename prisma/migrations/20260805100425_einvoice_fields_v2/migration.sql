@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE `Invoice` ADD COLUMN `cashierName` VARCHAR(191) NOT NULL DEFAULT 'AAA',
+    ADD COLUMN `incomeWithholdRate` DECIMAL(5, 2) NULL DEFAULT 2,
+    ADD COLUMN `salesPersonName` VARCHAR(191) NOT NULL DEFAULT 'AAA';

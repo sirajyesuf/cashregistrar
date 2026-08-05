@@ -51,13 +51,24 @@ export function InvoicePreview({ data, seller }: Props) {
             <p className="text-xs font-medium tracking-wider text-gray-500 uppercase">
               Bill To
             </p>
-            <p className="mt-1 font-medium text-gray-900">{data.customerName}</p>
+            <p className="mt-1 font-medium text-gray-900">
+              {data.buyer?.legalName || data.customerName}
+            </p>
+            {data.buyer?.tin && (
+              <p className="text-sm text-gray-600">TIN: {data.buyer.tin}</p>
+            )}
+            {data.buyer?.phone && (
+              <p className="text-sm text-gray-600">{data.buyer.phone}</p>
+            )}
           </div>
           <div className="text-right">
             <p className="text-xs font-medium tracking-wider text-gray-500 uppercase">
               Date
             </p>
             <p className="mt-1 text-gray-900">{data.date}</p>
+            {data.irn && (
+              <p className="mt-1 text-xs text-gray-500">IRN: {data.irn}</p>
+            )}
           </div>
         </div>
 
@@ -79,9 +90,17 @@ export function InvoicePreview({ data, seller }: Props) {
           <tbody>
             {data.lineItems.map((item) => (
               <tr key={item.id} className="border-b border-gray-100">
-                <td className="py-3 text-gray-900">{item.description}</td>
+                <td className="py-3 text-gray-900">
+                  {item.itemCode ? (
+                    <>
+                      <span className="font-medium">{item.itemCode}</span>{" "}
+                      <span className="text-gray-500">· </span>
+                    </>
+                  ) : null}
+                  {item.description}
+                </td>
                 <td className="py-3 text-right text-gray-900 tabular-nums">
-                  {item.quantity}
+                  {item.quantity} {item.unit || ""}
                 </td>
                 <td className="py-3 text-right text-gray-900 tabular-nums">
                   {formatCents(item.unitPriceCents)}
@@ -97,15 +116,21 @@ export function InvoicePreview({ data, seller }: Props) {
         <div className="mt-4 ml-auto w-64 space-y-1.5 text-sm">
           <div className="flex justify-between text-gray-600">
             <span>Subtotal</span>
-            <span className="tabular-nums">{formatCents(data.subtotalCents)}</span>
+            <span className="tabular-nums">
+              {formatCents(data.subtotalCents)}
+            </span>
           </div>
           <div className="flex justify-between text-gray-600">
             <span>Tax ({data.taxRate}%)</span>
-            <span className="tabular-nums">{formatCents(data.taxAmountCents)}</span>
+            <span className="tabular-nums">
+              {formatCents(data.taxAmountCents)}
+            </span>
           </div>
           <div className="flex justify-between border-t border-gray-200 pt-1.5 text-base font-bold text-gray-900">
             <span>Total</span>
-            <span className="tabular-nums">{formatCents(data.grandTotalCents)}</span>
+            <span className="tabular-nums">
+              {formatCents(data.grandTotalCents)}
+            </span>
           </div>
         </div>
 

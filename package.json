@@ -16,7 +16,11 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "seed:seller": "prisma db seed"
+  },
+  "prisma": {
+    "seed": "node prisma/seed-seller.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -26,7 +30,6 @@
     "jose": "^6.2.4",
     "lucide-react": "^1.26.0",
     "next": "16.2.6",
-    "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "shadcn": "^4.14.1",
@@ -36,13 +39,13 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "prisma": "^6.7.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
+    "prisma": "^6.7.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

@@ -13,8 +13,7 @@ export async function POST() {
       expiresAt: token.expiresAt,
     })
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "EIMS login failed"
+    const message = err instanceof Error ? err.message : "EIMS login failed"
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

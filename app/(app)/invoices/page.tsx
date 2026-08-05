@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Plus, Trash2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Pagination } from "@/components/ui/pagination"
+import { RegisterButton } from "@/components/invoice/register-button"
 import { formatCents, moneyToCents } from "@/lib/invoice"
 
 type InvoiceRow = {
@@ -14,9 +16,31 @@ type InvoiceRow = {
   customerName: string
   grandTotal: string
   _count: { lines: number }
+  irn?: string | null
+  registrationStatus?: string | null
 }
 
 const PAGE_SIZE = 10
+
+function StatusBadge({
+  status,
+  irn,
+}: {
+  status?: string | null
+  irn?: string | null
+}) {
+  if (status === "REGISTERED") {
+    return (
+      <Badge variant="success" title={irn ? `IRN: ${irn}` : undefined}>
+        Registered
+      </Badge>
+    )
+  }
+  if (status === "FAILED") {
+    return <Badge variant="destructive">Failed</Badge>
+  }
+  return <Badge variant="outline">Unregistered</Badge>
+}
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceRow[] | null>(null)
@@ -52,6 +76,16 @@ export default function InvoicesPage() {
     }
   }, [page, reloadKey])
 
+  const handleRegistered = (id: string) => {
+    setInvoices((prev) =>
+      prev?.map((invoice) =>
+        invoice.id === id
+          ? { ...invoice, registrationStatus: "REGISTERED" }
+          : invoice
+      ) ?? prev
+    )
+  }
+
   const handleDelete = async (invoice: InvoiceRow) => {
     if (!window.confirm(`Delete invoice ${invoice.number}? This cannot be undone.`)) {
       return
@@ -78,7 +112,7 @@ export default function InvoicesPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
+    <div className="mx-auto max-w-5xl p-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Invoices</h1>
         <div className="flex flex-wrap gap-2">
@@ -120,6 +154,7 @@ export default function InvoicesPage() {
                   <th className="px-4 py-2 text-left font-medium">Date</th>
                   <th className="px-4 py-2 text-right font-medium">Lines</th>
                   <th className="px-4 py-2 text-right font-medium">Total</th>
+                  <th className="px-4 py-2 text-left font-medium">Status</th>
                   <th className="px-4 py-2 text-right font-medium">Actions</th>
                 </tr>
               </thead>
@@ -142,8 +177,20 @@ export default function InvoicesPage() {
                     <td className="px-4 py-2 text-right tabular-nums">
                       {formatCents(moneyToCents(invoice.grandTotal))}
                     </td>
+                    <td className="px-4 py-2">
+                      <StatusBadge
+                        status={invoice.registrationStatus}
+                        irn={invoice.irn}
+                      />
+                    </td>
                     <td className="px-4 py-2 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2">
+                        <RegisterButton
+                          invoiceId={invoice.id}
+                          size="sm"
+                          disabled={invoice.registrationStatus === "REGISTERED"}
+                          onRegistered={() => handleRegistered(invoice.id)}
+                        />
                         <Link href={`/invoices/${invoice.id}`}>
                           <Button variant="outline" size="sm">
                             View

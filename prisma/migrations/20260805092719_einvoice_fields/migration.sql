@@ -1,0 +1,40 @@
+-- AlterTable
+ALTER TABLE `Invoice` ADD COLUMN `buyerCity` VARCHAR(191) NULL,
+    ADD COLUMN `buyerCountry` VARCHAR(191) NULL,
+    ADD COLUMN `buyerEmail` VARCHAR(191) NULL,
+    ADD COLUMN `buyerHouseNumber` VARCHAR(191) NULL,
+    ADD COLUMN `buyerIdNumber` VARCHAR(191) NULL,
+    ADD COLUMN `buyerIdType` VARCHAR(191) NULL,
+    ADD COLUMN `buyerKebele` VARCHAR(191) NULL,
+    ADD COLUMN `buyerLegalName` VARCHAR(191) NULL,
+    ADD COLUMN `buyerPhone` VARCHAR(191) NULL,
+    ADD COLUMN `buyerRegion` VARCHAR(191) NULL,
+    ADD COLUMN `buyerTin` VARCHAR(191) NULL,
+    ADD COLUMN `buyerVatNumber` VARCHAR(191) NULL,
+    ADD COLUMN `buyerWereda` VARCHAR(191) NULL,
+    ADD COLUMN `buyerZone` VARCHAR(191) NULL,
+    ADD COLUMN `irn` VARCHAR(64) NULL,
+    ADD COLUMN `paymentMode` VARCHAR(191) NOT NULL DEFAULT 'CASH',
+    ADD COLUMN `paymentTerm` VARCHAR(191) NOT NULL DEFAULT 'IMMIDIATE',
+    ADD COLUMN `registeredAt` DATETIME(3) NULL,
+    ADD COLUMN `registrationError` TEXT NULL,
+    ADD COLUMN `registrationStatus` ENUM('PENDING', 'REGISTERED', 'FAILED') NULL,
+    ADD COLUMN `transactionType` ENUM('B2B', 'B2C') NOT NULL DEFAULT 'B2B';
+
+-- AlterTable
+ALTER TABLE `InvoiceLine` ADD COLUMN `discount` DECIMAL(14, 2) NULL,
+    ADD COLUMN `itemCode` VARCHAR(191) NULL,
+    ADD COLUMN `natureOfSupplies` VARCHAR(191) NOT NULL DEFAULT 'Goods',
+    ADD COLUMN `taxCode` VARCHAR(191) NULL,
+    ADD COLUMN `unit` VARCHAR(191) NOT NULL DEFAULT 'PCS';
+
+-- AlterTable
+ALTER TABLE `SellerProfile` ADD COLUMN `email` VARCHAR(191) NULL,
+    ADD COLUMN `houseNumber` VARCHAR(191) NULL,
+    ADD COLUMN `legalName` VARCHAR(191) NULL,
+    ADD COLUMN `locality` VARCHAR(191) NULL,
+    ADD COLUMN `phone` VARCHAR(191) NULL,
+    ADD COLUMN `region` VARCHAR(191) NULL,
+    ADD COLUMN `subCity` VARCHAR(191) NULL,
+    ADD COLUMN `vatNumber` VARCHAR(191) NULL,
+    ADD COLUMN `wereda` VARCHAR(191) NULL;

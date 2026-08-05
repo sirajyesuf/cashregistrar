@@ -4,6 +4,42 @@ import { prisma } from "@/lib/db"
 
 export const runtime = "nodejs"
 
+function str(value: unknown): string {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function profileToResponse(profile: {
+  businessName: string
+  street: string
+  city: string
+  country: string
+  legalName: string | null
+  vatNumber: string | null
+  email: string | null
+  phone: string | null
+  region: string | null
+  subCity: string | null
+  wereda: string | null
+  houseNumber: string | null
+  locality: string | null
+}) {
+  return {
+    businessName: profile.businessName,
+    street: profile.street,
+    city: profile.city,
+    country: profile.country,
+    legalName: profile.legalName ?? "",
+    vatNumber: profile.vatNumber ?? "",
+    email: profile.email ?? "",
+    phone: profile.phone ?? "",
+    region: profile.region ?? "",
+    subCity: profile.subCity ?? "",
+    wereda: profile.wereda ?? "",
+    houseNumber: profile.houseNumber ?? "",
+    locality: profile.locality ?? "",
+  }
+}
+
 export async function GET() {
   const user = await getSessionUser()
   if (!user) {
@@ -12,11 +48,11 @@ export async function GET() {
 
   const profile = await prisma.sellerProfile.findFirst()
   return NextResponse.json({
-    profile: {
-      businessName: profile?.businessName ?? "",
-      street: profile?.street ?? "",
-      city: profile?.city ?? "",
-      country: profile?.country ?? "",
+    profile: profile ? profileToResponse(profile) : null,
+    source: {
+      tin: process.env.EINVOICE_TIN ?? "",
+      systemNumber: process.env.EINVOICE_SYSTEM_NUMBER ?? "",
+      systemType: process.env.EINVOICE_SYSTEM_TYPE ?? "",
     },
   })
 }
@@ -27,12 +63,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  let body: {
-    businessName?: unknown
-    street?: unknown
-    city?: unknown
-    country?: unknown
-  }
+  let body: Record<string, unknown>
   try {
     body = await request.json()
   } catch {
@@ -40,11 +71,19 @@ export async function PUT(request: Request) {
   }
 
   const data = {
-    businessName:
-      typeof body.businessName === "string" ? body.businessName.trim() : "",
-    street: typeof body.street === "string" ? body.street.trim() : "",
-    city: typeof body.city === "string" ? body.city.trim() : "",
-    country: typeof body.country === "string" ? body.country.trim() : "",
+    businessName: str(body.businessName),
+    street: str(body.street),
+    city: str(body.city),
+    country: str(body.country),
+    legalName: str(body.legalName),
+    vatNumber: str(body.vatNumber),
+    email: str(body.email),
+    phone: str(body.phone),
+    region: str(body.region),
+    subCity: str(body.subCity),
+    wereda: str(body.wereda),
+    houseNumber: str(body.houseNumber),
+    locality: str(body.locality),
   }
 
   if (!data.businessName) {
@@ -56,15 +95,11 @@ export async function PUT(request: Request) {
 
   const existing = await prisma.sellerProfile.findFirst()
   const profile = existing
-    ? await prisma.sellerProfile.update({ where: { id: existing.id }, data })
+    ? await prisma.sellerProfile.update({
+        where: { id: existing.id },
+        data,
+      })
     : await prisma.sellerProfile.create({ data })
 
-  return NextResponse.json({
-    profile: {
-      businessName: profile.businessName,
-      street: profile.street,
-      city: profile.city,
-      country: profile.country,
-    },
-  })
+  return NextResponse.json({ profile: profileToResponse(profile) })
 }

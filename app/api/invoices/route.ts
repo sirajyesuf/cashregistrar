@@ -13,6 +13,12 @@ type LineInput = {
   description?: unknown
   quantity?: unknown
   unitPriceCents?: unknown
+  itemCode?: unknown
+  unit?: unknown
+}
+
+function str(value: unknown): string {
+  return typeof value === "string" ? value.trim() : ""
 }
 
 async function requireUser() {
@@ -48,6 +54,8 @@ export async function GET(request: Request) {
         customerName: true,
         taxRate: true,
         grandTotal: true,
+        irn: true,
+        registrationStatus: true,
         createdAt: true,
         _count: { select: { lines: true } },
       },
@@ -68,6 +76,11 @@ export async function POST(request: Request) {
     date?: unknown
     customerName?: unknown
     taxRate?: unknown
+    transactionType?: unknown
+    buyer?: Record<string, unknown> | null
+    cashierName?: unknown
+    salesPersonName?: unknown
+    incomeWithholdRate?: unknown
     lines?: LineInput[]
   }
   try {
@@ -77,15 +90,31 @@ export async function POST(request: Request) {
   }
 
   const date = typeof body.date === "string" ? body.date : ""
-  const customerName = typeof body.customerName === "string" ? body.customerName.trim() : ""
+  const customerName =
+    typeof body.customerName === "string" ? body.customerName.trim() : ""
   const taxRate = Number(body.taxRate)
+  const transactionType = body.transactionType === "B2C" ? "B2C" : "B2B"
+  const incomeWithholdRate = Math.min(
+    100,
+    Math.max(0, Number(body.incomeWithholdRate) || 2)
+  )
+  const cashierName = str(body.cashierName) || "AAA"
+  const salesPersonName = str(body.salesPersonName) || "AAA"
+  const buyer = body.buyer && typeof body.buyer === "object" ? body.buyer : {}
+  const buyerTin = str(buyer.tin)
   const lines = Array.isArray(body.lines) ? body.lines : []
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return NextResponse.json({ error: "A valid date is required" }, { status: 400 })
+    return NextResponse.json(
+      { error: "A valid date is required" },
+      { status: 400 }
+    )
   }
   if (!customerName) {
-    return NextResponse.json({ error: "Customer name is required" }, { status: 400 })
+    return NextResponse.json(
+      { error: "Customer name is required" },
+      { status: 400 }
+    )
   }
   if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) {
     return NextResponse.json(
@@ -99,12 +128,25 @@ export async function POST(request: Request) {
       { status: 400 }
     )
   }
+  if (transactionType === "B2B" && !buyerTin) {
+    return NextResponse.json(
+      { error: "B2B invoices require a buyer TIN" },
+      { status: 400 }
+    )
+  }
 
   const parsedLines = lines.map((line) => {
-    const description = typeof line.description === "string" ? line.description.trim() : ""
+    const description =
+      typeof line.description === "string" ? line.description.trim() : ""
     const quantity = Number(line.quantity)
     const unitPriceCents = Math.round(Number(line.unitPriceCents) || 0)
-    return { description, quantity, unitPriceCents }
+    return {
+      description,
+      quantity,
+      unitPriceCents,
+      itemCode: str(line.itemCode),
+      unit: str(line.unit) || "PCS",
+    }
   })
 
   for (const line of parsedLines) {
@@ -151,6 +193,24 @@ export async function POST(request: Request) {
       subtotal: centsToDecimal(subtotalCents),
       taxAmount: centsToDecimal(taxAmountCents),
       grandTotal: centsToDecimal(grandTotalCents),
+      transactionType,
+      incomeWithholdRate: new Prisma.Decimal(incomeWithholdRate),
+      cashierName,
+      salesPersonName,
+      buyerLegalName: str(buyer.legalName),
+      buyerTin: buyerTin,
+      buyerVatNumber: str(buyer.vatNumber),
+      buyerIdType: str(buyer.idType),
+      buyerIdNumber: str(buyer.idNumber),
+      buyerEmail: str(buyer.email),
+      buyerPhone: str(buyer.phone),
+      buyerCity: str(buyer.city),
+      buyerRegion: str(buyer.region),
+      buyerCountry: str(buyer.country),
+      buyerZone: str(buyer.zone),
+      buyerKebele: str(buyer.kebele),
+      buyerWereda: str(buyer.wereda),
+      buyerHouseNumber: str(buyer.houseNumber),
       userId: user.id,
       lines: {
         create: parsedLines.map((line, index) => ({
@@ -158,7 +218,11 @@ export async function POST(request: Request) {
           description: line.description,
           quantity: new Prisma.Decimal(line.quantity),
           unitPrice: centsToDecimal(line.unitPriceCents),
-          total: centsToDecimal(Math.round(line.quantity * line.unitPriceCents)),
+          total: centsToDecimal(
+            Math.round(line.quantity * line.unitPriceCents)
+          ),
+          itemCode: line.itemCode,
+          unit: line.unit,
         })),
       },
     },

@@ -17,8 +17,7 @@ export async function eimsRouteHandler(
     const { status, data } = await callEims(path, payload)
     return Response.json(data, { status })
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "EIMS request failed"
+    const message = err instanceof Error ? err.message : "EIMS request failed"
     return Response.json({ error: message }, { status: 500 })
   }
 }
@@ -32,6 +31,7 @@ export type EimsCallResult = {
 export async function callEims(
   path: string,
   payload: unknown,
+  extraHeaders: Record<string, string> = {},
   retried = false
 ): Promise<EimsCallResult> {
   const cfg = getConfig()
@@ -43,7 +43,7 @@ export async function callEims(
   } catch (err) {
     if (!retried) {
       await forceRefresh()
-      return callEims(path, payload, true)
+      return callEims(path, payload, extraHeaders, true)
     }
     throw err
   }
@@ -54,6 +54,7 @@ export async function callEims(
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
+      ...extraHeaders,
     },
     body: JSON.stringify(wrapped),
   })
@@ -68,7 +69,7 @@ export async function callEims(
 
   if (res.status === 401 && !retried) {
     await forceRefresh()
-    return callEims(path, payload, true)
+    return callEims(path, payload, extraHeaders, true)
   }
 
   return { status: res.status, ok: res.ok, data }

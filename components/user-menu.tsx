@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Menu } from "@base-ui/react/menu"
-import { useTheme } from "next-themes"
+import { useTheme } from "@/components/theme-provider"
 import { ChevronDown, LogOut, Moon, Settings, Sun } from "lucide-react"
 
 type Props = {
@@ -39,7 +39,7 @@ export function UserMenu({ name, email }: Props) {
     <Menu.Root>
       <Menu.Trigger
         aria-label="Account menu"
-        className="flex items-center gap-2 rounded-lg py-1 pr-1.5 pl-1 outline-none transition-colors select-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-muted"
+        className="flex items-center gap-2 rounded-lg py-1 pr-1.5 pl-1 transition-colors outline-none select-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-muted"
       >
         <span className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
           {initials(name)}
@@ -49,7 +49,7 @@ export function UserMenu({ name, email }: Props) {
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner className="outline-none" sideOffset={8} align="end">
-          <Menu.Popup className="relative z-50 w-56 origin-[var(--transform-origin)] rounded-xl border bg-popover p-1 text-popover-foreground shadow-md outline-none transition-[scale,opacity] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0">
+          <Menu.Popup className="relative z-50 w-56 origin-[var(--transform-origin)] rounded-xl border bg-popover p-1 text-popover-foreground shadow-md transition-[scale,opacity] duration-100 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
             <div className="px-2.5 py-2">
               <p className="truncate text-sm font-medium">{name}</p>
               <p className="truncate text-xs text-muted-foreground">{email}</p>

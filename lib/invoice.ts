@@ -1,9 +1,47 @@
+export type TransactionType = "B2B" | "B2C"
+
+export type BuyerDetails = {
+  city: string
+  email: string
+  houseNumber: string
+  idNumber: string
+  idType: string
+  tin: string
+  legalName: string
+  phone: string
+  region: string
+  country: string
+  zone: string
+  kebele: string
+  vatNumber: string
+  wereda: string
+}
+
+export const EMPTY_BUYER: BuyerDetails = {
+  city: "",
+  email: "",
+  houseNumber: "",
+  idNumber: "",
+  idType: "",
+  tin: "",
+  legalName: "",
+  phone: "",
+  region: "",
+  country: "",
+  zone: "",
+  kebele: "",
+  vatNumber: "",
+  wereda: "",
+}
+
 export type LineItemCents = {
   id: string
   description: string
   quantity: number
   unitPriceCents: number
   totalCents: number
+  itemCode?: string
+  unit?: string
 }
 
 export type InvoiceTotalsCents = {
@@ -14,6 +52,25 @@ export type InvoiceTotalsCents = {
 
 export type PreviewLineItem = LineItemCents
 
+export type SellerInfo = {
+  businessName: string
+  street: string
+  city: string
+  country: string
+  legalName?: string
+  tin?: string
+  vatNumber?: string
+  email?: string
+  phone?: string
+  region?: string
+  subCity?: string
+  wereda?: string
+  houseNumber?: string
+  locality?: string
+}
+
+export type RegistrationStatus = "PENDING" | "REGISTERED" | "FAILED"
+
 export type PreviewInvoice = {
   id: string
   number: string
@@ -21,14 +78,11 @@ export type PreviewInvoice = {
   customerName: string
   taxRate: number
   lineItems: PreviewLineItem[]
+  transactionType?: TransactionType
+  buyer?: Partial<BuyerDetails>
+  irn?: string | null
+  registrationStatus?: RegistrationStatus | null
 } & InvoiceTotalsCents
-
-export type SellerInfo = {
-  businessName: string
-  street: string
-  city: string
-  country: string
-}
 
 export function moneyToCents(value: string | number): number {
   const num = typeof value === "number" ? value : Number(value)
@@ -76,6 +130,8 @@ type ApiLine = {
   quantity: ApiMoney
   unitPrice: ApiMoney
   total: ApiMoney
+  itemCode?: string | null
+  unit?: string | null
 }
 
 type ApiInvoice = {
@@ -88,6 +144,11 @@ type ApiInvoice = {
   taxAmount: ApiMoney
   grandTotal: ApiMoney
   lines: ApiLine[]
+  transactionType?: string | null
+  buyerTin?: string | null
+  buyerLegalName?: string | null
+  irn?: string | null
+  registrationStatus?: string | null
 }
 
 export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
@@ -97,6 +158,8 @@ export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
     quantity: Number(line.quantity),
     unitPriceCents: moneyToCents(line.unitPrice),
     totalCents: moneyToCents(line.total),
+    itemCode: line.itemCode ?? undefined,
+    unit: line.unit ?? undefined,
   }))
   return {
     id: invoice.id,
@@ -105,6 +168,18 @@ export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
     customerName: invoice.customerName,
     taxRate: Number(invoice.taxRate),
     lineItems,
+    transactionType:
+      invoice.transactionType === "B2B" || invoice.transactionType === "B2C"
+        ? invoice.transactionType
+        : undefined,
+    buyer: invoice.buyerLegalName
+      ? { legalName: invoice.buyerLegalName, tin: invoice.buyerTin ?? undefined }
+      : undefined,
+    irn: invoice.irn ?? null,
+    registrationStatus: invoice.registrationStatus as
+      | RegistrationStatus
+      | null
+      | undefined,
     subtotalCents: moneyToCents(invoice.subtotal),
     taxAmountCents: moneyToCents(invoice.taxAmount),
     grandTotalCents: moneyToCents(invoice.grandTotal),

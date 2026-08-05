@@ -31,6 +31,17 @@ model Counter {
   value Int    @default(0)
 }
 
+enum RegistrationStatus {
+  PENDING
+  REGISTERED
+  FAILED
+}
+
+enum TransactionType {
+  B2B
+  B2C
+}
+
 model Invoice {
   id           String        @id @default(cuid())
   number       String        @unique
@@ -40,6 +51,36 @@ model Invoice {
   subtotal     Decimal       @db.Decimal(14, 2)
   taxAmount    Decimal       @db.Decimal(14, 2)
   grandTotal   Decimal       @db.Decimal(14, 2)
+
+  transactionType TransactionType @default(B2B)
+
+  buyerLegalName  String?
+  buyerTin        String?
+  buyerVatNumber  String?
+  buyerIdType     String?
+  buyerIdNumber   String?
+  buyerEmail      String?
+  buyerPhone      String?
+  buyerCity       String?
+  buyerRegion     String?
+  buyerCountry    String?
+  buyerZone       String?
+  buyerKebele     String?
+  buyerWereda     String?
+  buyerHouseNumber String?
+
+  paymentMode String @default("CASH")
+  paymentTerm String @default("IMMIDIATE")
+
+  incomeWithholdRate Decimal? @default(2) @db.Decimal(5, 2)
+  cashierName        String   @default("AAA")
+  salesPersonName    String   @default("AAA")
+
+  irn                String?            @db.Text
+  registrationStatus RegistrationStatus?
+  registrationError  String?            @db.Text
+  registeredAt       DateTime?
+
   userId       String
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   lines        InvoiceLine[]
@@ -48,14 +89,19 @@ model Invoice {
 }
 
 model InvoiceLine {
-  id          String   @id @default(cuid())
-  invoiceId   String
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  lineNumber  Int
-  description String
-  quantity    Decimal  @db.Decimal(12, 3)
-  unitPrice   Decimal  @db.Decimal(12, 2)
-  total       Decimal  @db.Decimal(14, 2)
+  id                String   @id @default(cuid())
+  invoiceId         String
+  invoice           Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  lineNumber        Int
+  description       String
+  quantity          Decimal  @db.Decimal(12, 3)
+  unitPrice         Decimal  @db.Decimal(12, 2)
+  total             Decimal  @db.Decimal(14, 2)
+  itemCode          String?
+  unit              String   @default("PCS")
+  natureOfSupplies  String   @default("goods")
+  taxCode           String?
+  discount          Decimal? @db.Decimal(14, 2)
 }
 
 model SellerProfile {
@@ -64,5 +110,14 @@ model SellerProfile {
   street       String
   city         String
   country      String
+  legalName    String?
+  vatNumber    String?
+  email        String?
+  phone        String?
+  region       String?
+  subCity      String?
+  wereda       String?
+  houseNumber  String?
+  locality     String?
   updatedAt    DateTime @updatedAt
 }

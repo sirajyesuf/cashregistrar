@@ -2,32 +2,55 @@
 
 import { useCallback, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, X } from "lucide-react"
+import { Building2, ChevronDown, Plus, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { uid } from "@/lib/utils"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   calculateTotalsCents,
   formatCents,
   lineTotalCents,
   moneyToCents,
   todayString,
+  EMPTY_BUYER,
+  type BuyerDetails,
+  type TransactionType,
 } from "@/lib/invoice"
+import { uid } from "@/lib/utils"
 
 type LineInput = {
   id: string
   description: string
   quantity: string
   unitPrice: string
+  itemCode: string
+  unit: string
 }
 
 function createLineItem(): LineInput {
-  return { id: uid(), description: "", quantity: "1", unitPrice: "" }
+  return {
+    id: uid(),
+    description: "",
+    quantity: "1",
+    unitPrice: "",
+    itemCode: "",
+    unit: "PCS",
+  }
 }
 
 function isFutureDate(date: string): boolean {
   return date > todayString()
 }
+
+const ID_TYPES = ["KID", "Passport", "Driver License", "Other"]
+const UNITS = ["PCS", "KG", "M", "L", "BOX", "EA", "Other"]
 
 export function InvoiceForm() {
   const router = useRouter()
@@ -35,13 +58,20 @@ export function InvoiceForm() {
   const [customerName, setCustomerName] = useState("")
   const [lineItems, setLineItems] = useState<LineInput[]>([createLineItem()])
   const [taxRate, setTaxRate] = useState(15)
+  const [transactionType, setTransactionType] = useState<TransactionType>("B2B")
+  const [buyer, setBuyer] = useState<BuyerDetails>(EMPTY_BUYER)
+  const [cashierName, setCashierName] = useState("AAA")
+  const [salesPersonName, setSalesPersonName] = useState("AAA")
+  const [incomeWithholdRate, setIncomeWithholdRate] = useState(2)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
   const updateLineItem = useCallback(
     (id: string, field: keyof Omit<LineInput, "id">, value: string) => {
       setLineItems((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+        prev.map((item) =>
+          item.id === id ? { ...item, [field]: value } : item
+        )
       )
     },
     []
@@ -54,6 +84,13 @@ export function InvoiceForm() {
   const addLineItem = useCallback(() => {
     setLineItems((prev) => [...prev, createLineItem()])
   }, [])
+
+  const updateBuyer = useCallback(
+    (field: keyof BuyerDetails, value: string) => {
+      setBuyer((prev) => ({ ...prev, [field]: value }))
+    },
+    []
+  )
 
   const derived = useMemo(
     () =>
@@ -70,6 +107,8 @@ export function InvoiceForm() {
           totalCents: lineTotalCents(quantityNum, unitPriceCents),
           rawQuantity: item.quantity,
           rawUnitPrice: item.unitPrice,
+          itemCode: item.itemCode,
+          unit: item.unit,
           valid:
             item.description.trim() !== "" &&
             quantityNum > 0 &&
@@ -81,6 +120,14 @@ export function InvoiceForm() {
 
   const totals = calculateTotalsCents(derived, taxRate)
 
+  const buyerValid = useMemo(() => {
+    if (transactionType === "B2C") return true
+    return (
+      buyer.tin.trim() !== "" &&
+      (buyer.idType.trim() !== "" || buyer.idNumber.trim() !== "")
+    )
+  }, [transactionType, buyer])
+
   const valid = useMemo(
     () =>
       date !== "" &&
@@ -89,12 +136,13 @@ export function InvoiceForm() {
       Number.isFinite(taxRate) &&
       taxRate >= 0 &&
       taxRate <= 100 &&
+      buyerValid &&
       derived.length > 0 &&
       derived.every((item) => item.valid),
-    [date, customerName, taxRate, derived]
+    [date, customerName, taxRate, buyerValid, derived]
   )
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!valid || pending) return
     setError(null)
@@ -107,10 +155,17 @@ export function InvoiceForm() {
           date,
           customerName: customerName.trim(),
           taxRate,
+          transactionType,
+          buyer,
+          cashierName: cashierName.trim() || "AAA",
+          salesPersonName: salesPersonName.trim() || "AAA",
+          incomeWithholdRate,
           lines: derived.map((item) => ({
             description: item.description.trim(),
             quantity: item.quantity,
             unitPriceCents: item.unitPriceCents,
+            itemCode: item.itemCode.trim(),
+            unit: item.unit.trim() || "PCS",
           })),
         }),
       })
@@ -123,20 +178,16 @@ export function InvoiceForm() {
       }
       router.push(`/invoices/${body.invoice.id}`)
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save invoice"
-      )
+      setError(err instanceof Error ? err.message : "Failed to save invoice")
       setPending(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6">
-      <div className="flex flex-wrap gap-4">
+    <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-6">
+      <div className="flex flex-wrap items-end gap-4">
         <div className="flex-1">
-          <label htmlFor="date" className="text-sm font-medium">
-            Date
-          </label>
+          <Label htmlFor="date">Date</Label>
           <Input
             id="date"
             type="date"
@@ -151,9 +202,7 @@ export function InvoiceForm() {
           )}
         </div>
         <div className="flex-1">
-          <label htmlFor="customerName" className="text-sm font-medium">
-            Customer Name
-          </label>
+          <Label htmlFor="customerName">Customer Name</Label>
           <Input
             id="customerName"
             value={customerName}
@@ -162,6 +211,229 @@ export function InvoiceForm() {
             required
           />
         </div>
+        <div className="w-40">
+          <Label htmlFor="transactionType">Transaction Type</Label>
+          <Select
+            value={transactionType}
+            onValueChange={(value) => {
+              if (value === "B2B" || value === "B2C") {
+                setTransactionType(value)
+              }
+            }}
+          >
+            <SelectTrigger id="transactionType">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="B2B">B2B — Business</SelectItem>
+              <SelectItem value="B2C">B2C — Consumer</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <details className="group rounded-lg border">
+        <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
+          {transactionType === "B2B" ? (
+            <Building2 className="size-4" />
+          ) : (
+            <User className="size-4" />
+          )}
+          Buyer Details
+          <span className="ml-auto inline-flex items-center gap-3">
+            {transactionType === "B2B" && buyer.tin.trim() && (
+              <span className="text-xs text-muted-foreground">
+                TIN: {buyer.tin}
+              </span>
+            )}
+            <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+          </span>
+        </summary>
+        <div className="space-y-4 border-t p-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="buyerLegalName">Legal Name</Label>
+              <Input
+                id="buyerLegalName"
+                value={buyer.legalName}
+                onChange={(e) => updateBuyer("legalName", e.target.value)}
+                placeholder="Buyer registered name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="buyerTin">TIN</Label>
+              <Input
+                id="buyerTin"
+                value={buyer.tin}
+                onChange={(e) => updateBuyer("tin", e.target.value)}
+                placeholder="Buyer tax ID"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="buyerVatNumber">VAT Number</Label>
+              <Input
+                id="buyerVatNumber"
+                value={buyer.vatNumber}
+                onChange={(e) => updateBuyer("vatNumber", e.target.value)}
+                placeholder="Buyer VAT number"
+              />
+            </div>
+            <div>
+              <Label htmlFor="buyerIdNumber">ID Number</Label>
+              <Input
+                id="buyerIdNumber"
+                value={buyer.idNumber}
+                onChange={(e) => updateBuyer("idNumber", e.target.value)}
+                placeholder="National / kebele ID"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="buyerIdType">ID Type</Label>
+              <Select
+                value={buyer.idType}
+                onValueChange={(value) => updateBuyer("idType", value ?? "")}
+              >
+                <SelectTrigger id="buyerIdType">
+                  <SelectValue placeholder="Select…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ID_TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="buyerEmail">Email</Label>
+              <Input
+                id="buyerEmail"
+                type="email"
+                value={buyer.email}
+                onChange={(e) => updateBuyer("email", e.target.value)}
+                placeholder="buyer@example.com"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="buyerPhone">Phone</Label>
+              <Input
+                id="buyerPhone"
+                value={buyer.phone}
+                onChange={(e) => updateBuyer("phone", e.target.value)}
+                placeholder="e.g. 0912345678"
+              />
+            </div>
+            <div>
+              <Label htmlFor="buyerHouseNumber">House Number</Label>
+              <Input
+                id="buyerHouseNumber"
+                value={buyer.houseNumber}
+                onChange={(e) => updateBuyer("houseNumber", e.target.value)}
+                placeholder="House / building number"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="buyerRegion">Region</Label>
+              <Input
+                id="buyerRegion"
+                value={buyer.region}
+                onChange={(e) => updateBuyer("region", e.target.value)}
+                placeholder="e.g. 13"
+              />
+            </div>
+            <div>
+              <Label htmlFor="buyerCity">City</Label>
+              <Input
+                id="buyerCity"
+                value={buyer.city}
+                onChange={(e) => updateBuyer("city", e.target.value)}
+                placeholder="e.g. Addis Ababa"
+              />
+            </div>
+            <div>
+              <Label htmlFor="buyerCountry">Country</Label>
+              <Input
+                id="buyerCountry"
+                value={buyer.country}
+                onChange={(e) => updateBuyer("country", e.target.value)}
+                placeholder="e.g. 70"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="buyerZone">Zone</Label>
+              <Input
+                id="buyerZone"
+                value={buyer.zone}
+                onChange={(e) => updateBuyer("zone", e.target.value)}
+                placeholder="Zone"
+              />
+            </div>
+            <div>
+              <Label htmlFor="buyerWereda">Wereda</Label>
+              <Input
+                id="buyerWereda"
+                value={buyer.wereda}
+                onChange={(e) => updateBuyer("wereda", e.target.value)}
+                placeholder="Wereda / district"
+              />
+            </div>
+            <div>
+              <Label htmlFor="buyerKebele">Kebele</Label>
+              <Input
+                id="buyerKebele"
+                value={buyer.kebele}
+                onChange={(e) => updateBuyer("kebele", e.target.value)}
+                placeholder="Kebele"
+              />
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+        <div>
+          <Label htmlFor="cashierName">Cashier Name</Label>
+          <Input
+            id="cashierName"
+            value={cashierName}
+            onChange={(e) => setCashierName(e.target.value)}
+            placeholder="AAA"
+          />
+        </div>
+        <div>
+          <Label htmlFor="salesPersonName">Sales Person</Label>
+          <Input
+            id="salesPersonName"
+            value={salesPersonName}
+            onChange={(e) => setSalesPersonName(e.target.value)}
+            placeholder="AAA"
+          />
+        </div>
+        {transactionType === "B2B" && (
+          <div>
+            <Label htmlFor="incomeWithholdRate">Income Withhold (%)</Label>
+            <Input
+              id="incomeWithholdRate"
+              type="number"
+              min="0"
+              max="100"
+              step="any"
+              value={incomeWithholdRate}
+              onChange={(e) => setIncomeWithholdRate(Number(e.target.value))}
+            />
+          </div>
+        )}
       </div>
 
       <div>
@@ -182,9 +454,13 @@ export function InvoiceForm() {
           <table className="w-full text-sm">
             <thead className="bg-muted">
               <tr>
+                <th className="w-24 px-3 py-2 text-left font-medium">Code</th>
                 <th className="px-3 py-2 text-left font-medium">Description</th>
-                <th className="w-24 px-3 py-2 text-right font-medium">Qty</th>
-                <th className="w-28 px-3 py-2 text-right font-medium">Unit Price</th>
+                <th className="w-20 px-3 py-2 text-right font-medium">Qty</th>
+                <th className="w-24 px-3 py-2 text-right font-medium">Unit</th>
+                <th className="w-28 px-3 py-2 text-right font-medium">
+                  Unit Price
+                </th>
                 <th className="w-28 px-3 py-2 text-right font-medium">Total</th>
                 <th className="w-10" />
               </tr>
@@ -192,6 +468,17 @@ export function InvoiceForm() {
             <tbody>
               {derived.map((item) => (
                 <tr key={item.id} className="border-t">
+                  <td className="px-3 py-1.5">
+                    <input
+                      value={item.itemCode}
+                      onChange={(e) =>
+                        updateLineItem(item.id, "itemCode", e.target.value)
+                      }
+                      aria-label="Item code"
+                      className="w-full bg-transparent px-1 py-1 outline-none"
+                      placeholder="SKU"
+                    />
+                  </td>
                   <td className="px-3 py-1.5">
                     <input
                       value={item.description}
@@ -217,6 +504,22 @@ export function InvoiceForm() {
                       className="w-full bg-transparent px-1 py-1 text-right outline-none"
                       required
                     />
+                  </td>
+                  <td className="px-3 py-1.5">
+                    <select
+                      value={item.unit}
+                      onChange={(e) =>
+                        updateLineItem(item.id, "unit", e.target.value)
+                      }
+                      aria-label="Unit"
+                      className="w-full bg-transparent px-1 py-1 text-right outline-none"
+                    >
+                      {UNITS.map((u) => (
+                        <option key={u} value={u}>
+                          {u}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-3 py-1.5">
                     <input
@@ -258,9 +561,7 @@ export function InvoiceForm() {
       <div className="flex flex-wrap gap-4">
         <div className="flex-1" />
         <div className="w-48">
-          <label htmlFor="taxRate" className="text-sm font-medium">
-            Tax Rate (%)
-          </label>
+          <Label htmlFor="taxRate">Tax Rate (%)</Label>
           <Input
             id="taxRate"
             type="number"
@@ -276,17 +577,29 @@ export function InvoiceForm() {
       <div className="ml-auto w-64 space-y-1.5 border-t pt-3 text-sm">
         <div className="flex justify-between">
           <span>Subtotal</span>
-          <span className="tabular-nums">{formatCents(totals.subtotalCents)}</span>
+          <span className="tabular-nums">
+            {formatCents(totals.subtotalCents)}
+          </span>
         </div>
         <div className="flex justify-between">
           <span>Tax ({taxRate}%)</span>
-          <span className="tabular-nums">{formatCents(totals.taxAmountCents)}</span>
+          <span className="tabular-nums">
+            {formatCents(totals.taxAmountCents)}
+          </span>
         </div>
         <div className="flex justify-between font-semibold">
           <span>Grand Total</span>
-          <span className="tabular-nums">{formatCents(totals.grandTotalCents)}</span>
+          <span className="tabular-nums">
+            {formatCents(totals.grandTotalCents)}
+          </span>
         </div>
       </div>
+
+      {transactionType === "B2B" && !buyer.tin.trim() && (
+        <p className="text-xs text-muted-foreground">
+          For B2B invoices, add the buyer&apos;s TIN (required by EIMS).
+        </p>
+      )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
