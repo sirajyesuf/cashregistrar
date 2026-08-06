@@ -1,12 +1,29 @@
 import { NextResponse } from "next/server"
+import type { Invoice, InvoiceLine, SellerProfile } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
-import { callEims } from "@/lib/einvoice/client"
-import { getConfig } from "@/lib/einvoice/config"
+import { callEims, type EimsCallResult } from "@/lib/einvoice/client"
+import { getConfig, type EimsConfig } from "@/lib/einvoice/config"
 import { buildRegisterPayload } from "@/lib/einvoice/payload"
 
 export const runtime = "nodejs"
 
+/**
+ * EIMS requires every invoice registered from a source system (TIN +
+ * SYSTEM_NUMBER) to carry a strictly sequential DocumentNumber / InvoiceCounter
+ * starting at 1. That sequence is tracked locally by the "eims" Counter row.
+ *
+ * The counter can drift BEHIND EIMS's real count when EIMS accepts a document
+ * but the app never records it (network/parse edge cases after acceptance,
+ * external registrations on the same source system, etc.). When that happens
+ * EIMS rejects the out-of-sequence number with a 7001/7015 error that states
+ * the expected next number ("...expected : 11").
+ *
+ * Self-heal: on a 7001/7015 sequence error we parse EIMS's expected number,
+ * realign the "eims" counter to it (EIMS is the source of truth), and
+ * auto-retry the registration once. The retry is capped at one attempt so a
+ * persistent failure surfaces normally instead of looping.
+ */
 function extractErrorMessage(data: unknown): string {
   if (data && typeof data === "object") {
     const d = data as {
@@ -47,6 +64,49 @@ function extractErrorMessage(data: unknown): string {
     if (typeof d.message === "string") return d.message
   }
   return "EIMS registration failed"
+}
+
+/**
+ * Returns true when the EIMS error message is a document/counter sequence
+ * error (codes 7001 or 7015), i.e. the only errors the counter self-heal
+ * understands.
+ */
+function isSequenceError(message: string): boolean {
+  return /7001|7015/.test(message)
+}
+
+/**
+ * Extracts the next expected document number from an EIMS sequence error
+ * message, e.g. "Document number is not in correct sequence expected : 11"
+ * returns 11. Returns null when the pattern is absent.
+ */
+function parseExpectedCounter(message: string): number | null {
+  const match = message.match(/expected\s*:\s*(\d+)/i)
+  return match ? Number(match[1]) : null
+}
+
+/**
+ * Builds the register payload for a given counter value and sends it to EIMS.
+ * Extracted so the self-heal path can re-run the same request with the
+ * corrected document number.
+ */
+async function attemptRegister(
+  cfg: EimsConfig,
+  invoice: Invoice & { lines: InvoiceLine[] },
+  seller: SellerProfile | null,
+  counterValue: number,
+  previousIrn: string | null
+): Promise<EimsCallResult> {
+  const payload = buildRegisterPayload({
+    invoice,
+    seller,
+    invoiceCounter: counterValue,
+    previousIrn,
+  })
+  return callEims("/v1/register", payload, {
+    TIN: cfg.tin,
+    SYSTEM_NUMBER: cfg.systemNumber,
+  })
 }
 
 export async function POST(request: Request) {
@@ -114,62 +174,65 @@ export async function POST(request: Request) {
     orderBy: { createdAt: "desc" },
     select: { irn: true },
   })
+  const previousIrn = previous?.irn ?? null
 
   const cfg = getConfig()
-  const payload = buildRegisterPayload({
+  let result = await attemptRegister(
+    cfg,
     invoice,
     seller,
-    invoiceCounter: counter.value,
-    previousIrn: previous?.irn ?? null,
-  })
+    counter.value,
+    previousIrn
+  )
 
-  try {
-    const result = await callEims("/v1/register", payload, {
-      TIN: cfg.tin,
-      SYSTEM_NUMBER: cfg.systemNumber,
-    })
-
-    const data = result.data as { body?: { irn?: unknown } } | undefined
-    const irn = typeof data?.body?.irn === "string" ? data.body.irn : null
-
-    if (result.ok && irn) {
-      await prisma.invoice.update({
-        where: { id: invoice.id },
-        data: {
-          irn,
-          registrationStatus: "REGISTERED",
-          registrationError: null,
-          registeredAt: new Date(),
-        },
-      })
+  // Self-heal: realign the counter to EIMS's expected next number and retry once.
+  if (!result.ok) {
+    const message = extractErrorMessage(result.data)
+    const expected = parseExpectedCounter(message)
+    if (isSequenceError(message) && expected !== null) {
       await prisma.counter.update({
         where: { name: "eims" },
-        data: { value: { increment: 1 } },
+        data: { value: expected },
       })
-      return NextResponse.json({ ok: true, irn })
+      result = await attemptRegister(
+        cfg,
+        invoice,
+        seller,
+        expected,
+        previousIrn
+      )
     }
-
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: {
-        registrationStatus: "FAILED",
-        registrationError: extractErrorMessage(data),
-      },
-    })
-    return NextResponse.json(
-      { error: extractErrorMessage(data) },
-      { status: result.ok ? 500 : result.status }
-    )
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "EIMS registration failed"
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: {
-        registrationStatus: "FAILED",
-        registrationError: message,
-      },
-    })
-    return NextResponse.json({ error: message }, { status: 500 })
   }
+
+  const data = result.data as { body?: { irn?: unknown } } | undefined
+  const irn = typeof data?.body?.irn === "string" ? data.body.irn : null
+
+  if (result.ok && irn) {
+    await prisma.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        irn,
+        registrationStatus: "REGISTERED",
+        registrationError: null,
+        registeredAt: new Date(),
+      },
+    })
+    await prisma.counter.update({
+      where: { name: "eims" },
+      data: { value: { increment: 1 } },
+    })
+    return NextResponse.json({ ok: true, irn })
+  }
+
+  await prisma.invoice.update({
+    where: { id: invoice.id },
+    data: {
+      registrationStatus: "FAILED",
+      registrationError: extractErrorMessage(data),
+    },
+  })
+  return NextResponse.json(
+    { error: extractErrorMessage(data) },
+    { status: result.ok ? 500 : result.status }
+  )
 }
