@@ -1,4 +1,7 @@
 import { PrismaClient } from "@prisma/client"
+import { loadEnv } from "./load-env.mjs"
+
+loadEnv()
 
 const prisma = new PrismaClient()
 
@@ -8,11 +11,17 @@ function value(name, fallback) {
 }
 
 const seller = {
-  businessName: value("EINVOICE_SELLER_BUSINESS_NAME", "Empire Technological solution"),
+  businessName: value(
+    "EINVOICE_SELLER_BUSINESS_NAME",
+    "Empire Technological solution"
+  ),
   street: value("EINVOICE_SELLER_STREET", ""),
   city: value("EINVOICE_SELLER_CITY", "101"),
   country: value("EINVOICE_SELLER_COUNTRY", "ET"),
-  legalName: value("EINVOICE_SELLER_LEGAL_NAME", "Empire Technological solution"),
+  legalName: value(
+    "EINVOICE_SELLER_LEGAL_NAME",
+    "Empire Technological solution"
+  ),
   vatNumber: value("EINVOICE_SELLER_VAT_NUMBER", "43256663343256663322"),
   email: value("EINVOICE_SELLER_EMAIL", "seretse@empire.et"),
   phone: value("EINVOICE_SELLER_PHONE", "+251976524241"),
@@ -31,7 +40,10 @@ if (!seller.businessName) {
 try {
   const existing = await prisma.sellerProfile.findFirst()
   const profile = existing
-    ? await prisma.sellerProfile.update({ where: { id: existing.id }, data: seller })
+    ? await prisma.sellerProfile.update({
+        where: { id: existing.id },
+        data: seller,
+      })
     : await prisma.sellerProfile.create({ data: seller })
   console.log(
     existing

@@ -17,10 +17,12 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "seed:seller": "prisma db seed"
+    "seed": "prisma db seed",
+    "seed:seller": "node prisma/seed-seller.mjs",
+    "seed:admin": "node prisma/seed-admin.mjs"
   },
   "prisma": {
-    "seed": "node prisma/seed-seller.mjs"
+    "seed": "node prisma/seed.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

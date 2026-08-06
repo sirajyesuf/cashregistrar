@@ -32,11 +32,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { data: session, isPending } = authClient.useSession()
   const user = session?.user ?? null
 
+  const isAuthPage =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/admin/login"
+
   useEffect(() => {
-    if (!isPending && !user) {
+    if (!isPending && !user && !isAuthPage) {
       router.push("/login")
     }
-  }, [isPending, user, router])
+  }, [isPending, user, router, isAuthPage])
 
   const isActive = (href: string) =>
     href === "/dashboard"
@@ -104,7 +109,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </Menu.Positioner>
                 </Menu.Portal>
               </Menu.Root>
-              {user && <UserMenu name={user.name} email={user.email} />}
+              {user && (
+                <UserMenu
+                  name={user.name}
+                  email={user.email}
+                  isAdmin={user.role === "admin"}
+                />
+              )}
             </div>
           </div>
         </header>

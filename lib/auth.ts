@@ -14,6 +14,29 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        required: true,
+        defaultValue: "user",
+        input: false,
+        returned: true,
+      },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        // The first registered user becomes the admin so the /admin area
+        // is reachable without any manual setup.
+        before: async (user) => {
+          const count = await prisma.user.count()
+          return { data: { ...user, role: count === 0 ? "admin" : "user" } }
+        },
+      },
+    },
+  },
   secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
   trustedOrigins: splitOrigins(process.env.BETTER_AUTH_TRUSTED_ORIGINS),
