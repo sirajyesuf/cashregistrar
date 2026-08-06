@@ -28,8 +28,10 @@ function Row({
 }) {
   return (
     <div className="flex items-center justify-between gap-3 py-2">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium">{children}</span>
+      <span className="shrink-0 text-sm text-muted-foreground">{label}</span>
+      <span className="min-w-0 text-right text-sm font-medium break-all">
+        {children}
+      </span>
     </div>
   )
 }
@@ -55,52 +57,60 @@ export default function AdminSystemPage() {
   if (!data) return <p className="text-sm text-muted-foreground">Loading…</p>
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <div className="rounded-xl border bg-card p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">EIMS token</h2>
-          {data.token.valid ? (
-            <Badge variant="success">Valid</Badge>
-          ) : (
-            <Badge variant="destructive">Invalid</Badge>
-          )}
-        </div>
-        <div className="mt-3 divide-y">
-          <Row label="Exists">{data.token.exists ? "Yes" : "No"}</Row>
-          <Row label="Expires">
-            {data.token.expiresAt
-              ? new Date(data.token.expiresAt).toLocaleString()
-              : "—"}
-          </Row>
-          <Row label="Updated">
-            {data.token.updatedAt
-              ? new Date(data.token.updatedAt).toLocaleString()
-              : "—"}
-          </Row>
-        </div>
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">System</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          EIMS connection, counters and configuration.
+        </p>
       </div>
-
-      <div className="rounded-xl border bg-card p-5">
-        <h2 className="font-semibold">Counters</h2>
-        <div className="mt-3 divide-y">
-          {data.counters.length === 0 && (
-            <p className="py-2 text-sm text-muted-foreground">None</p>
-          )}
-          {data.counters.map((counter) => (
-            <Row key={counter.name} label={counter.name}>
-              {counter.value}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="rounded-xl border bg-card p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">EIMS token</h2>
+            {data.token.valid ? (
+              <Badge variant="success">Valid</Badge>
+            ) : (
+              <Badge variant="destructive">Invalid</Badge>
+            )}
+          </div>
+          <div className="mt-3 divide-y">
+            <Row label="Exists">{data.token.exists ? "Yes" : "No"}</Row>
+            <Row label="Expires">
+              {data.token.expiresAt
+                ? new Date(data.token.expiresAt).toLocaleString()
+                : "—"}
             </Row>
-          ))}
+            <Row label="Updated">
+              {data.token.updatedAt
+                ? new Date(data.token.updatedAt).toLocaleString()
+                : "—"}
+            </Row>
+          </div>
         </div>
-      </div>
 
-      <div className="rounded-xl border bg-card p-5">
-        <h2 className="font-semibold">Config</h2>
-        <div className="mt-3 divide-y">
-          <Row label="TIN">{data.config.tin || "—"}</Row>
-          <Row label="System number">{data.config.systemNumber || "—"}</Row>
-          <Row label="System type">{data.config.systemType || "—"}</Row>
-          <Row label="Base URL">{data.config.baseUrl || "—"}</Row>
+        <div className="rounded-xl border bg-card p-5">
+          <h2 className="font-semibold">Counters</h2>
+          <div className="mt-3 divide-y">
+            {data.counters.length === 0 && (
+              <p className="py-2 text-sm text-muted-foreground">None</p>
+            )}
+            {data.counters.map((counter) => (
+              <Row key={counter.name} label={counter.name}>
+                {counter.value}
+              </Row>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border bg-card p-5">
+          <h2 className="font-semibold">Config</h2>
+          <div className="mt-3 divide-y">
+            <Row label="TIN">{data.config.tin || "—"}</Row>
+            <Row label="System number">{data.config.systemNumber || "—"}</Row>
+            <Row label="System type">{data.config.systemType || "—"}</Row>
+            <Row label="Base URL">{data.config.baseUrl || "—"}</Row>
+          </div>
         </div>
       </div>
     </div>

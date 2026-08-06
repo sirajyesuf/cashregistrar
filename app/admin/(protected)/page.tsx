@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
+import { Banknote, Percent, Receipt, Users } from "lucide-react"
 import { formatCents } from "@/lib/invoice"
+import { StatusBadge } from "./status-badge"
 
 type OverviewData = {
   stats: {
@@ -30,11 +31,26 @@ type OverviewData = {
   }[]
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string
+  value: string | number
+  icon: typeof Users
+}) {
   return (
-    <div className="rounded-xl border bg-card p-5">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+    <div className="rounded-xl border bg-card p-4 sm:p-5">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <span className="flex size-8 items-center justify-center rounded-lg border bg-muted/50">
+          <Icon className="size-4" />
+        </span>
+      </div>
+      <p className="mt-2 truncate text-2xl font-semibold tabular-nums">
+        {value}
+      </p>
     </div>
   )
 }
@@ -59,16 +75,29 @@ export default function AdminOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Users" value={data.stats.totalUsers} />
-        <StatCard label="Invoices" value={data.stats.totalInvoices} />
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Everything happening across the business.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Users" value={data.stats.totalUsers} icon={Users} />
+        <StatCard
+          label="Invoices"
+          value={data.stats.totalInvoices}
+          icon={Receipt}
+        />
         <StatCard
           label="Total revenue"
           value={formatCents(data.stats.totalRevenueCents)}
+          icon={Banknote}
         />
         <StatCard
           label="Total tax"
           value={formatCents(data.stats.totalTaxCents)}
+          icon={Percent}
         />
       </div>
 
@@ -77,16 +106,31 @@ export default function AdminOverviewPage() {
           <h2 className="font-semibold">Invoice status</h2>
           <div className="mt-3 space-y-2 text-sm">
             {[
-              ["Registered", data.stats.statusCounts.REGISTERED],
-              ["Cancelled", data.stats.statusCounts.CANCELLED],
-              ["Failed", data.stats.statusCounts.FAILED],
-              ["Unregistered", data.stats.statusCounts.UNREGISTERED],
-            ].map(([label, count]) => (
+              [
+                "Registered",
+                data.stats.statusCounts.REGISTERED,
+                "bg-emerald-500",
+              ],
+              [
+                "Cancelled",
+                data.stats.statusCounts.CANCELLED,
+                "bg-muted-foreground/40",
+              ],
+              ["Failed", data.stats.statusCounts.FAILED, "bg-destructive"],
+              [
+                "Unregistered",
+                data.stats.statusCounts.UNREGISTERED,
+                "bg-muted-foreground/20",
+              ],
+            ].map(([label, count, dot]) => (
               <div
                 key={label as string}
                 className="flex items-center justify-between"
               >
-                <span className="text-muted-foreground">{label}</span>
+                <span className="inline-flex items-center gap-2 text-muted-foreground">
+                  <span className={`size-2 rounded-full ${dot as string}`} />
+                  {label}
+                </span>
                 <span className="font-medium tabular-nums">
                   {count as number}
                 </span>
@@ -117,7 +161,7 @@ export default function AdminOverviewPage() {
       <div className="rounded-xl border bg-card p-5">
         <h2 className="font-semibold">Recent invoices</h2>
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[560px] text-sm">
             <thead className="text-left text-muted-foreground">
               <tr className="border-b">
                 <th className="py-2 font-medium">Number</th>
@@ -130,7 +174,7 @@ export default function AdminOverviewPage() {
             <tbody>
               {data.recent.map((inv) => (
                 <tr key={inv.id} className="border-b last:border-0">
-                  <td className="py-2">
+                  <td className="py-2 pr-4">
                     <Link
                       href={`/invoices/${inv.id}`}
                       className="font-medium underline-offset-4 hover:underline"
@@ -138,21 +182,13 @@ export default function AdminOverviewPage() {
                       {inv.number}
                     </Link>
                   </td>
-                  <td className="py-2">{inv.buyerLegalName || "—"}</td>
-                  <td className="py-2">{inv.date}</td>
-                  <td className="py-2 text-right tabular-nums">
+                  <td className="py-2 pr-4">{inv.buyerLegalName || "—"}</td>
+                  <td className="py-2 pr-4">{inv.date}</td>
+                  <td className="py-2 pr-4 text-right tabular-nums">
                     {formatCents(Number(inv.grandTotal) * 100)}
                   </td>
                   <td className="py-2">
-                    {inv.registrationStatus === "REGISTERED" ? (
-                      <Badge variant="success">Registered</Badge>
-                    ) : inv.registrationStatus === "CANCELLED" ? (
-                      <Badge variant="outline">Cancelled</Badge>
-                    ) : inv.registrationStatus === "FAILED" ? (
-                      <Badge variant="destructive">Failed</Badge>
-                    ) : (
-                      <Badge variant="outline">Unregistered</Badge>
-                    )}
+                    <StatusBadge status={inv.registrationStatus} />
                   </td>
                 </tr>
               ))}

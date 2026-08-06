@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Menu } from "@base-ui/react/menu"
-import { ChevronDown, ExternalLink, LogOut } from "lucide-react"
+import { ChevronDown, ExternalLink, LogOut, User } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 
 type Props = {
@@ -59,6 +59,13 @@ export function AdminUserMenu({ name, email }: Props) {
             >
               <ExternalLink className="size-4 text-muted-foreground" />
               Go to app
+            </Menu.LinkItem>
+            <Menu.LinkItem
+              className="flex cursor-default items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none select-none data-highlighted:bg-muted data-disabled:opacity-50"
+              render={<Link href="/admin/profile" />}
+            >
+              <User className="size-4 text-muted-foreground" />
+              Profile
             </Menu.LinkItem>
             <Menu.Item
               onClick={handleSignOut}

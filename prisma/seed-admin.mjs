@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client"
+import { betterAuth } from "better-auth"
+import { prismaAdapter } from "better-auth/adapters/prisma"
 import { loadEnv } from "./load-env.mjs"
 
 loadEnv()
@@ -6,16 +8,32 @@ loadEnv()
 const prisma = new PrismaClient()
 
 const DEFAULT_ADMIN_EMAIL = "seretse@empire.et"
+const DEFAULT_ADMIN_PASSWORD = "123456789"
+const DEFAULT_ADMIN_NAME = "Admin"
 
 /**
- * Promotes a user to the admin role so the /admin area is reachable.
+ * Minimal better-auth instance used only to create the user so the password
+ * is hashed exactly like normal sign-ups. (The app's full config lives in
+ * lib/auth.ts; this seed cannot import TypeScript modules.)
+ */
+const auth = betterAuth({
+  database: prismaAdapter(prisma, { provider: "mysql" }),
+  emailAndPassword: { enabled: true, minPasswordLength: 5 },
+  secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,
+})
+
+/**
+ * Ensures an admin account exists for the /admin area.
  *
- * Mirrors the seller seeder: idempotent, uses an env var with a sensible
- * default, and never fails the combined `prisma db seed` run.
+ * Like the seller seeder: idempotent and env-driven.
+ * - ADMIN_EMAIL   (optional) - email of the admin; defaults to DEFAULT_ADMIN_EMAIL.
+ * - ADMIN_PASSWORD (optional) - password used when creating a missing user;
+ *   defaults to DEFAULT_ADMIN_PASSWORD.
+ * - ADMIN_NAME    (optional) - display name for a newly created user.
  *
- * - ADMIN_EMAIL (optional) - email to promote; defaults to DEFAULT_ADMIN_EMAIL.
- * - On a fresh database the first registered user is already auto-promoted by
- *   the auth bootstrap hook, so a missing user here is skipped, not an error.
+ * If the user already exists they are promoted to admin; if not, the user is
+ * created (via better-auth, so the password hash matches normal sign-ups) and
+ * then promoted.
  *
  * Run: npm run seed:admin   (or ADMIN_EMAIL=you@example.com npm run seed:admin)
  */
@@ -23,20 +41,25 @@ async function main() {
   const email = (process.env.ADMIN_EMAIL ?? DEFAULT_ADMIN_EMAIL)
     .trim()
     .toLowerCase()
+  const password = process.env.ADMIN_PASSWORD ?? DEFAULT_ADMIN_PASSWORD
+  const name = (process.env.ADMIN_NAME ?? DEFAULT_ADMIN_NAME).trim()
 
-  const user = await prisma.user.findUnique({ where: { email } })
-  if (!user) {
-    console.log(
-      `Admin user "${email}" not found — skipping (the first registered user is made admin automatically).`
-    )
+  const existing = await prisma.user.findUnique({ where: { email } })
+  if (existing) {
+    await prisma.user.update({ where: { email }, data: { role: "admin" } })
+    console.log(`Promoted ${email} to admin`)
     return
   }
 
-  const updated = await prisma.user.update({
-    where: { email },
+  const created = await auth.api.signUpEmail({ body: { name, email, password } })
+  if (!created?.user?.id) {
+    throw new Error(`Could not create user ${email}`)
+  }
+  await prisma.user.update({
+    where: { id: created.user.id },
     data: { role: "admin" },
   })
-  console.log(`Promoted ${updated.email} to admin`)
+  console.log(`Created ${email} as admin (name: ${name})`)
 }
 
 main()

@@ -158,13 +158,8 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <ThemeSwitcher />
             <Link href="/login">
-              <Button variant="ghost" size="sm">
-                Sign in
-              </Button>
-            </Link>
-            <Link href="/register" className="hidden sm:inline-flex">
               <Button size="sm">
-                Get started
+                Sign in
                 <ArrowRight className="size-3.5" />
               </Button>
             </Link>
@@ -184,15 +179,15 @@ export default function LandingPage() {
                 customer a receipt — all in one place.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="/register">
+                <Link href="/login">
                   <Button size="lg">
-                    Get started
+                    Sign in
                     <ArrowRight className="size-4" />
                   </Button>
                 </Link>
-                <Link href="/login">
+                <Link href="/admin/login">
                   <Button variant="outline" size="lg">
-                    Sign in
+                    Admin sign in
                   </Button>
                 </Link>
               </div>
@@ -262,9 +257,9 @@ export default function LandingPage() {
                 Add your business details and make your first official invoice
                 in minutes.
               </p>
-              <Link href="/register">
+              <Link href="/login">
                 <Button size="lg">
-                  Create your account
+                  Sign in
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>

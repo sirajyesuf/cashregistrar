@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
 import { Pagination } from "@/components/ui/pagination"
+import { cn } from "@/lib/utils"
 import { formatCents, moneyToCents } from "@/lib/invoice"
+import { StatusBadge } from "../status-badge"
 
 type AdminInvoice = {
   id: string
@@ -56,6 +57,13 @@ export default function AdminInvoicesPage() {
 
   return (
     <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Every invoice from every user.
+        </p>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         {STATUSES.map((s) => (
           <button
@@ -65,11 +73,12 @@ export default function AdminInvoicesPage() {
               setStatus(s)
               setPage(1)
             }}
-            className={
+            className={cn(
+              "rounded-full border px-3 py-1 text-sm font-medium transition-colors",
               status === s
-                ? "rounded-md bg-primary px-3 py-1 text-sm font-medium text-primary-foreground"
-                : "rounded-md border px-3 py-1 text-sm text-muted-foreground hover:text-foreground"
-            }
+                ? "border-primary bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
           >
             {s === "" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
           </button>
@@ -84,7 +93,7 @@ export default function AdminInvoicesPage() {
 
       {invoices && (
         <div className="overflow-x-auto rounded-xl border bg-card">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[600px] text-sm">
             <thead className="text-left text-muted-foreground">
               <tr className="border-b">
                 <th className="px-4 py-2 font-medium">Number</th>
@@ -115,15 +124,7 @@ export default function AdminInvoicesPage() {
                     {formatCents(moneyToCents(inv.grandTotal))}
                   </td>
                   <td className="px-4 py-2">
-                    {inv.registrationStatus === "REGISTERED" ? (
-                      <Badge variant="success">Registered</Badge>
-                    ) : inv.registrationStatus === "CANCELLED" ? (
-                      <Badge variant="outline">Cancelled</Badge>
-                    ) : inv.registrationStatus === "FAILED" ? (
-                      <Badge variant="destructive">Failed</Badge>
-                    ) : (
-                      <Badge variant="outline">Unregistered</Badge>
-                    )}
+                    <StatusBadge status={inv.registrationStatus} />
                   </td>
                 </tr>
               ))}
