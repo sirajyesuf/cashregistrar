@@ -79,6 +79,11 @@ enum RegistrationStatus {
   FAILED
 }
 
+enum ReceiptStatus {
+  ISSUED
+  FAILED
+}
+
 enum TransactionType {
   B2B
   B2C
@@ -122,6 +127,8 @@ model Invoice {
   registrationError  String?            @db.Text
   registeredAt       DateTime?
 
+  receipt Receipt?
+
   userId       String
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   lines        InvoiceLine[]
@@ -143,6 +150,22 @@ model InvoiceLine {
   natureOfSupplies  String   @default("goods")
   taxCode           String?
   discount          Decimal? @db.Decimal(14, 2)
+}
+
+model Receipt {
+  id              String         @id @default(cuid())
+  invoiceId       String         @unique
+  invoice         Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  number          String
+  rrn             String?        @db.Text
+  qr              String?        @db.LongText
+  eimsStatus      String?
+  date            DateTime?
+  status          ReceiptStatus?
+  error           String?        @db.Text
+  collectedAmount Decimal?       @db.Decimal(14, 2)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }
 
 model SellerProfile {

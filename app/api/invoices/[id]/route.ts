@@ -17,7 +17,10 @@ export async function GET(
 
   const invoice = await prisma.invoice.findUnique({
     where: { id },
-    include: { lines: { orderBy: { lineNumber: "asc" } } },
+    include: {
+      lines: { orderBy: { lineNumber: "asc" } },
+      receipt: true,
+    },
   })
 
   if (!invoice || invoice.userId !== user.id) {

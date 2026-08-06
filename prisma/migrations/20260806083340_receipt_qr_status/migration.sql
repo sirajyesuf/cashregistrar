@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `Receipt` ADD COLUMN `eimsStatus` VARCHAR(191) NULL,
+    ADD COLUMN `qr` LONGTEXT NULL;

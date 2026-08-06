@@ -116,6 +116,13 @@ export type PreviewInvoice = {
   buyer?: Partial<BuyerDetails>
   irn?: string | null
   registrationStatus?: RegistrationStatus | null
+  receipt?: {
+    number: string | null
+    rrn: string | null
+    qr: string | null
+    eimsStatus: string | null
+    status: string | null
+  } | null
 } & InvoiceTotalsCents
 
 export function moneyToCents(value: string | number): number {
@@ -182,6 +189,13 @@ type ApiInvoice = {
   buyerTin?: string | null
   irn?: string | null
   registrationStatus?: string | null
+  receipt?: {
+    number: string | null
+    rrn: string | null
+    qr: string | null
+    eimsStatus: string | null
+    status: string | null
+  } | null
 }
 
 export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
@@ -213,6 +227,15 @@ export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
     irn: invoice.irn ?? null,
     registrationStatus: invoice.registrationStatus as
       RegistrationStatus | null | undefined,
+    receipt: invoice.receipt
+      ? {
+          number: invoice.receipt.number ?? null,
+          rrn: invoice.receipt.rrn ?? null,
+          qr: invoice.receipt.qr ?? null,
+          eimsStatus: invoice.receipt.eimsStatus ?? null,
+          status: invoice.receipt.status ?? null,
+        }
+      : null,
     subtotalCents: moneyToCents(invoice.subtotal),
     taxAmountCents: moneyToCents(invoice.taxAmount),
     grandTotalCents: moneyToCents(invoice.grandTotal),

@@ -5,6 +5,11 @@ import { prisma } from "@/lib/db"
 import { callEims, type EimsCallResult } from "@/lib/einvoice/client"
 import { getConfig, type EimsConfig } from "@/lib/einvoice/config"
 import { buildRegisterPayload } from "@/lib/einvoice/payload"
+import {
+  extractErrorMessage,
+  isSequenceError,
+  parseExpectedCounter,
+} from "@/lib/einvoice/eims-error"
 
 export const runtime = "nodejs"
 
@@ -24,66 +29,6 @@ export const runtime = "nodejs"
  * auto-retry the registration once. The retry is capped at one attempt so a
  * persistent failure surfaces normally instead of looping.
  */
-function extractErrorMessage(data: unknown): string {
-  if (data && typeof data === "object") {
-    const d = data as {
-      message?: unknown
-      details?: { errorMessage?: unknown }[]
-      body?: unknown
-    }
-    if (Array.isArray(d.details)) {
-      const msg = d.details
-        .map((x) => (typeof x.errorMessage === "string" ? x.errorMessage : ""))
-        .filter(Boolean)
-        .join("; ")
-      if (msg) return msg
-    }
-    if (Array.isArray(d.body)) {
-      const msgs = d.body
-        .map((item) => {
-          if (item && typeof item === "object") {
-            const o = item as {
-              portion?: unknown
-              errorMessage?: unknown
-              message?: unknown
-            }
-            if (Array.isArray(o.errorMessage)) {
-              return o.errorMessage
-                .filter((m) => typeof m === "string")
-                .join("; ")
-            }
-            if (typeof o.message === "string") return o.message
-          }
-          if (typeof item === "string") return item
-          return ""
-        })
-        .filter(Boolean)
-      if (msgs.length > 0) return msgs.join(" | ")
-      if (typeof d.body[0] === "object") return JSON.stringify(d.body[0])
-    }
-    if (typeof d.message === "string") return d.message
-  }
-  return "EIMS registration failed"
-}
-
-/**
- * Returns true when the EIMS error message is a document/counter sequence
- * error (codes 7001 or 7015), i.e. the only errors the counter self-heal
- * understands.
- */
-function isSequenceError(message: string): boolean {
-  return /7001|7015/.test(message)
-}
-
-/**
- * Extracts the next expected document number from an EIMS sequence error
- * message, e.g. "Document number is not in correct sequence expected : 11"
- * returns 11. Returns null when the pattern is absent.
- */
-function parseExpectedCounter(message: string): number | null {
-  const match = message.match(/expected\s*:\s*(\d+)/i)
-  return match ? Number(match[1]) : null
-}
 
 /**
  * Builds the register payload for a given counter value and sends it to EIMS.

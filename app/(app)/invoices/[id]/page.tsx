@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -8,7 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { InvoicePreview } from "@/components/invoice/invoice-preview"
 import { RegisterButton } from "@/components/invoice/register-button"
 import { CancelButton } from "@/components/invoice/cancel-button"
-import { invoiceFromApi } from "@/lib/invoice"
+import { ReceiptButton } from "@/components/invoice/receipt-button"
+import { formatCents, invoiceFromApi } from "@/lib/invoice"
 import type { PreviewInvoice, SellerInfo } from "@/lib/invoice"
 
 type ApiInvoice = {
@@ -75,7 +77,29 @@ export default function InvoiceDetailPage() {
     )
   }
 
+  const handleReceiptIssued = (receipt: {
+    rrn: string | null
+    qr: string | null
+    status: string | null
+  }) => {
+    setInvoice((prev) =>
+      prev
+        ? {
+            ...prev,
+            receipt: {
+              number: prev.receipt?.number ?? null,
+              rrn: receipt.rrn,
+              qr: receipt.qr,
+              eimsStatus: receipt.status,
+              status: "ISSUED",
+            },
+          }
+        : prev
+    )
+  }
+
   const cannotRegister = invoice?.registrationStatus === "REGISTERED"
+  const receiptIssued = invoice?.receipt?.status === "ISSUED"
 
   return (
     <div className="mx-auto max-w-4xl p-6">
@@ -127,8 +151,69 @@ export default function InvoiceDetailPage() {
                   onCancelled={handleCancelled}
                 />
               )}
+              {invoice.registrationStatus === "REGISTERED" &&
+                !receiptIssued && (
+                  <ReceiptButton
+                    invoiceId={invoice.id}
+                    invoiceNumber={invoice.number}
+                    size="sm"
+                    onIssued={handleReceiptIssued}
+                  />
+                )}
+              {receiptIssued && (
+                <Badge
+                  variant="success"
+                  title={invoice.receipt?.rrn ?? undefined}
+                >
+                  {invoice.receipt?.rrn
+                    ? `Receipt · ${invoice.receipt.rrn}`
+                    : "Receipt"}
+                </Badge>
+              )}
             </div>
           </div>
+
+          {receiptIssued && (
+            <div className="rounded-lg border bg-muted/30 p-4 print:hidden">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-semibold">Sales Receipt</span>
+                {invoice.receipt?.number && (
+                  <span className="text-sm text-muted-foreground">
+                    {invoice.receipt.number}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-start gap-4">
+                {invoice.receipt?.qr && (
+                  <Image
+                    src={`data:image/png;base64,${invoice.receipt.qr}`}
+                    alt="Receipt QR code"
+                    width={144}
+                    height={144}
+                    unoptimized
+                    className="size-36 rounded-md border bg-white"
+                  />
+                )}
+                <div className="space-y-1 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">RRN: </span>
+                    {invoice.receipt?.rrn ?? "—"}
+                  </p>
+                  {invoice.receipt?.eimsStatus && (
+                    <p>
+                      <span className="text-muted-foreground">Status: </span>
+                      {invoice.receipt.eimsStatus}
+                    </p>
+                  )}
+                  <p>
+                    <span className="text-muted-foreground">Amount: </span>
+                    {formatCents(invoice.grandTotalCents)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <InvoicePreview data={invoice} seller={seller} />
         </div>
       )}
