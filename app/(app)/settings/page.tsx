@@ -153,7 +153,7 @@ export default function SettingsPage() {
                   placeholder="e.g. 123 Business Street"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="city">City</Label>
                   <Input
@@ -184,7 +184,7 @@ export default function SettingsPage() {
 
             <div className="mb-5 flex items-start gap-2 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
               <Info className="mt-0.5 size-4 shrink-0" />
-              <span className="space-x-3">
+              <span className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                 <span>
                   Source system: <strong>{source.systemNumber || "—"}</strong> (
                   {source.systemType || "—"})
@@ -196,7 +196,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="legalName">Legal Name</Label>
                   <Input
@@ -216,7 +216,7 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -237,7 +237,7 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <Label htmlFor="region">Region</Label>
                   <Input
@@ -266,7 +266,7 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="houseNumber">House Number</Label>
                   <Input

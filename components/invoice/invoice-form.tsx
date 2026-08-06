@@ -245,7 +245,7 @@ export function InvoiceForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-6">
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="flex-1">
           <Label htmlFor="date">Date</Label>
           <Input
@@ -283,14 +283,14 @@ export function InvoiceForm() {
       </div>
 
       <details className="group rounded-lg border">
-        <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
+        <summary className="flex cursor-pointer flex-wrap items-center gap-2 px-4 py-3 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
           {transactionType === "B2B" ? (
             <Building2 className="size-4" />
           ) : (
             <User className="size-4" />
           )}
           Buyer Details
-          <span className="ml-auto inline-flex items-center gap-3">
+          <span className="ml-auto inline-flex flex-wrap items-center justify-end gap-2">
             {transactionType === "B2B" && buyer.tin.trim() && (
               <span className="text-xs text-muted-foreground">
                 TIN: {buyer.tin}
@@ -324,7 +324,7 @@ export function InvoiceForm() {
           </span>
         </summary>
         <div className="space-y-4 border-t p-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="buyerLegalName">Legal Name</Label>
               <Input
@@ -345,7 +345,7 @@ export function InvoiceForm() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="buyerVatNumber">VAT Number</Label>
               <Input
@@ -365,7 +365,7 @@ export function InvoiceForm() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="buyerIdType">ID Type</Label>
               <Select
@@ -395,7 +395,7 @@ export function InvoiceForm() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="buyerPhone">Phone</Label>
               <Input
@@ -415,7 +415,7 @@ export function InvoiceForm() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <Label htmlFor="buyerRegion">Region</Label>
               <Input
@@ -444,7 +444,7 @@ export function InvoiceForm() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <Label htmlFor="buyerZone">Zone</Label>
               <Input
@@ -476,7 +476,7 @@ export function InvoiceForm() {
         </div>
       </details>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         <div>
           <Label htmlFor="cashierName">Cashier Name</Label>
           <Input
