@@ -42,10 +42,10 @@ export const buyerSchema = z.object({
       "Region must be 1 to 3 digits"
     ),
   country: z.string(),
-  zone: z.string(),
-  kebele: z.string(),
+  zone: z.string().trim().min(1, "Zone is required"),
+  kebele: z.string().trim().min(1, "Kebele is required"),
   vatNumber: z.string(),
-  wereda: z.string(),
+  wereda: z.string().trim().min(1, "Wereda is required"),
 })
 
 export type BuyerDetails = z.infer<typeof buyerSchema>
