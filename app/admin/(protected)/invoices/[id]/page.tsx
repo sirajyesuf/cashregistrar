@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Building2, TriangleAlert, User } from "lucide-react"
+import { Building2, Check, Copy, TriangleAlert, User } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { formatCents, moneyToCents } from "@/lib/invoice"
@@ -91,6 +92,31 @@ function FailurePanel({
   issues?: { portion: string; messages: string[] }[]
   badge?: string | null
 }) {
+  const [copied, setCopied] = useState(false)
+
+  const text = [
+    title,
+    statusCode !== undefined && statusCode !== null ? `EIMS ${statusCode}` : "",
+    badge ?? "",
+    message,
+    ...(issues ?? []).map(
+      (issue) =>
+        `${issue.portion ? `${issue.portion}: ` : ""}${issue.messages.join("; ")}`
+    ),
+  ]
+    .filter(Boolean)
+    .join("\n")
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // clipboard unavailable; ignore
+    }
+  }
+
   return (
     <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4">
       <div className="flex items-start gap-3">
@@ -102,6 +128,16 @@ function FailurePanel({
               <Badge variant="destructive">EIMS {statusCode}</Badge>
             )}
             {badge && <Badge variant="outline">{badge}</Badge>}
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="ml-auto"
+              onClick={handleCopy}
+            >
+              {copied ? <Check className="text-emerald-600" /> : <Copy />}
+              {copied ? "Copied" : "Copy"}
+            </Button>
           </div>
           <p className="text-sm text-foreground">{message}</p>
           {issues && issues.length > 0 && (
@@ -177,22 +213,24 @@ export default function AdminInvoiceViewPage({
 
       {invoice && (
         <>
-          {invoice.registrationStatus === "FAILED" &&
-            invoice.registrationError && (
-              <FailurePanel
-                title="Registration failed"
-                statusCode={invoice.registrationError.statusCode}
-                message={
-                  invoice.registrationError.message ||
-                  "EIMS rejected the invoice registration."
-                }
-                issues={invoice.registrationError.issues}
-              />
-            )}
-          {invoice.receipt?.status === "FAILED" && invoice.receipt.error && (
+          {invoice.registrationStatus === "FAILED" && (
+            <FailurePanel
+              title="Registration failed"
+              statusCode={invoice.registrationError?.statusCode ?? null}
+              message={
+                invoice.registrationError?.message ||
+                "EIMS rejected the invoice registration. No error details were stored."
+              }
+              issues={invoice.registrationError?.issues ?? []}
+            />
+          )}
+          {invoice.receipt?.status === "FAILED" && (
             <FailurePanel
               title="Receipt failed"
-              message={invoice.receipt.error}
+              message={
+                invoice.receipt.error ||
+                "EIMS rejected the receipt. No error details were stored."
+              }
               badge={invoice.receipt.eimsStatus}
             />
           )}
