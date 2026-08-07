@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
 import { Pagination } from "@/components/ui/pagination"
 import { cn } from "@/lib/utils"
 import { formatCents, moneyToCents } from "@/lib/invoice"
@@ -102,6 +103,7 @@ export default function AdminInvoicesPage() {
                 <th className="px-4 py-2 text-right font-medium">Lines</th>
                 <th className="px-4 py-2 text-right font-medium">Total</th>
                 <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 text-right font-medium">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -125,6 +127,15 @@ export default function AdminInvoicesPage() {
                   </td>
                   <td className="px-4 py-2">
                     <StatusBadge status={inv.registrationStatus} />
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      render={<Link href={`/admin/invoices/${inv.id}`} />}
+                    >
+                      View
+                    </Button>
                   </td>
                 </tr>
               ))}
