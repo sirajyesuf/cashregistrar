@@ -56,6 +56,84 @@ export function extractErrorMessage(data: unknown): string {
   return "EIMS request failed"
 }
 
+export type EimsIssue = {
+  portion: string
+  messages: string[]
+}
+
+export type EimsError = {
+  statusCode: number | null
+  message: string
+  issues: EimsIssue[]
+  raw: string
+}
+
+/**
+ * Parses an EIMS error response into a structured shape. Handles the common
+ * single-document error bodies:
+ *
+ *  - { statusCode, message, body: [{ portion, errorMessage: [...] }] }
+ *  - { body: { message | msg | status } }
+ *  - { details: [{ errorMessage }] }
+ *
+ * Falls back to the flattened raw text when the shape is unrecognised.
+ */
+export function parseEimsError(data: unknown): EimsError {
+  const raw = extractErrorMessage(data)
+  const d =
+    data && typeof data === "object"
+      ? (data as {
+          statusCode?: unknown
+          message?: unknown
+          body?: unknown
+          details?: unknown
+        })
+      : {}
+
+  const statusCode =
+    typeof d.statusCode === "number" ? d.statusCode : null
+  const message =
+    typeof d.message === "string" ? d.message : "EIMS request failed"
+
+  const issues: EimsIssue[] = []
+
+  if (Array.isArray(d.body)) {
+    for (const item of d.body) {
+      if (typeof item === "string") {
+        if (item) issues.push({ portion: "", messages: [item] })
+        continue
+      }
+      if (!item || typeof item !== "object") continue
+      const o = item as {
+        portion?: unknown
+        errorMessage?: unknown
+        message?: unknown
+      }
+      const portion = typeof o.portion === "string" ? o.portion : ""
+      const messages: string[] = []
+      if (Array.isArray(o.errorMessage)) {
+        for (const m of o.errorMessage) {
+          if (typeof m === "string" && m) messages.push(m)
+        }
+      }
+      if (typeof o.message === "string" && o.message) {
+        messages.push(o.message)
+      }
+      if (messages.length > 0) issues.push({ portion, messages })
+    }
+  } else if (Array.isArray(d.details)) {
+    for (const item of d.details) {
+      if (!item || typeof item !== "object") continue
+      const o = item as { errorMessage?: unknown }
+      if (typeof o.errorMessage === "string" && o.errorMessage) {
+        issues.push({ portion: "", messages: [o.errorMessage] })
+      }
+    }
+  }
+
+  return { statusCode, message, issues, raw }
+}
+
 /**
  * Returns true when the EIMS error message is a document/counter sequence
  * error (codes 7001 or 7015), i.e. the only errors the counter self-heal

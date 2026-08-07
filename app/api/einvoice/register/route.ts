@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import type { Invoice, InvoiceLine, SellerProfile } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { callEims, type EimsCallResult } from "@/lib/einvoice/client"
@@ -8,6 +9,7 @@ import { buildRegisterPayload } from "@/lib/einvoice/payload"
 import {
   extractErrorMessage,
   isSequenceError,
+  parseEimsError,
   parseExpectedCounter,
 } from "@/lib/einvoice/eims-error"
 
@@ -158,7 +160,7 @@ export async function POST(request: Request) {
       data: {
         irn,
         registrationStatus: "REGISTERED",
-        registrationError: null,
+        registrationError: Prisma.DbNull,
         registeredAt: new Date(),
       },
     })
@@ -169,15 +171,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, irn })
   }
 
+  const eims = parseEimsError(data)
   await prisma.invoice.update({
     where: { id: invoice.id },
     data: {
       registrationStatus: "FAILED",
-      registrationError: extractErrorMessage(data),
+      registrationError: {
+        statusCode: eims.statusCode,
+        message: eims.message,
+        issues: eims.issues,
+      },
     },
   })
   return NextResponse.json(
-    { error: extractErrorMessage(data) },
+    {
+      error: eims.raw,
+      statusCode: eims.statusCode,
+      message: eims.message,
+      issues: eims.issues,
+      detail: eims.raw,
+    },
     { status: result.ok ? 500 : result.status }
   )
 }

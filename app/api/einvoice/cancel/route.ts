@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
+import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { callEims } from "@/lib/einvoice/client"
 import { getConfig } from "@/lib/einvoice/config"
+import { parseEimsError } from "@/lib/einvoice/eims-error"
 
 export const runtime = "nodejs"
 
@@ -95,7 +97,7 @@ export async function POST(request: Request) {
         where: { id: invoice.id },
         data: {
           registrationStatus: "CANCELLED",
-          registrationError: null,
+          registrationError: Prisma.DbNull,
         },
       })
       return NextResponse.json({
@@ -104,9 +106,16 @@ export async function POST(request: Request) {
       })
     }
 
+    const eims = parseEimsError(data)
     await prisma.invoice.update({
       where: { id: invoice.id },
-      data: { registrationError: extractErrorMessage(data) },
+      data: {
+        registrationError: {
+          statusCode: eims.statusCode,
+          message: eims.message,
+          issues: eims.issues,
+        },
+      },
     })
     return NextResponse.json(
       { error: extractErrorMessage(data) },
@@ -117,7 +126,7 @@ export async function POST(request: Request) {
       err instanceof Error ? err.message : "EIMS cancellation failed"
     await prisma.invoice.update({
       where: { id: invoice.id },
-      data: { registrationError: message },
+      data: { registrationError: { statusCode: null, message, issues: [] } },
     })
     return NextResponse.json({ error: message }, { status: 500 })
   }

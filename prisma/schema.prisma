@@ -130,7 +130,7 @@ model Invoice {
 
   irn                String?            @db.Text
   registrationStatus RegistrationStatus?
-  registrationError  String?            @db.Text
+  registrationError  Json?
   registeredAt       DateTime?
 
   receipt Receipt?
