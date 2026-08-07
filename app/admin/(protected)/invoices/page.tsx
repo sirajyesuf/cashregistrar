@@ -111,7 +111,7 @@ export default function AdminInvoicesPage() {
                 <tr key={inv.id} className="border-b last:border-0">
                   <td className="px-4 py-2">
                     <Link
-                      href={`/invoices/${inv.id}`}
+                      href={`/admin/invoices/${inv.id}`}
                       className="font-medium underline-offset-4 hover:underline"
                     >
                       {inv.number}
