@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Pencil, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Pagination } from "@/components/ui/pagination"
@@ -22,6 +22,10 @@ type InvoiceRow = {
 }
 
 const PAGE_SIZE = 10
+
+function cannotEdit(invoice: InvoiceRow): boolean {
+  return invoice.registrationStatus === "REGISTERED"
+}
 
 function StatusBadge({
   status,
@@ -216,6 +220,19 @@ export default function InvoicesPage() {
                             onCancelled={() => handleCancelled(invoice.id)}
                           />
                         )}
+                        <Link
+                          href={`/invoices/${invoice.id}/edit`}
+                          aria-disabled={cannotEdit(invoice)}
+                        >
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={cannotEdit(invoice)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                        </Link>
                         <Link href={`/invoices/${invoice.id}`}>
                           <Button variant="outline" size="sm">
                             View

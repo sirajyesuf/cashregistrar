@@ -36,6 +36,22 @@ type LineInput = {
   unit: string
 }
 
+export type InvoiceFormInitial = {
+  date: string
+  lines: Array<Omit<LineInput, "id">>
+  taxRate: number
+  transactionType: TransactionType
+  buyer: BuyerDetails
+  cashierName: string
+  salesPersonName: string
+  incomeWithholdRate: number
+}
+
+type InvoiceFormProps = {
+  invoiceId?: string
+  initial?: InvoiceFormInitial
+}
+
 function createLineItem(): LineInput {
   return {
     id: uid(),
@@ -54,16 +70,29 @@ function isFutureDate(date: string): boolean {
 const ID_TYPES = ["KID", "Passport", "Driver License", "Other"]
 const UNITS = ["PCS", "KG", "M", "L", "BOX", "EA", "Other"]
 
-export function InvoiceForm() {
+export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
   const router = useRouter()
-  const [date, setDate] = useState(todayString())
-  const [lineItems, setLineItems] = useState<LineInput[]>([createLineItem()])
-  const [taxRate, setTaxRate] = useState(15)
-  const [transactionType, setTransactionType] = useState<TransactionType>("B2B")
-  const [buyer, setBuyer] = useState<BuyerDetails>(EMPTY_BUYER)
-  const [cashierName, setCashierName] = useState("AAA")
-  const [salesPersonName, setSalesPersonName] = useState("AAA")
-  const [incomeWithholdRate, setIncomeWithholdRate] = useState(2)
+  const [date, setDate] = useState(initial?.date ?? todayString())
+  const [lineItems, setLineItems] = useState<LineInput[]>(
+    () =>
+      initial?.lines.map((line) => ({ ...line, id: uid() })) ?? [
+        createLineItem(),
+      ]
+  )
+  const [taxRate, setTaxRate] = useState(initial?.taxRate ?? 15)
+  const [transactionType, setTransactionType] = useState<TransactionType>(
+    initial?.transactionType ?? "B2B"
+  )
+  const [buyer, setBuyer] = useState<BuyerDetails>(
+    initial?.buyer ?? EMPTY_BUYER
+  )
+  const [cashierName, setCashierName] = useState(initial?.cashierName ?? "AAA")
+  const [salesPersonName, setSalesPersonName] = useState(
+    initial?.salesPersonName ?? "AAA"
+  )
+  const [incomeWithholdRate, setIncomeWithholdRate] = useState(
+    initial?.incomeWithholdRate ?? 2
+  )
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
@@ -204,26 +233,29 @@ export function InvoiceForm() {
     setError(null)
     setPending(true)
     try {
-      const res = await fetch("/api/invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date,
-          taxRate,
-          transactionType,
-          buyer,
-          cashierName: cashierName.trim() || "AAA",
-          salesPersonName: salesPersonName.trim() || "AAA",
-          incomeWithholdRate,
-          lines: derived.map((item) => ({
-            description: item.description.trim(),
-            quantity: item.quantity,
-            unitPriceCents: item.unitPriceCents,
-            itemCode: item.itemCode.trim(),
-            unit: item.unit.trim() || "PCS",
-          })),
-        }),
-      })
+      const res = await fetch(
+        invoiceId ? `/api/invoices/${invoiceId}` : "/api/invoices",
+        {
+          method: invoiceId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date,
+            taxRate,
+            transactionType,
+            buyer,
+            cashierName: cashierName.trim() || "AAA",
+            salesPersonName: salesPersonName.trim() || "AAA",
+            incomeWithholdRate,
+            lines: derived.map((item) => ({
+              description: item.description.trim(),
+              quantity: item.quantity,
+              unitPriceCents: item.unitPriceCents,
+              itemCode: item.itemCode.trim(),
+              unit: item.unit.trim() || "PCS",
+            })),
+          }),
+        }
+      )
       const body = (await res.json().catch(() => ({}))) as {
         invoice?: { id: string }
         error?: string
@@ -231,7 +263,9 @@ export function InvoiceForm() {
       if (!res.ok || !body.invoice) {
         throw new Error(body.error ?? `Failed to save invoice (${res.status})`)
       }
-      router.push(`/invoices/${body.invoice.id}`)
+      router.push(
+        invoiceId ? `/invoices/${invoiceId}` : `/invoices/${body.invoice.id}`
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save invoice")
       setPending(false)
@@ -700,7 +734,11 @@ export function InvoiceForm() {
           disabled={pending}
           onClick={() => submitInvoice()}
         >
-          {pending ? "Saving…" : "Save Invoice"}
+          {pending
+            ? "Saving…"
+            : invoiceId
+              ? "Save Changes"
+              : "Save Invoice"}
         </Button>
       </div>
     </form>
