@@ -7,6 +7,14 @@ import { Building2, ChevronDown, Plus, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -554,32 +562,22 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                       </Button>
                     </div>
 
-                    <div className="overflow-x-auto rounded-md border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="w-24 px-3 py-2 text-left font-medium">
-                          Code
-                        </th>
-                        <th className="px-3 py-2 text-left font-medium">
-                          Description
-                        </th>
-                        <th className="w-20 px-3 py-2 text-right font-medium">
-                          Qty
-                        </th>
-                        <th className="w-24 px-3 py-2 text-right font-medium">
-                          Unit
-                        </th>
-                        <th className="w-28 px-3 py-2 text-right font-medium">
+                    <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead className="w-24">Code</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="w-20 text-right">Qty</TableHead>
+                        <TableHead className="w-24 text-right">Unit</TableHead>
+                        <TableHead className="w-28 text-right">
                           Unit Price
-                        </th>
-                        <th className="w-28 px-3 py-2 text-right font-medium">
-                          Total
-                        </th>
-                        <th className="w-10" />
-                      </tr>
-                    </thead>
-                    <tbody>
+                        </TableHead>
+                        <TableHead className="w-28 text-right">Total</TableHead>
+                        <TableHead className="w-10" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {linesField.state.value.map((line, index) => {
                         const descMeta = form.getFieldMeta(
                           `lines[${index}].description` as never
@@ -604,8 +602,8 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                           : []
                         return (
                           <Fragment key={line.id}>
-                            <tr className="border-t">
-                              <td className="px-3 py-1.5">
+                            <TableRow>
+                              <TableCell>
                                 <form.Field name={`lines[${index}].itemCode` as never}>
                                   {(field) => (
                                     <TableInput
@@ -615,8 +613,8 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                                     />
                                   )}
                                 </form.Field>
-                              </td>
-                              <td className="px-3 py-1.5">
+                              </TableCell>
+                              <TableCell>
                                 <form.Field
                                   name={`lines[${index}].description` as never}
                                 >
@@ -628,8 +626,8 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                                     />
                                   )}
                                 </form.Field>
-                              </td>
-                              <td className="px-3 py-1.5">
+                              </TableCell>
+                              <TableCell>
                                 <form.Field name={`lines[${index}].quantity` as never}>
                                   {(field) => (
                                     <TableInput
@@ -642,8 +640,8 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                                     />
                                   )}
                                 </form.Field>
-                              </td>
-                              <td className="px-3 py-1.5">
+                              </TableCell>
+                              <TableCell>
                                 <form.Field name={`lines[${index}].unit` as never}>
                                   {(field) => {
                                     const isInvalid =
@@ -676,8 +674,8 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                                     )
                                   }}
                                 </form.Field>
-                              </td>
-                              <td className="px-3 py-1.5">
+                              </TableCell>
+                              <TableCell>
                                 <form.Field name={`lines[${index}].unitPrice` as never}>
                                   {(field) => (
                                     <TableInput
@@ -690,11 +688,11 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                                     />
                                   )}
                                 </form.Field>
-                              </td>
-                              <td className="px-3 py-1.5 text-right tabular-nums">
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">
                                 {formatCents(derived[index]?.totalCents ?? 0)}
-                              </td>
-                              <td className="px-2 py-1.5">
+                              </TableCell>
+                              <TableCell>
                                 {linesField.state.value.length > 1 && (
                                   <button
                                     type="button"
@@ -707,22 +705,25 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                                     <X className="h-4 w-4" />
                                   </button>
                                 )}
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                             {rowMessages.length > 0 && (
-                              <tr>
-                                <td colSpan={7} className="px-3 pb-2 pt-0">
+                              <TableRow>
+                                <TableCell
+                                  colSpan={7}
+                                  className="pb-2 pt-0"
+                                >
                                   <p className="text-xs text-destructive">
                                     {rowMessages.join(" · ")}
                                   </p>
-                                </td>
-                              </tr>
+                                </TableCell>
+                              </TableRow>
                             )}
                           </Fragment>
                         )
                       })}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
                   </FieldSet>
                 )}

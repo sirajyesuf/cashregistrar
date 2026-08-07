@@ -13,6 +13,14 @@ import {
 } from "lucide-react"
 import { useUser } from "@/components/app-shell"
 import { Button } from "@/components/ui/button"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { formatCents } from "@/lib/invoice"
 
 type RecentInvoice = {
@@ -206,43 +214,33 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl border">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="px-4 py-2.5 text-left font-medium">
-                        Number
-                      </th>
-                      <th className="px-4 py-2.5 text-left font-medium">
-                        Customer
-                      </th>
-                      <th className="px-4 py-2.5 text-left font-medium">
-                        Date
-                      </th>
-                      <th className="px-4 py-2.5 text-right font-medium">
-                        Total
-                      </th>
-                      <th className="px-4 py-2.5 text-right font-medium">
-                        View
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="rounded-xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableHead>Number</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="text-right">View</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {data.recent.map((invoice) => (
-                      <tr key={invoice.id} className="border-t">
-                        <td className="px-4 py-2.5 font-medium">
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-medium">
                           {invoice.number}
-                        </td>
-                        <td className="px-4 py-2.5 text-muted-foreground">
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
                           {invoice.customerName}
-                        </td>
-                        <td className="px-4 py-2.5 text-muted-foreground">
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
                           {invoice.date.slice(0, 10)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-medium tabular-nums">
+                        </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
                           {formatCents(Number(invoice.grandTotal) * 100)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
+                        </TableCell>
+                        <TableCell className="text-right">
                           <Link
                             href={`/invoices/${invoice.id}`}
                             className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -250,11 +248,11 @@ export default function DashboardPage() {
                           >
                             <ArrowUpRight className="size-4" />
                           </Link>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </section>

@@ -15,6 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { authClient } from "@/lib/auth-client"
 
 type AdminUser = {
@@ -89,42 +97,42 @@ export default function AdminUsersPage() {
 
       <AddUserForm onCreated={loadUsers} />
 
-      <div className="overflow-x-auto rounded-xl border bg-card">
-        <table className="w-full min-w-[560px] text-sm">
-          <thead className="text-left text-muted-foreground">
-            <tr className="border-b">
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Email</th>
-              <th className="px-4 py-2 font-medium">Role</th>
-              <th className="px-4 py-2 text-right font-medium">Invoices</th>
-              <th className="px-4 py-2 font-medium">Created</th>
-              <th className="px-4 py-2 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="rounded-xl border bg-card">
+        <Table className="min-w-[560px]">
+          <TableHeader>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead className="text-right">Invoices</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {users.map((user) => {
               const isSelf = user.id === currentUserId
               const canImpersonate = !isSelf && user.role !== "admin"
               return (
-                <tr key={user.id} className="border-b last:border-0">
-                  <td className="px-4 py-2 font-medium">{user.name}</td>
-                  <td className="px-4 py-2 text-muted-foreground">
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {user.email}
-                  </td>
-                  <td className="px-4 py-2">
+                  </TableCell>
+                  <TableCell>
                     {user.role === "admin" ? (
                       <Badge variant="success">admin</Badge>
                     ) : (
                       <Badge variant="outline">user</Badge>
                     )}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums">
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
                     {user._count.invoices}
-                  </td>
-                  <td className="px-4 py-2 text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-2 text-right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     <Button
                       type="button"
                       variant="ghost"
@@ -146,12 +154,12 @@ export default function AdminUsersPage() {
                         ? "Signing in…"
                         : "Impersonate"}
                     </Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   )

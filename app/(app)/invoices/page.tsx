@@ -5,6 +5,14 @@ import Link from "next/link"
 import { Plus, Pencil, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Pagination } from "@/components/ui/pagination"
 import { RegisterButton } from "@/components/invoice/register-button"
 import { CancelButton } from "@/components/invoice/cancel-button"
@@ -171,41 +179,39 @@ export default function InvoicesPage() {
 
       {invoices && invoices.length > 0 && (
         <>
-          <div className="overflow-x-auto rounded-md border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium">Number</th>
-                  <th className="px-4 py-2 text-left font-medium">Customer</th>
-                  <th className="px-4 py-2 text-left font-medium">Date</th>
-                  <th className="px-4 py-2 text-right font-medium">Lines</th>
-                  <th className="px-4 py-2 text-right font-medium">Total</th>
-                  <th className="px-4 py-2 text-left font-medium">Status</th>
-                  <th className="px-4 py-2 text-right font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead>Number</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Lines</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {invoices.map((invoice) => (
-                  <tr key={invoice.id} className="border-t">
-                    <td className="px-4 py-2">
+                  <TableRow key={invoice.id}>
+                    <TableCell>
                       <Link
                         href={`/invoices/${invoice.id}`}
                         className="font-medium underline-offset-4 hover:underline"
                       >
                         {invoice.number}
                       </Link>
-                    </td>
-                    <td className="px-4 py-2">
-                      {invoice.buyerLegalName || "—"}
-                    </td>
-                    <td className="px-4 py-2">{invoice.date.slice(0, 10)}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">
+                    </TableCell>
+                    <TableCell>{invoice.buyerLegalName || "—"}</TableCell>
+                    <TableCell>{invoice.date.slice(0, 10)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {invoice._count.lines}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums">
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {formatCents(moneyToCents(invoice.grandTotal))}
-                    </td>
-                    <td className="px-4 py-2">
+                    </TableCell>
+                    <TableCell>
                       <div className="flex flex-wrap items-center gap-1">
                         <StatusBadge
                           status={invoice.registrationStatus}
@@ -215,8 +221,8 @@ export default function InvoicesPage() {
                           <Badge variant="outline">Receipt issued</Badge>
                         )}
                       </div>
-                    </td>
-                    <td className="px-4 py-2 text-right">
+                    </TableCell>
+                    <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <RegisterButton
                           invoiceId={invoice.id}
@@ -262,11 +268,11 @@ export default function InvoicesPage() {
                           {deletingId === invoice.id ? "Deleting…" : "Delete"}
                         </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           <Pagination
             page={page}

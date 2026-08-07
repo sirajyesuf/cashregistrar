@@ -6,6 +6,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { copyText } from "@/lib/copy"
 import { formatCents, moneyToCents } from "@/lib/invoice"
 import { StatusBadge } from "../../status-badge"
@@ -315,47 +323,41 @@ export default function AdminInvoiceViewPage({
             />
           </div>
 
-          <div className="overflow-x-auto rounded-md border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted">
-                <tr>
-                  <th className="w-24 px-3 py-2 text-left font-medium">Code</th>
-                  <th className="px-3 py-2 text-left font-medium">
-                    Description
-                  </th>
-                  <th className="w-20 px-3 py-2 text-right font-medium">Qty</th>
-                  <th className="w-24 px-3 py-2 text-right font-medium">
-                    Unit
-                  </th>
-                  <th className="w-28 px-3 py-2 text-right font-medium">
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="w-24">Code</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="w-20 text-right">Qty</TableHead>
+                  <TableHead className="w-24 text-right">Unit</TableHead>
+                  <TableHead className="w-28 text-right">
                     Unit Price
-                  </th>
-                  <th className="w-28 px-3 py-2 text-right font-medium">
-                    Total
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                  <TableHead className="w-28 text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {invoice.lines.map((line) => (
-                  <tr key={line.id} className="border-t">
-                    <td className="px-3 py-1.5">{line.itemCode ?? "—"}</td>
-                    <td className="px-3 py-1.5">{line.description}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">
-                      {line.quantity} {line.unit}
-                    </td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">
+                  <TableRow key={line.id}>
+                    <TableCell>{line.itemCode ?? "—"}</TableCell>
+                    <TableCell>{line.description}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {line.quantity}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {line.unit}
-                    </td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {formatCents(moneyToCents(line.unitPrice))}
-                    </td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
                       {formatCents(moneyToCents(line.total))}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           <div className="ml-auto w-64 space-y-1.5 border-t pt-3 text-sm">

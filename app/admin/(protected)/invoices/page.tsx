@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Pagination } from "@/components/ui/pagination"
 import { cn } from "@/lib/utils"
 import { formatCents, moneyToCents } from "@/lib/invoice"
@@ -93,42 +101,42 @@ export default function AdminInvoicesPage() {
       )}
 
       {invoices && (
-        <div className="overflow-x-auto rounded-xl border bg-card">
-          <table className="w-full min-w-[600px] text-sm">
-            <thead className="text-left text-muted-foreground">
-              <tr className="border-b">
-                <th className="px-4 py-2 font-medium">Number</th>
-                <th className="px-4 py-2 font-medium">Customer</th>
-                <th className="px-4 py-2 font-medium">Date</th>
-                <th className="px-4 py-2 text-right font-medium">Lines</th>
-                <th className="px-4 py-2 text-right font-medium">Total</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 text-right font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="rounded-xl border bg-card">
+          <Table className="min-w-[600px]">
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead>Number</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Lines</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {invoices.map((inv) => (
-                <tr key={inv.id} className="border-b last:border-0">
-                  <td className="px-4 py-2">
+                <TableRow key={inv.id}>
+                  <TableCell>
                     <Link
                       href={`/admin/invoices/${inv.id}`}
                       className="font-medium underline-offset-4 hover:underline"
                     >
                       {inv.number}
                     </Link>
-                  </td>
-                  <td className="px-4 py-2">{inv.buyerLegalName || "—"}</td>
-                  <td className="px-4 py-2">{inv.date}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">
+                  </TableCell>
+                  <TableCell>{inv.buyerLegalName || "—"}</TableCell>
+                  <TableCell>{inv.date}</TableCell>
+                  <TableCell className="text-right tabular-nums">
                     {inv._count.lines}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums">
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
                     {formatCents(moneyToCents(inv.grandTotal))}
-                  </td>
-                  <td className="px-4 py-2">
+                  </TableCell>
+                  <TableCell>
                     <StatusBadge status={inv.registrationStatus} />
-                  </td>
-                  <td className="px-4 py-2 text-right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     <Button
                       variant="outline"
                       size="sm"
@@ -136,11 +144,11 @@ export default function AdminInvoicesPage() {
                     >
                       View
                     </Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 

@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Banknote, Percent, Receipt, Users } from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { formatCents } from "@/lib/invoice"
 import { StatusBadge } from "./status-badge"
 
@@ -160,40 +168,40 @@ export default function AdminOverviewPage() {
 
       <div className="rounded-xl border bg-card p-5">
         <h2 className="font-semibold">Recent invoices</h2>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead className="text-left text-muted-foreground">
-              <tr className="border-b">
-                <th className="py-2 font-medium">Number</th>
-                <th className="py-2 font-medium">Customer</th>
-                <th className="py-2 font-medium">Date</th>
-                <th className="py-2 text-right font-medium">Total</th>
-                <th className="py-2 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="mt-3">
+          <Table className="min-w-[560px]">
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead>Number</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data.recent.map((inv) => (
-                <tr key={inv.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4">
+                <TableRow key={inv.id}>
+                  <TableCell>
                     <Link
                       href={`/invoices/${inv.id}`}
                       className="font-medium underline-offset-4 hover:underline"
                     >
                       {inv.number}
                     </Link>
-                  </td>
-                  <td className="py-2 pr-4">{inv.buyerLegalName || "—"}</td>
-                  <td className="py-2 pr-4">{inv.date}</td>
-                  <td className="py-2 pr-4 text-right tabular-nums">
+                  </TableCell>
+                  <TableCell>{inv.buyerLegalName || "—"}</TableCell>
+                  <TableCell>{inv.date}</TableCell>
+                  <TableCell className="text-right tabular-nums">
                     {formatCents(Number(inv.grandTotal) * 100)}
-                  </td>
-                  <td className="py-2">
+                  </TableCell>
+                  <TableCell>
                     <StatusBadge status={inv.registrationStatus} />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
     </div>
