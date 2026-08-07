@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db"
 import { callEims, type EimsCallResult } from "@/lib/einvoice/client"
 import { getConfig, type EimsConfig } from "@/lib/einvoice/config"
 import { buildRegisterPayload } from "@/lib/einvoice/payload"
+import { validateLineTotals } from "@/lib/einvoice/validate"
 import {
   extractErrorMessage,
   isSequenceError,
@@ -102,6 +103,29 @@ export async function POST(request: Request) {
       {
         error:
           "Every line item description must be at least 3 characters (required by EIMS)",
+      },
+      { status: 400 }
+    )
+  }
+
+  const lineTotalIssues = validateLineTotals({
+    lines: invoice.lines,
+    taxRate: Number(invoice.taxRate),
+  })
+  if (lineTotalIssues.length > 0) {
+    return NextResponse.json(
+      {
+        error:
+          lineTotalIssues
+            .map(
+              (issue) =>
+                `Line ${issue.lineNumber}: TotalLineAmount should be ${issue.expected.toFixed(
+                  2
+                )} but is ${issue.received.toFixed(2)}`
+            )
+            .join("; ") +
+          ". This usually means the invoice tax rate is not 0% or 15%. " +
+          "Edit the invoice and set the tax rate to 0 or 15, or fix the line totals.",
       },
       { status: 400 }
     )

@@ -80,8 +80,10 @@ export const invoiceInputSchema = z
     taxRate: z
       .number()
       .finite()
-      .min(0, "Tax rate must be between 0 and 100")
-      .max(100, "Tax rate must be between 0 and 100"),
+      .refine(
+        (value) => value === 0 || value === 15,
+        "Tax rate must be 0% or 15% (EIMS only supports VAT0 and VAT15)"
+      ),
     transactionType: transactionTypeSchema,
     buyer: buyerSchema,
     cashierName: z.string(),
@@ -139,8 +141,10 @@ export const invoiceFormSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/, "A valid date is required"),
     taxRate: z
       .number()
-      .min(0, "Tax rate must be between 0 and 100")
-      .max(100, "Tax rate must be between 0 and 100"),
+      .refine(
+        (value) => value === 0 || value === 15,
+        "Tax rate must be 0% or 15% (EIMS only supports VAT0 and VAT15)"
+      ),
     transactionType: transactionTypeSchema,
     buyer: buyerSchema,
     cashierName: z.string(),

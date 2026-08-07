@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Pagination } from "@/components/ui/pagination"
 import { RegisterButton } from "@/components/invoice/register-button"
 import { CancelButton } from "@/components/invoice/cancel-button"
-import { formatCents, moneyToCents } from "@/lib/invoice"
+import { formatCents, hasIssuedReceipt, moneyToCents } from "@/lib/invoice"
 
 type InvoiceRow = {
   id: string
@@ -19,12 +19,19 @@ type InvoiceRow = {
   _count: { lines: number }
   irn?: string | null
   registrationStatus?: string | null
+  receipt?: { status?: string | null } | null
 }
 
 const PAGE_SIZE = 10
 
 function cannotEdit(invoice: InvoiceRow): boolean {
   return invoice.registrationStatus === "REGISTERED"
+}
+
+function cannotDelete(invoice: InvoiceRow): boolean {
+  return (
+    invoice.registrationStatus === "REGISTERED" || hasIssuedReceipt(invoice)
+  )
 }
 
 function StatusBadge({
@@ -199,10 +206,15 @@ export default function InvoicesPage() {
                       {formatCents(moneyToCents(invoice.grandTotal))}
                     </td>
                     <td className="px-4 py-2">
-                      <StatusBadge
-                        status={invoice.registrationStatus}
-                        irn={invoice.irn}
-                      />
+                      <div className="flex flex-wrap items-center gap-1">
+                        <StatusBadge
+                          status={invoice.registrationStatus}
+                          irn={invoice.irn}
+                        />
+                        {hasIssuedReceipt(invoice) && (
+                          <Badge variant="outline">Receipt issued</Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -212,14 +224,15 @@ export default function InvoicesPage() {
                           disabled={invoice.registrationStatus === "REGISTERED"}
                           onRegistered={() => handleRegistered(invoice.id)}
                         />
-                        {invoice.registrationStatus === "REGISTERED" && (
-                          <CancelButton
-                            invoiceId={invoice.id}
-                            invoiceNumber={invoice.number}
-                            size="sm"
-                            onCancelled={() => handleCancelled(invoice.id)}
-                          />
-                        )}
+                        {invoice.registrationStatus === "REGISTERED" &&
+                          !hasIssuedReceipt(invoice) && (
+                            <CancelButton
+                              invoiceId={invoice.id}
+                              invoiceNumber={invoice.number}
+                              size="sm"
+                              onCancelled={() => handleCancelled(invoice.id)}
+                            />
+                          )}
                         <Link
                           href={`/invoices/${invoice.id}/edit`}
                           aria-disabled={cannotEdit(invoice)}
@@ -242,7 +255,7 @@ export default function InvoicesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDelete(invoice)}
-                          disabled={deletingId === invoice.id}
+                          disabled={deletingId === invoice.id || cannotDelete(invoice)}
                           className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 className="h-3.5 w-3.5" />

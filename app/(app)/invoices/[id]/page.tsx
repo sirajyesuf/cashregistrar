@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { Pencil, ChevronDown } from "lucide-react"
@@ -11,7 +12,7 @@ import { RegisterButton } from "@/components/invoice/register-button"
 import { CancelButton } from "@/components/invoice/cancel-button"
 import { ReceiptButton } from "@/components/invoice/receipt-button"
 import { HashField } from "@/components/invoice/hash-field"
-import { formatCents, invoiceFromApi } from "@/lib/invoice"
+import { formatCents, hasIssuedReceipt, invoiceFromApi } from "@/lib/invoice"
 import type { PreviewInvoice, SellerInfo } from "@/lib/invoice"
 
 type ApiInvoice = {
@@ -101,7 +102,7 @@ export default function InvoiceDetailPage() {
   }
 
   const cannotRegister = invoice?.registrationStatus === "REGISTERED"
-  const receiptIssued = invoice?.receipt?.status === "ISSUED"
+  const receiptIssued = hasIssuedReceipt(invoice)
 
   return (
     <div className="mx-auto max-w-4xl p-4 sm:p-6">
@@ -148,6 +149,7 @@ export default function InvoiceDetailPage() {
               ) : (
                 <Badge variant="outline">Unregistered</Badge>
               )}
+              {receiptIssued && <Badge variant="outline">Receipt issued</Badge>}
             </button>
 
             {panelOpen && (
@@ -158,6 +160,24 @@ export default function InvoiceDetailPage() {
 
                 {receiptIssued && (
                   <div className="space-y-2">
+                    {invoice.receipt?.qr && (
+                      <div className="flex flex-col items-center gap-2 py-1">
+                        <div className="rounded-lg bg-white p-4">
+                          <Image
+                            src={`data:image/png;base64,${invoice.receipt.qr}`}
+                            alt="Receipt QR code"
+                            width={600}
+                            height={600}
+                            unoptimized
+                            className="size-64"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Scan with the EIMS verification app to confirm the
+                          receipt.
+                        </p>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm text-muted-foreground">
                         Receipt
@@ -198,14 +218,15 @@ export default function InvoiceDetailPage() {
                     disabled={cannotRegister}
                     onRegistered={handleRegistered}
                   />
-                  {invoice.registrationStatus === "REGISTERED" && (
-                    <CancelButton
-                      invoiceId={invoice.id}
-                      invoiceNumber={invoice.number}
-                      size="sm"
-                      onCancelled={handleCancelled}
-                    />
-                  )}
+                  {invoice.registrationStatus === "REGISTERED" &&
+                    !receiptIssued && (
+                      <CancelButton
+                        invoiceId={invoice.id}
+                        invoiceNumber={invoice.number}
+                        size="sm"
+                        onCancelled={handleCancelled}
+                      />
+                    )}
                   {invoice.registrationStatus === "REGISTERED" &&
                     !receiptIssued && (
                       <ReceiptButton
@@ -216,6 +237,12 @@ export default function InvoiceDetailPage() {
                       />
                     )}
                 </div>
+                {receiptIssued && (
+                  <p className="text-xs text-muted-foreground">
+                    Cancellation isn&apos;t available once a sales receipt has
+                    been issued.
+                  </p>
+                )}
               </div>
             )}
           </div>

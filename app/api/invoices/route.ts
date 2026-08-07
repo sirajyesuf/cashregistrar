@@ -46,6 +46,7 @@ export async function GET(request: Request) {
         irn: true,
         registrationStatus: true,
         createdAt: true,
+        receipt: { select: { status: true } },
         _count: { select: { lines: true } },
       },
     }),

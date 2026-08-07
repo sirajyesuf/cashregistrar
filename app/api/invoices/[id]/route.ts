@@ -117,7 +117,7 @@ export async function PUT(
       data: {
         date: data.date,
         buyerLegalName: data.buyer.legalName,
-        taxRate: centsToDecimal(data.taxRate),
+        taxRate: new Prisma.Decimal(data.taxRate),
         subtotal: centsToDecimal(subtotalCents),
         taxAmount: centsToDecimal(taxAmountCents),
         grandTotal: centsToDecimal(grandTotalCents),
@@ -165,11 +165,28 @@ export async function DELETE(
 
   const invoice = await prisma.invoice.findUnique({
     where: { id },
-    select: { userId: true },
+    select: {
+      userId: true,
+      registrationStatus: true,
+      receipt: { select: { status: true } },
+    },
   })
 
   if (!invoice || invoice.userId !== user.id) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
+  }
+
+  if (
+    invoice.registrationStatus === "REGISTERED" ||
+    invoice.receipt?.status === "ISSUED"
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Registered invoices with issued receipts cannot be deleted",
+      },
+      { status: 409 }
+    )
   }
 
   await prisma.invoice.delete({ where: { id } })

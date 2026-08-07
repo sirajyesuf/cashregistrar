@@ -249,3 +249,9 @@ export function todayString(): string {
   const day = String(now.getDate()).padStart(2, "0")
   return `${year}-${month}-${day}`
 }
+
+export function hasIssuedReceipt(
+  invoice: { receipt?: { status?: string | null } | null } | null
+): boolean {
+  return invoice?.receipt?.status === "ISSUED"
+}

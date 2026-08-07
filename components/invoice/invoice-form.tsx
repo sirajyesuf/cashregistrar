@@ -736,10 +736,6 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                       <TextField
                         field={field}
                         label="Tax Rate (%)"
-                        type="number"
-                        min={0}
-                        max={100}
-                        step="any"
                         formatChange={(raw) => Number(raw)}
                       />
                     )}
