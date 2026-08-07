@@ -219,7 +219,9 @@ export default function AdminInvoiceViewPage({
               statusCode={invoice.registrationError?.statusCode ?? null}
               message={
                 invoice.registrationError?.message ||
-                "EIMS rejected the invoice registration. No error details were stored."
+                (invoice.registrationError?.issues?.length
+                  ? "EIMS rejected the invoice registration."
+                  : "EIMS rejected the invoice registration. No error details were stored.")
               }
               issues={invoice.registrationError?.issues ?? []}
             />
