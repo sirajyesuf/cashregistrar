@@ -3,6 +3,8 @@ import { z } from "zod"
 const EIMS_EMAIL_REGEX = /^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$/
 const EIMS_TIN_REGEX = /^[0-9]{10,20}$/
 const EIMS_REGION_REGEX = /^[0-9]{1,3}$/
+const EIMS_PHONE_REGEX = /^\+?[0-9]{10}$/
+const EIMS_VAT_NUMBER_REGEX = /^[0-9]{3,25}$/
 
 export const buyerSchema = z.object({
   city: z.string(),
@@ -22,7 +24,10 @@ export const buyerSchema = z.object({
       (value) => value.trim().length >= 3,
       "House number must be at least 3 characters long"
     ),
-  idNumber: z.string(),
+  idNumber: z
+    .string()
+    .trim()
+    .min(1, "ID number must be at least 1 character long"),
   idType: z.string().max(3, "ID type must be at most 3 characters long"),
   tin: z
     .string()
@@ -34,7 +39,12 @@ export const buyerSchema = z.object({
     .string()
     .trim()
     .min(1, "The buyer's legal name is required"),
-  phone: z.string(),
+  phone: z
+    .string()
+    .refine(
+      (value) => EIMS_PHONE_REGEX.test(value.trim()),
+      "Phone must be 10 digits"
+    ),
   region: z
     .string()
     .refine(
@@ -44,7 +54,16 @@ export const buyerSchema = z.object({
   country: z.string(),
   zone: z.string().trim().min(1, "Zone is required"),
   kebele: z.string().trim().min(1, "Kebele is required"),
-  vatNumber: z.string(),
+  vatNumber: z
+    .string()
+    .refine(
+      (value) => EIMS_VAT_NUMBER_REGEX.test(value.trim()),
+      "VAT number must be 3 to 25 digits"
+    )
+    .refine(
+      (value) => value.trim().length >= 3,
+      "VAT number must be at least 3 characters long"
+    ),
   wereda: z.string().trim().min(1, "Wereda is required"),
 })
 

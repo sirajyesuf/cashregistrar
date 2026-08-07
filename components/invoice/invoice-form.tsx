@@ -763,12 +763,6 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                   </span>
                 </div>
               </div>
-
-              {!values.buyer.tin.trim() && (
-                <p className="text-xs text-muted-foreground">
-                  Buyer TIN is required (10 to 20 digits).
-                </p>
-              )}
             </>
           )
         }}
