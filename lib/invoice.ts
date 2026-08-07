@@ -22,7 +22,7 @@ export const EMPTY_BUYER: BuyerDetails = {
   email: "",
   houseNumber: "",
   idNumber: "",
-  idType: "",
+  idType: "KID",
   tin: "",
   legalName: "",
   phone: "",

@@ -2,23 +2,12 @@ import { NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
+import { invoiceInputSchema } from "@/lib/invoice-schema"
 
 export const runtime = "nodejs"
 
 function centsToDecimal(cents: number) {
   return new Prisma.Decimal(Math.round(cents)).div(100)
-}
-
-type LineInput = {
-  description?: unknown
-  quantity?: unknown
-  unitPriceCents?: unknown
-  itemCode?: unknown
-  unit?: unknown
-}
-
-function str(value: unknown): string {
-  return typeof value === "string" ? value.trim() : ""
 }
 
 async function requireUser() {
@@ -72,104 +61,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  let body: {
-    date?: unknown
-    taxRate?: unknown
-    transactionType?: unknown
-    buyer?: Record<string, unknown> | null
-    cashierName?: unknown
-    salesPersonName?: unknown
-    incomeWithholdRate?: unknown
-    lines?: LineInput[]
-  }
+  let body: unknown
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const date = typeof body.date === "string" ? body.date : ""
-  const taxRate = Number(body.taxRate)
-  const transactionType = body.transactionType === "B2C" ? "B2C" : "B2B"
-  const incomeWithholdRate = Math.min(
-    100,
-    Math.max(0, Number(body.incomeWithholdRate) || 2)
-  )
-  const cashierName = str(body.cashierName) || "AAA"
-  const salesPersonName = str(body.salesPersonName) || "AAA"
-  const buyer = body.buyer && typeof body.buyer === "object" ? body.buyer : {}
-  const buyerLegalName = str(buyer.legalName)
-  const buyerTin = str(buyer.tin)
-  const lines = Array.isArray(body.lines) ? body.lines : []
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  const parsed = invoiceInputSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "A valid date is required" },
-      { status: 400 }
-    )
-  }
-  if (!buyerLegalName) {
-    return NextResponse.json(
-      { error: "Customer legal name is required" },
-      { status: 400 }
-    )
-  }
-  if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) {
-    return NextResponse.json(
-      { error: "Tax rate must be between 0 and 100" },
-      { status: 400 }
-    )
-  }
-  if (lines.length === 0) {
-    return NextResponse.json(
-      { error: "At least one line item is required" },
-      { status: 400 }
-    )
-  }
-  if (transactionType === "B2B" && !buyerTin) {
-    return NextResponse.json(
-      { error: "B2B invoices require a buyer TIN" },
+      { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
       { status: 400 }
     )
   }
 
-  const parsedLines = lines.map((line) => {
-    const description =
-      typeof line.description === "string" ? line.description.trim() : ""
-    const quantity = Number(line.quantity)
-    const unitPriceCents = Math.round(Number(line.unitPriceCents) || 0)
-    return {
-      description,
-      quantity,
-      unitPriceCents,
-      itemCode: str(line.itemCode),
-      unit: str(line.unit) || "PCS",
-    }
-  })
+  const {
+    date,
+    taxRate,
+    transactionType,
+    buyer,
+    cashierName,
+    salesPersonName,
+    incomeWithholdRate,
+    lines,
+  } = parsed.data
 
-  for (const line of parsedLines) {
-    if (line.description.length < 3) {
-      return NextResponse.json(
-        {
-          error:
-            "Every line item description must be at least 3 characters (required by EIMS)",
-        },
-        { status: 400 }
-      )
-    }
-    if (!Number.isFinite(line.quantity) || line.quantity <= 0) {
-      return NextResponse.json(
-        { error: "Every line item needs a quantity greater than zero" },
-        { status: 400 }
-      )
-    }
-    if (line.unitPriceCents < 0) {
-      return NextResponse.json(
-        { error: "Unit price cannot be negative" },
-        { status: 400 }
-      )
-    }
-  }
+  const parsedLines = lines.map((line) => ({
+    ...line,
+    unitPriceCents: Math.round(line.unitPriceCents),
+  }))
 
   const subtotalCents = parsedLines.reduce(
     (sum, line) => sum + Math.round(line.quantity * line.unitPriceCents),
@@ -189,28 +110,28 @@ export async function POST(request: Request) {
     data: {
       number,
       date,
-      buyerLegalName,
+      buyerLegalName: buyer.legalName,
       taxRate: new Prisma.Decimal(taxRate),
       subtotal: centsToDecimal(subtotalCents),
       taxAmount: centsToDecimal(taxAmountCents),
       grandTotal: centsToDecimal(grandTotalCents),
       transactionType,
       incomeWithholdRate: new Prisma.Decimal(incomeWithholdRate),
-      cashierName,
-      salesPersonName,
-      buyerTin: buyerTin,
-      buyerVatNumber: str(buyer.vatNumber),
-      buyerIdType: str(buyer.idType),
-      buyerIdNumber: str(buyer.idNumber),
-      buyerEmail: str(buyer.email),
-      buyerPhone: str(buyer.phone),
-      buyerCity: str(buyer.city),
-      buyerRegion: str(buyer.region),
-      buyerCountry: str(buyer.country),
-      buyerZone: str(buyer.zone),
-      buyerKebele: str(buyer.kebele),
-      buyerWereda: str(buyer.wereda),
-      buyerHouseNumber: str(buyer.houseNumber),
+      cashierName: cashierName || "AAA",
+      salesPersonName: salesPersonName || "AAA",
+      buyerTin: buyer.tin,
+      buyerVatNumber: buyer.vatNumber,
+      buyerIdType: buyer.idType,
+      buyerIdNumber: buyer.idNumber,
+      buyerEmail: buyer.email,
+      buyerPhone: buyer.phone,
+      buyerCity: buyer.city,
+      buyerRegion: buyer.region,
+      buyerCountry: buyer.country,
+      buyerZone: buyer.zone,
+      buyerKebele: buyer.kebele,
+      buyerWereda: buyer.wereda,
+      buyerHouseNumber: buyer.houseNumber,
       userId: user.id,
       lines: {
         create: parsedLines.map((line, index) => ({
@@ -222,7 +143,7 @@ export async function POST(request: Request) {
             Math.round(line.quantity * line.unitPriceCents)
           ),
           itemCode: line.itemCode,
-          unit: line.unit,
+          unit: line.unit || "PCS",
         })),
       },
     },
