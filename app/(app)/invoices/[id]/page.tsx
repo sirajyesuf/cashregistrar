@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Image from "next/image"
 import { useParams } from "next/navigation"
 import Link from "next/link"
+import { Pencil, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { InvoicePreview } from "@/components/invoice/invoice-preview"
@@ -44,6 +44,7 @@ export default function InvoiceDetailPage() {
   const [seller, setSeller] = useState<SellerInfo>(DEFAULT_SELLER)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [panelOpen, setPanelOpen] = useState(true)
 
   useEffect(() => {
     Promise.all([fetch(`/api/invoices/${id}`), fetch("/api/settings/seller")])
@@ -106,7 +107,10 @@ export default function InvoiceDetailPage() {
     <div className="mx-auto max-w-4xl p-6">
       <div className="mb-6 flex items-center justify-end print:hidden">
         <Link href={`/invoices/${id}/edit`}>
-          <Button variant="outline">Edit</Button>
+          <Button variant="outline">
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
         </Link>
       </div>
 
@@ -122,8 +126,18 @@ export default function InvoiceDetailPage() {
 
       {invoice && (
         <div className="space-y-4">
-          <div className="rounded-lg border bg-muted/30 p-4 print:hidden">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="rounded-lg border bg-muted/30 print:hidden">
+            <button
+              type="button"
+              onClick={() => setPanelOpen((open) => !open)}
+              className="flex w-full items-center gap-3 p-4 text-left"
+              aria-expanded={panelOpen}
+            >
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
+                  panelOpen ? "" : "-rotate-90"
+                }`}
+              />
               <span className="text-sm font-semibold">EIMS Registration</span>
               {invoice.registrationStatus === "REGISTERED" ? (
                 <Badge variant="success">Registered</Badge>
@@ -134,77 +148,76 @@ export default function InvoiceDetailPage() {
               ) : (
                 <Badge variant="outline">Unregistered</Badge>
               )}
-            </div>
+            </button>
 
-            {invoice.irn && (
-              <div className="mt-3 space-y-2 border-t pt-3">
-                <HashField label="Invoice IRN" value={invoice.irn} />
-              </div>
-            )}
-
-            {receiptIssued && (
-              <div className="mt-3 space-y-2 border-t pt-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">Receipt</span>
-                  <span className="text-sm font-medium">
-                    {invoice.receipt?.number ?? "—"}
-                  </span>
-                </div>
-                {invoice.receipt?.rrn && (
-                  <HashField label="Receipt RRN" value={invoice.receipt.rrn} />
+            {panelOpen && (
+              <div className="space-y-3 border-t p-4">
+                {invoice.irn && (
+                  <HashField label="Invoice IRN" value={invoice.irn} />
                 )}
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">Status</span>
-                  <span className="text-sm font-medium">
-                    {invoice.receipt?.eimsStatus ?? "—"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">Amount</span>
-                  <span className="text-sm font-medium">
-                    {formatCents(invoice.grandTotalCents)}
-                  </span>
-                </div>
-                {invoice.receipt?.qr && (
-                  <div className="flex justify-center pt-2">
-                    <Image
-                      src={`data:image/png;base64,${invoice.receipt.qr}`}
-                      alt="Receipt QR code"
-                      width={128}
-                      height={128}
-                      unoptimized
-                      className="size-32 rounded-md border bg-white"
-                    />
+
+                {receiptIssued && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        Receipt
+                      </span>
+                      <span className="text-sm font-medium">
+                        {invoice.receipt?.number ?? "—"}
+                      </span>
+                    </div>
+                    {invoice.receipt?.rrn && (
+                      <HashField
+                        label="Receipt RRN"
+                        value={invoice.receipt.rrn}
+                      />
+                    )}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        Status
+                      </span>
+                      <span className="text-sm font-medium">
+                        {invoice.receipt?.eimsStatus ?? "—"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        Amount
+                      </span>
+                      <span className="text-sm font-medium">
+                        {formatCents(invoice.grandTotalCents)}
+                      </span>
+                    </div>
                   </div>
                 )}
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <RegisterButton
+                    invoiceId={invoice.id}
+                    size="sm"
+                    disabled={cannotRegister}
+                    onRegistered={handleRegistered}
+                  />
+                  {invoice.registrationStatus === "REGISTERED" && (
+                    <CancelButton
+                      invoiceId={invoice.id}
+                      invoiceNumber={invoice.number}
+                      size="sm"
+                      onCancelled={handleCancelled}
+                    />
+                  )}
+                  {invoice.registrationStatus === "REGISTERED" &&
+                    !receiptIssued && (
+                      <ReceiptButton
+                        invoiceId={invoice.id}
+                        invoiceNumber={invoice.number}
+                        size="sm"
+                        onIssued={handleReceiptIssued}
+                      />
+                    )}
+                </div>
               </div>
             )}
-
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
-              <RegisterButton
-                invoiceId={invoice.id}
-                size="sm"
-                disabled={cannotRegister}
-                onRegistered={handleRegistered}
-              />
-              {invoice.registrationStatus === "REGISTERED" && (
-                <CancelButton
-                  invoiceId={invoice.id}
-                  invoiceNumber={invoice.number}
-                  size="sm"
-                  onCancelled={handleCancelled}
-                />
-              )}
-              {invoice.registrationStatus === "REGISTERED" &&
-                !receiptIssued && (
-                  <ReceiptButton
-                    invoiceId={invoice.id}
-                    invoiceNumber={invoice.number}
-                    size="sm"
-                    onIssued={handleReceiptIssued}
-                  />
-                )}
-            </div>
           </div>
 
           <InvoicePreview data={invoice} seller={seller} />
