@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Plus, Pencil, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -71,6 +72,8 @@ export default function InvoicesPage() {
   const [total, setTotal] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string[]>([])
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
@@ -148,6 +151,59 @@ export default function InvoicesPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  const selectableIds = (invoices ?? []).filter((inv) => !cannotDelete(inv)).map((inv) => inv.id)
+  const allSelected =
+    selectableIds.length > 0 && selectableIds.every((id) => selected.includes(id))
+  const someSelected = selected.some((id) => selectableIds.includes(id))
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
+  }
+
+  const handleBulkDelete = async () => {
+    const ids = selected.filter((id) => {
+      const inv = invoices?.find((i) => i.id === id)
+      return inv ? !cannotDelete(inv) : false
+    })
+    if (ids.length === 0) return
+    if (
+      !window.confirm(
+        `Delete ${ids.length} selected invoice${ids.length > 1 ? "s" : ""}? This cannot be undone.`
+      )
+    ) {
+      return
+    }
+    setBulkDeleting(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/invoices/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      })
+      const body = (await res.json().catch(() => ({}))) as {
+        deleted?: number
+        skipped?: number
+        error?: string
+      }
+      if (!res.ok) {
+        throw new Error(body.error ?? `Failed to delete invoices (${res.status})`)
+      }
+      setSelected([])
+      if (invoices && invoices.length === ids.length && page > 1) {
+        setPage((prev) => prev - 1)
+      } else {
+        setReloadKey((key) => key + 1)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete invoices")
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-5xl p-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -179,10 +235,36 @@ export default function InvoicesPage() {
 
       {invoices && invoices.length > 0 && (
         <>
+          {selected.length > 0 && (
+            <div className="mb-3 flex items-center justify-between rounded-md border bg-muted/50 px-3 py-2">
+              <span className="text-sm font-medium">
+                {selected.length} selected
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {bulkDeleting ? "Deleting…" : "Delete selected"}
+              </Button>
+            </div>
+          )}
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allSelected}
+                      indeterminate={someSelected && !allSelected}
+                      onCheckedChange={(checked) => {
+                        setSelected(checked ? selectableIds : [])
+                      }}
+                      aria-label="Select all invoices"
+                    />
+                  </TableHead>
                   <TableHead>Number</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Date</TableHead>
@@ -195,6 +277,14 @@ export default function InvoicesPage() {
               <TableBody>
                 {invoices.map((invoice) => (
                   <TableRow key={invoice.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selected.includes(invoice.id)}
+                        disabled={cannotDelete(invoice)}
+                        onCheckedChange={() => toggleSelect(invoice.id)}
+                        aria-label={`Select ${invoice.number}`}
+                      />
+                    </TableCell>
                     <TableCell>
                       <Link
                         href={`/invoices/${invoice.id}`}
