@@ -1,13 +1,21 @@
 "use client"
 
+import { useSyncExternalStore } from "react"
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 
 import { Button } from "@/components/ui/button"
 
+const noopSubscribe = () => () => {}
+
 export function ThemeSwitcher() {
   const { resolvedTheme, setTheme } = useTheme()
-  const isDark = resolvedTheme === "dark"
+  const mounted = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false
+  )
+  const isDark = mounted && resolvedTheme === "dark"
 
   return (
     <Button

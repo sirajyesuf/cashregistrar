@@ -9,7 +9,6 @@ import {
   Menu,
   Receipt,
   Settings2,
-  Shield,
   User,
   Users,
   X,
@@ -63,10 +62,12 @@ function NavItems({
 function Brand() {
   return (
     <span className="flex items-center gap-2">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-        <Shield className="size-4" />
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
+        CR
       </span>
-      <span className="text-sm font-semibold tracking-tight">Admin</span>
+      <span className="text-sm font-semibold tracking-tight">
+        CashRegistrar
+      </span>
     </span>
   )
 }
@@ -108,11 +109,15 @@ export function AdminSidebar({
         <div className="flex-1 overflow-y-auto p-3">
           <NavItems pathname={pathname} />
         </div>
-        <div className="flex items-center justify-between border-t p-3">
-          <ThemeSwitcher />
-          <AdminUserMenu name={name} email={email} />
+        <div className="border-t p-3">
+          <AdminUserMenu name={name} email={email} fullWidth />
         </div>
       </aside>
+
+      {/* Desktop theme switcher — fixed to the top-right corner */}
+      <div className="fixed top-4 right-4 z-40 hidden md:block">
+        <ThemeSwitcher />
+      </div>
 
       {/* Mobile drawer */}
       <Dialog.Root open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -136,9 +141,8 @@ export function AdminSidebar({
                 onNavigate={() => setMobileOpen(false)}
               />
             </div>
-            <div className="flex items-center justify-between border-t p-3">
-              <ThemeSwitcher />
-              <AdminUserMenu name={name} email={email} />
+            <div className="border-t p-3">
+              <AdminUserMenu name={name} email={email} fullWidth />
             </div>
           </Dialog.Popup>
         </Dialog.Portal>
