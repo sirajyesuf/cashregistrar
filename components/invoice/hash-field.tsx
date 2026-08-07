@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Check, Copy } from "lucide-react"
+import { copyText } from "@/lib/copy"
 
 type HashFieldProps = {
   label: string
@@ -20,7 +21,7 @@ export function HashField({ label, value }: HashFieldProps) {
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(value)
+      await copyText(value)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {

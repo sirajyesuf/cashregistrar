@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
+import { admin } from "better-auth/plugins"
 import { prisma } from "@/lib/db"
 
 function splitOrigins(value: string | undefined): string[] {
@@ -38,6 +39,7 @@ export const auth = betterAuth({
       },
     },
   },
+  plugins: [admin()],
   secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
   trustedOrigins: splitOrigins(process.env.BETTER_AUTH_TRUSTED_ORIGINS),

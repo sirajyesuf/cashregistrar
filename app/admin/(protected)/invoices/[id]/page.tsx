@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { copyText } from "@/lib/copy"
 import { formatCents, moneyToCents } from "@/lib/invoice"
 import { StatusBadge } from "../../status-badge"
 import type { TransactionType } from "@/lib/invoice"
@@ -109,7 +110,7 @@ function FailurePanel({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(text)
+      await copyText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {

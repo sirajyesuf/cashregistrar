@@ -4,7 +4,8 @@ import { createContext, useContext, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Menu } from "@base-ui/react/menu"
-import { Menu as MenuIcon, Receipt } from "lucide-react"
+import { LogOut, Menu as MenuIcon, Receipt, UserRoundCog } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/user-menu"
 import { authClient } from "@/lib/auth-client"
 
@@ -47,6 +48,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     href === "/dashboard"
       ? pathname === href
       : pathname === href || pathname.startsWith(`${href}/`)
+
+  const impersonatedBy = session?.session?.impersonatedBy
+
+  const stopImpersonating = async () => {
+    await authClient.admin.stopImpersonating()
+    router.push("/admin/users")
+  }
 
   return (
     <UserContext.Provider value={{ user }}>
@@ -120,6 +128,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="flex-1">{children}</main>
+        {impersonatedBy && (
+          <footer className="border-t bg-muted/40">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+                  <UserRoundCog className="size-4.5 text-primary" />
+                </span>
+                <div className="min-w-0 leading-tight">
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    Viewing as
+                  </p>
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {user?.name || user?.email}
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={stopImpersonating}
+              >
+                <LogOut className="size-3.5" />
+                Exit impersonation
+              </Button>
+            </div>
+          </footer>
+        )}
       </div>
     </UserContext.Provider>
   )
