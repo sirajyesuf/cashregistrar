@@ -104,9 +104,9 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="mx-auto max-w-4xl p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <Link href="/invoices">
-          <Button variant="outline">&larr; Back to Invoices</Button>
+      <div className="mb-6 flex items-center justify-end print:hidden">
+        <Link href={`/invoices/${id}/edit`}>
+          <Button variant="outline">Edit</Button>
         </Link>
       </div>
 

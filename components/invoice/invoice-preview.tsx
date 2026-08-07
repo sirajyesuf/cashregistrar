@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect } from "react"
-import { Printer } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Loader2, Printer } from "lucide-react"
+import { useReactToPrint } from "react-to-print"
 import { Button } from "@/components/ui/button"
 import type { PreviewInvoice, SellerInfo } from "@/lib/invoice"
 import { formatCents } from "@/lib/invoice"
@@ -12,6 +13,10 @@ type Props = {
 }
 
 export function InvoicePreview({ data, seller }: Props) {
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [isPrinting, setIsPrinting] = useState(false)
+  const promiseResolveRef = useRef<(() => void) | null>(null)
+
   useEffect(() => {
     const original = document.title
     document.title = `Invoice ${data.number}`
@@ -20,16 +25,43 @@ export function InvoicePreview({ data, seller }: Props) {
     }
   }, [data.number])
 
+  useEffect(() => {
+    if (!isPrinting || !promiseResolveRef.current) return
+    promiseResolveRef.current()
+  }, [isPrinting])
+
+  const handlePrint = useReactToPrint({
+    contentRef,
+    documentTitle: `Invoice-${data.number}`,
+    onBeforePrint: () =>
+      new Promise<void>((resolve) => {
+        promiseResolveRef.current = resolve
+        setIsPrinting(true)
+      }),
+    onAfterPrint: () => {
+      promiseResolveRef.current = null
+      setIsPrinting(false)
+    },
+    pageStyle: `@page { size: A4; margin: 1.5cm; } @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } table tr { break-inside: avoid; } .invoice-totals { break-inside: avoid; } }`,
+  })
+
   return (
     <div className="mx-auto max-w-4xl">
       <div className="mb-6 flex justify-end gap-3 print:hidden">
-        <Button onClick={() => window.print()}>
-          <Printer className="mr-2 h-4 w-4" />
-          Print / Save PDF
+        <Button onClick={() => handlePrint()} disabled={isPrinting}>
+          {isPrinting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Printer className="mr-2 h-4 w-4" />
+          )}
+          {isPrinting ? "Preparing…" : "Print / Save PDF"}
         </Button>
       </div>
 
-      <div className="rounded-lg border bg-white p-8 shadow-sm print:border-none print:shadow-none">
+      <div
+        ref={contentRef}
+        className="rounded-lg border bg-white p-8 shadow-sm print:border-none print:shadow-none"
+      >
         <div className="flex items-start justify-between border-b pb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">INVOICE</h1>
@@ -110,7 +142,7 @@ export function InvoicePreview({ data, seller }: Props) {
           </tbody>
         </table>
 
-        <div className="mt-4 ml-auto w-64 space-y-1.5 text-sm">
+        <div className="invoice-totals mt-4 ml-auto w-64 space-y-1.5 text-sm">
           <div className="flex justify-between text-gray-600">
             <span>Subtotal</span>
             <span className="tabular-nums">
@@ -135,18 +167,6 @@ export function InvoicePreview({ data, seller }: Props) {
           Thank you for your business!
         </div>
       </div>
-
-      <style>{`
-        @media print {
-          body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          @page {
-            margin: 1.5cm;
-          }
-        }
-      `}</style>
     </div>
   )
 }
