@@ -168,32 +168,27 @@ export default function LandingPage() {
       </header>
 
       <main>
-        <section className="mx-auto max-w-6xl px-4 pt-16 pb-20 sm:px-6 sm:pt-24">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
-              <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
+        <section className="mx-auto max-w-6xl px-4 pt-12 pb-16 sm:px-6 sm:pt-24">
+          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
+            <div className="text-center sm:text-left">
+              <h1 className="text-3xl font-bold tracking-tight text-balance sm:text-5xl">
                 Simple, official invoices.
               </h1>
-              <p className="mt-4 max-w-md text-lg text-muted-foreground">
+              <p className="mx-auto mt-4 max-w-md text-base text-muted-foreground sm:mx-0 sm:text-lg">
                 Create an invoice, send it to the government, and give your
                 customer a receipt — all in one place.
               </p>
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
                 <Link href="/login">
                   <Button size="lg">
                     Sign in
                     <ArrowRight className="size-4" />
                   </Button>
                 </Link>
-                <Link href="/admin/login">
-                  <Button variant="outline" size="lg">
-                    Admin sign in
-                  </Button>
-                </Link>
               </div>
             </div>
 
-            <div className="flex justify-center lg:justify-end">
+            <div className="hidden justify-center lg:flex lg:justify-end">
               <MockInvoice />
             </div>
           </div>
