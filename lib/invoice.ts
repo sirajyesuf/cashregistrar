@@ -104,7 +104,7 @@ export type SellerInfo = {
 }
 
 export type RegistrationStatus =
-  "PENDING" | "REGISTERED" | "CANCELLED" | "FAILED"
+  "PENDING" | "PROCESSING" | "REGISTERED" | "CANCELLED" | "FAILED"
 
 export type PreviewInvoice = {
   id: string

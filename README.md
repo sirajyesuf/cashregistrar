@@ -13,17 +13,27 @@ npm run dev
 
 Set `DATABASE_URL` (MySQL) and `AUTH_SECRET` (used to sign session cookies) in `.env.local`.
 
+Bulk EIMS registration requires this callback setting:
+
+```env
+EINVOICE_CALLBACK_URL=https://your-domain.example/api/einvoice/callback
+```
+
+This URL is sent to EIMS in the required `callback` header. EIMS uses it to
+send the later results, and the callback identifies the operation using the
+EIMS `conversationId`.
+
 ## Scripts
 
-| Script                 | Description                          |
-| ---------------------- | ------------------------------------ |
-| `npm run dev`          | Start Next.js dev server             |
-| `npm run build`        | Production build                     |
-| `npm run start`        | Serve the production build           |
-| `npm run lint`         | ESLint                               |
-| `npm run typecheck`    | `tsc --noEmit`                       |
-| `npm run format`       | Prettier (write)                     |
-| `npm run prisma:migrate` | Apply a new migration (`prisma migrate dev`) |
+| Script                   | Description                                           |
+| ------------------------ | ----------------------------------------------------- |
+| `npm run dev`            | Start Next.js dev server                              |
+| `npm run build`          | Production build                                      |
+| `npm run start`          | Serve the production build                            |
+| `npm run lint`           | ESLint                                                |
+| `npm run typecheck`      | `tsc --noEmit`                                        |
+| `npm run format`         | Prettier (write)                                      |
+| `npm run prisma:migrate` | Apply a new migration (`prisma migrate dev`)          |
 | `npm run prisma:deploy`  | Apply migrations on the VPS (`prisma migrate deploy`) |
 
 ## Structure

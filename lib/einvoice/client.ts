@@ -1,7 +1,7 @@
 import { getConfig } from "./config"
 import { loadKeys } from "./keys"
 import { signAndWrap } from "./sign"
-import { forceRefresh, getValidToken } from "./token"
+import { forceLogin, forceRefresh, getValidToken } from "./token"
 
 export async function eimsRouteHandler(
   path: string,
@@ -26,6 +26,7 @@ export type EimsCallResult = {
   status: number
   ok: boolean
   data: unknown
+  retryAfter: string | null
 }
 
 export async function callEims(
@@ -68,9 +69,14 @@ export async function callEims(
   }
 
   if (res.status === 401 && !retried) {
-    await forceRefresh()
+    await forceLogin()
     return callEims(path, payload, extraHeaders, true)
   }
 
-  return { status: res.status, ok: res.ok, data }
+  return {
+    status: res.status,
+    ok: res.ok,
+    data,
+    retryAfter: res.headers.get("retry-after"),
+  }
 }

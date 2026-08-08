@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `Invoice` MODIFY `registrationStatus` ENUM('PENDING', 'PROCESSING', 'REGISTERED', 'CANCELLED', 'FAILED') NULL;

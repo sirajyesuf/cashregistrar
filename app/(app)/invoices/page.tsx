@@ -24,6 +24,7 @@ import {
 import { Pagination } from "@/components/ui/pagination"
 import { RegisterButton } from "@/components/invoice/register-button"
 import { CancelButton } from "@/components/invoice/cancel-button"
+import { BulkActions } from "@/components/invoice/bulk-actions"
 import { formatCents, hasIssuedReceipt, moneyToCents } from "@/lib/invoice"
 
 type InvoiceRow = {
@@ -48,7 +49,10 @@ type InvoiceStats = {
 const PAGE_SIZE = 10
 
 function cannotEdit(invoice: InvoiceRow): boolean {
-  return invoice.registrationStatus === "REGISTERED"
+  return (
+    invoice.registrationStatus === "REGISTERED" ||
+    invoice.registrationStatus === "PROCESSING"
+  )
 }
 
 function cannotDelete(invoice: InvoiceRow): boolean {
@@ -76,6 +80,9 @@ function StatusBadge({
   }
   if (status === "FAILED") {
     return <Badge variant="destructive">Failed</Badge>
+  }
+  if (status === "PROCESSING") {
+    return <Badge variant="outline">Processing</Badge>
   }
   return <Badge variant="outline">Unregistered</Badge>
 }
@@ -116,6 +123,18 @@ export default function InvoicesPage() {
       cancelled = true
     }
   }, [page, reloadKey])
+
+  const hasProcessingInvoices = invoices?.some(
+    (invoice) => invoice.registrationStatus === "PROCESSING"
+  )
+
+  useEffect(() => {
+    if (!hasProcessingInvoices) return
+    const interval = window.setInterval(() => {
+      setReloadKey((key) => key + 1)
+    }, 5000)
+    return () => window.clearInterval(interval)
+  }, [hasProcessingInvoices])
 
   const handleRegistered = (id: string) => {
     setInvoices(
@@ -168,9 +187,17 @@ export default function InvoicesPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const selectableIds = (invoices ?? []).filter((inv) => !cannotDelete(inv)).map((inv) => inv.id)
+  const selectableIds = (invoices ?? [])
+    .filter(
+      (inv) =>
+        inv.registrationStatus !== "PROCESSING" &&
+        (!cannotDelete(inv) ||
+          (inv.registrationStatus === "REGISTERED" && !hasIssuedReceipt(inv)))
+    )
+    .map((inv) => inv.id)
   const allSelected =
-    selectableIds.length > 0 && selectableIds.every((id) => selected.includes(id))
+    selectableIds.length > 0 &&
+    selectableIds.every((id) => selected.includes(id))
   const someSelected = selected.some((id) => selectableIds.includes(id))
 
   const toggleSelect = (id: string) => {
@@ -182,7 +209,9 @@ export default function InvoicesPage() {
   const handleBulkDelete = async () => {
     const ids = selected.filter((id) => {
       const inv = invoices?.find((i) => i.id === id)
-      return inv ? !cannotDelete(inv) : false
+      return inv
+        ? !cannotDelete(inv) && inv.registrationStatus !== "PROCESSING"
+        : false
     })
     if (ids.length === 0) return
     if (
@@ -206,7 +235,9 @@ export default function InvoicesPage() {
         error?: string
       }
       if (!res.ok) {
-        throw new Error(body.error ?? `Failed to delete invoices (${res.status})`)
+        throw new Error(
+          body.error ?? `Failed to delete invoices (${res.status})`
+        )
       }
       setSelected([])
       if (invoices && invoices.length === ids.length && page > 1) {
@@ -278,20 +309,18 @@ export default function InvoicesPage() {
       {invoices && invoices.length > 0 && (
         <>
           {selected.length > 0 && (
-            <div className="mb-3 flex items-center justify-between rounded-md border bg-muted/50 px-3 py-2">
-              <span className="text-sm font-medium">
-                {selected.length} selected
-              </span>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleBulkDelete}
-                disabled={bulkDeleting}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                {bulkDeleting ? "Deleting…" : "Delete selected"}
-              </Button>
-            </div>
+            <BulkActions
+              invoices={invoices.filter((invoice) =>
+                selected.includes(invoice.id)
+              )}
+              onClear={() => setSelected([])}
+              onDelete={handleBulkDelete}
+              onSubmitted={() => {
+                setSelected([])
+                setReloadKey((key) => key + 1)
+              }}
+              deleting={bulkDeleting}
+            />
           )}
           <div className="rounded-md border">
             <Table>
@@ -322,7 +351,7 @@ export default function InvoicesPage() {
                     <TableCell>
                       <Checkbox
                         checked={selected.includes(invoice.id)}
-                        disabled={cannotDelete(invoice)}
+                        disabled={!selectableIds.includes(invoice.id)}
                         onCheckedChange={() => toggleSelect(invoice.id)}
                         aria-label={`Select ${invoice.number}`}
                       />
@@ -359,7 +388,10 @@ export default function InvoicesPage() {
                         <RegisterButton
                           invoiceId={invoice.id}
                           size="sm"
-                          disabled={invoice.registrationStatus === "REGISTERED"}
+                          disabled={
+                            invoice.registrationStatus === "REGISTERED" ||
+                            invoice.registrationStatus === "PROCESSING"
+                          }
                           onRegistered={() => handleRegistered(invoice.id)}
                         />
                         {invoice.registrationStatus === "REGISTERED" &&
@@ -393,7 +425,9 @@ export default function InvoicesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDelete(invoice)}
-                          disabled={deletingId === invoice.id || cannotDelete(invoice)}
+                          disabled={
+                            deletingId === invoice.id || cannotDelete(invoice)
+                          }
                           className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
