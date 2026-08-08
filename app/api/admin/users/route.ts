@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { requireAdmin } from "@/lib/auth/admin"
 import { prisma } from "@/lib/db"
+import { adminUserSchema } from "@/lib/admin-user-schema"
 
 export const runtime = "nodejs"
 
@@ -32,39 +33,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: guard.error }, { status: guard.status! })
   }
 
-  let body: {
-    name?: unknown
-    email?: unknown
-    password?: unknown
-    role?: unknown
-  }
+  let body: unknown
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const name = typeof body.name === "string" ? body.name.trim() : ""
-  const email =
-    typeof body.email === "string" ? body.email.trim().toLowerCase() : ""
-  const password = typeof body.password === "string" ? body.password : ""
-  const role = body.role === "ADMIN" ? "ADMIN" : "OWNER"
+  const parsed = adminUserSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
+      { status: 400 }
+    )
+  }
 
-  if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 })
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json(
-      { error: "A valid email is required" },
-      { status: 400 }
-    )
-  }
-  if (password.length < 5) {
-    return NextResponse.json(
-      { error: "Password must be at least 5 characters" },
-      { status: 400 }
-    )
-  }
+  const { name, password, role } = parsed.data
+  const email = parsed.data.email.toLowerCase()
 
   try {
     // Create the user via better-auth so the password is hashed the same way

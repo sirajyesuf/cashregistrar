@@ -38,7 +38,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  if (authenticated && (pathname === "/" || matches(pathname, AUTH_ROUTES))) {
+  if (authenticated && matches(pathname, AUTH_ROUTES)) {
     return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 

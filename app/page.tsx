@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { Button } from "@/components/ui/button"
+import { getSessionUser } from "@/lib/auth/user"
 
 const FEATURES = [
   {
@@ -133,7 +134,11 @@ function MockInvoice() {
   )
 }
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const isAuthenticated = Boolean(await getSessionUser())
+  const actionHref = isAuthenticated ? "/dashboard" : "/login"
+  const actionLabel = isAuthenticated ? "Dashboard" : "Sign in"
+
   return (
     <div className="min-h-svh">
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
@@ -157,9 +162,9 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-2">
             <ThemeSwitcher />
-            <Link href="/login">
+            <Link href={actionHref}>
               <Button size="sm">
-                Sign in
+                {actionLabel}
                 <ArrowRight className="size-3.5" />
               </Button>
             </Link>
@@ -178,14 +183,16 @@ export default function LandingPage() {
                 Create an invoice, send it to the government, and give your
                 customer a receipt — all in one place.
               </p>
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-                <Link href="/login">
-                  <Button size="lg">
-                    Sign in
-                    <ArrowRight className="size-4" />
-                  </Button>
-                </Link>
-              </div>
+              {!isAuthenticated && (
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
+                  <Link href="/login">
+                    <Button size="lg">
+                      Sign in
+                      <ArrowRight className="size-4" />
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
 
             <div className="hidden justify-center lg:flex lg:justify-end">
@@ -252,9 +259,9 @@ export default function LandingPage() {
                 Add your business details and make your first official invoice
                 in minutes.
               </p>
-              <Link href="/login">
+              <Link href={actionHref}>
                 <Button size="lg">
-                  Sign in
+                  {actionLabel}
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>

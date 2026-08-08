@@ -115,7 +115,7 @@ export default function EditInvoicePage() {
           Edit Invoice {invoice?.number ? `— ${invoice.number}` : ""}
         </h1>
         <Link href={`/invoices/${id}`}>
-          <Button variant="outline">Back to Invoice</Button>
+          <Button variant="outline">View invoice</Button>
         </Link>
       </div>
 
@@ -135,7 +135,7 @@ export default function EditInvoicePage() {
             This invoice is registered with EIMS and can no longer be edited.
           </p>
           <Link href={`/invoices/${id}`} className="mt-4 inline-block">
-            <Button>Back to Invoice</Button>
+            <Button>View invoice</Button>
           </Link>
         </div>
       )}

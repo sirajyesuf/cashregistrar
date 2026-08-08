@@ -120,7 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <UserMenu
                   name={user.name}
                   email={user.email}
-                  isAdmin={user.role === "admin"}
+                  isAdmin={user.role === "ADMIN"}
                 />
               )}
             </div>
