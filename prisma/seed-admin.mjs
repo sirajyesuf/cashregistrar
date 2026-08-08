@@ -10,6 +10,7 @@ const prisma = new PrismaClient()
 const DEFAULT_ADMIN_EMAIL = "seretse@empire.et"
 const DEFAULT_ADMIN_PASSWORD = "123456789"
 const DEFAULT_ADMIN_NAME = "Admin"
+const ADMIN_ROLE = "ADMIN"
 
 /**
  * Minimal better-auth instance used only to create the user so the password
@@ -46,8 +47,8 @@ async function main() {
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
-    await prisma.user.update({ where: { email }, data: { role: "admin" } })
-    console.log(`Promoted ${email} to admin`)
+    await prisma.user.update({ where: { email }, data: { role: ADMIN_ROLE } })
+    console.log(`Promoted ${email} to ${ADMIN_ROLE}`)
     return
   }
 
@@ -57,9 +58,9 @@ async function main() {
   }
   await prisma.user.update({
     where: { id: created.user.id },
-    data: { role: "admin" },
+    data: { role: ADMIN_ROLE },
   })
-  console.log(`Created ${email} as admin (name: ${name})`)
+  console.log(`Created ${email} as ${ADMIN_ROLE} (name: ${name})`)
 }
 
 main()

@@ -1,7 +1,8 @@
 import { headers } from "next/headers"
+import type { Role } from "@prisma/client"
 import { auth } from "@/lib/auth"
 
-export type UserRole = "user" | "admin"
+export type UserRole = Role
 
 export type SessionUser = {
   id: string
@@ -19,6 +20,6 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     id: session.user.id,
     email: session.user.email,
     name: session.user.name ?? null,
-    role: session.user.role === "admin" ? "admin" : "user",
+    role: session.user.role as UserRole,
   }
 }

@@ -44,7 +44,7 @@ export async function proxy(request: NextRequest) {
 
   // Admin login page is public. An admin who is already signed in jumps to /admin.
   if (pathname === ADMIN_LOGIN) {
-    if (authenticated && role === "admin") {
+    if (authenticated && role === "ADMIN") {
       return NextResponse.redirect(new URL("/admin", request.url))
     }
     return NextResponse.next()
@@ -59,7 +59,7 @@ export async function proxy(request: NextRequest) {
     if (!authenticated) {
       return NextResponse.redirect(new URL(ADMIN_LOGIN, request.url))
     }
-    if (role !== "admin") {
+    if (role !== "ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", request.url))
     }
   }

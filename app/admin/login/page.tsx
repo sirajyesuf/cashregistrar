@@ -26,7 +26,7 @@ export default function AdminLoginPage() {
       if (result.error || !result.data) {
         throw new Error(result.error?.message ?? "Sign in failed")
       }
-      if (result.data.user.role !== "admin") {
+      if (result.data.user.role !== "ADMIN") {
         await authClient.signOut()
         throw new Error("This account does not have admin access.")
       }

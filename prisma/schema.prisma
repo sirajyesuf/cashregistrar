@@ -13,7 +13,7 @@ model User {
   email           String           @unique
   emailVerified   Boolean          @default(false)
   image           String?
-  role            Role             @default(user)
+  role            Role             @default(OWNER)
   banned          Boolean?
   banReason       String?
   banExpires      DateTime?
@@ -63,13 +63,13 @@ model Branch {
 }
 
 model BusinessMember {
-  id         String       @id @default(cuid())
+  id         String   @id @default(cuid())
   userId     String
   businessId String
   branchId   String?
-  role       BusinessRole @default(CASHIER)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  role       Role     @default(CASHIER)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
@@ -81,15 +81,11 @@ model BusinessMember {
   @@index([branchId])
 }
 
-enum BusinessRole {
+enum Role {
+  ADMIN
   OWNER
   MANAGER
   CASHIER
-}
-
-enum Role {
-  user
-  admin
 }
 
 model Session {

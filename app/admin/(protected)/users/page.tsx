@@ -112,7 +112,7 @@ export default function AdminUsersPage() {
           <TableBody>
             {users.map((user) => {
               const isSelf = user.id === currentUserId
-              const canImpersonate = !isSelf && user.role !== "admin"
+              const canImpersonate = !isSelf && user.role !== "ADMIN"
               return (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
@@ -120,10 +120,10 @@ export default function AdminUsersPage() {
                     {user.email}
                   </TableCell>
                   <TableCell>
-                    {user.role === "admin" ? (
-                      <Badge variant="success">admin</Badge>
+                    {user.role === "ADMIN" ? (
+                      <Badge variant="success">ADMIN</Badge>
                     ) : (
-                      <Badge variant="outline">user</Badge>
+                      <Badge variant="outline">{user.role}</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
@@ -144,7 +144,7 @@ export default function AdminUsersPage() {
                       title={
                         isSelf
                           ? "You are already signed in as this user"
-                          : user.role === "admin"
+                          : user.role === "ADMIN"
                             ? "Cannot impersonate another admin"
                             : "Sign in as this user"
                       }
@@ -170,7 +170,7 @@ function AddUserForm({ onCreated }: { onCreated: () => void }) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState("user")
+  const [role, setRole] = useState("OWNER")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -178,7 +178,7 @@ function AddUserForm({ onCreated }: { onCreated: () => void }) {
     setName("")
     setEmail("")
     setPassword("")
-    setRole("user")
+    setRole("OWNER")
     setError(null)
   }
 
@@ -292,14 +292,14 @@ function AddUserForm({ onCreated }: { onCreated: () => void }) {
                 <Label htmlFor="newUserRole">Role</Label>
                 <Select
                   value={role}
-                  onValueChange={(value) => setRole(value ?? "user")}
+                  onValueChange={(value) => setRole(value ?? "OWNER")}
                 >
                   <SelectTrigger id="newUserRole">
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">user</SelectItem>
-                    <SelectItem value="admin">admin</SelectItem>
+                    <SelectItem value="OWNER">OWNER</SelectItem>
+                    <SelectItem value="ADMIN">ADMIN</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

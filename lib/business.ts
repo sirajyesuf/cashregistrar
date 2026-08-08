@@ -1,4 +1,4 @@
-import { BusinessRole, Prisma } from "@prisma/client"
+import { Prisma, Role } from "@prisma/client"
 import { prisma } from "@/lib/db"
 
 export const businessRoles = ["OWNER", "MANAGER", "CASHIER"] as const
@@ -6,7 +6,7 @@ export const businessRoles = ["OWNER", "MANAGER", "CASHIER"] as const
 export type BusinessAccess = {
   userId: string
   businessId: string
-  role: BusinessRole
+  role: Role
   branchId: string | null
 }
 
@@ -22,23 +22,23 @@ export async function getBusinessAccess(
   return membership
 }
 
-export function canManageBusiness(role: BusinessRole) {
-  return role === BusinessRole.OWNER
+export function canManageBusiness(role: Role) {
+  return role === Role.OWNER
 }
 
-export function canManageBranch(role: BusinessRole) {
-  return role === BusinessRole.OWNER || role === BusinessRole.MANAGER
+export function canManageBranch(role: Role) {
+  return role === Role.OWNER || role === Role.MANAGER
 }
 
-export function canManageMembers(role: BusinessRole) {
-  return role === BusinessRole.OWNER
+export function canManageMembers(role: Role) {
+  return role === Role.OWNER
 }
 
 export function canAccessBranch(
   access: BusinessAccess,
   branchId: string
 ): boolean {
-  return access.role === BusinessRole.OWNER || access.branchId === branchId
+  return access.role === Role.OWNER || access.branchId === branchId
 }
 
 export function isPrismaUniqueError(error: unknown): error is Prisma.PrismaClientKnownRequestError {

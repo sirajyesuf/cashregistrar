@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   const email =
     typeof body.email === "string" ? body.email.trim().toLowerCase() : ""
   const password = typeof body.password === "string" ? body.password : ""
-  const role = body.role === "admin" ? "admin" : "user"
+  const role = body.role === "ADMIN" ? "ADMIN" : "OWNER"
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 })

@@ -21,7 +21,7 @@ export const auth = betterAuth({
       role: {
         type: "string",
         required: true,
-        defaultValue: "user",
+        defaultValue: "OWNER",
         input: false,
         returned: true,
       },
@@ -34,12 +34,12 @@ export const auth = betterAuth({
         // is reachable without any manual setup.
         before: async (user) => {
           const count = await prisma.user.count()
-          return { data: { ...user, role: count === 0 ? "admin" : "user" } }
+          return { data: { ...user, role: count === 0 ? "ADMIN" : "OWNER" } }
         },
       },
     },
   },
-  plugins: [admin()],
+  plugins: [admin({ defaultRole: "OWNER", adminRoles: ["ADMIN"] })],
   secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
   trustedOrigins: splitOrigins(process.env.BETTER_AUTH_TRUSTED_ORIGINS),

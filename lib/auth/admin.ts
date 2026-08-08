@@ -13,7 +13,7 @@ export async function requireAdmin(): Promise<AdminGuardResult> {
   if (!user) {
     return { user: null, error: "Not authenticated", status: 401 }
   }
-  if (user.role !== "admin") {
+  if (user.role !== "ADMIN") {
     return { user: null, error: "Forbidden", status: 403 }
   }
   return { user, error: null, status: null }

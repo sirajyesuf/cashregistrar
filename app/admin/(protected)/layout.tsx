@@ -9,7 +9,7 @@ export default async function AdminLayout({
 }) {
   const user = await getSessionUser()
   if (!user) redirect("/admin/login")
-  if (user.role !== "admin") redirect("/dashboard")
+  if (user.role !== "ADMIN") redirect("/dashboard")
 
   return (
     <div className="min-h-svh bg-background">
