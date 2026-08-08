@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import {
+  CircleX,
+  FileText,
+  Pencil,
+  Plus,
+  ReceiptText,
+  Trash2,
+} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -29,6 +36,13 @@ type InvoiceRow = {
   irn?: string | null
   registrationStatus?: string | null
   receipt?: { status?: string | null } | null
+}
+
+type InvoiceStats = {
+  totalInvoices: number
+  failed: number
+  cancelled: number
+  issuedReceipts: number
 }
 
 const PAGE_SIZE = 10
@@ -70,6 +84,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceRow[] | null>(null)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
+  const [stats, setStats] = useState<InvoiceStats | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [selected, setSelected] = useState<string[]>([])
@@ -84,11 +99,13 @@ export default function InvoicesPage() {
         const body = (await res.json()) as {
           invoices: InvoiceRow[]
           total: number
+          stats: InvoiceStats
         }
         if (cancelled) return
         setError(null)
         setInvoices(body.invoices)
         setTotal(body.total)
+        setStats(body.stats)
       })
       .catch((err) => {
         if (cancelled) return
@@ -217,6 +234,31 @@ export default function InvoicesPage() {
           </Link>
         </div>
       </div>
+
+      {stats && (
+        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <InvoiceStat
+            label="Total invoices"
+            value={stats.totalInvoices}
+            icon={<FileText className="size-4.5" />}
+          />
+          <InvoiceStat
+            label="Total failed"
+            value={stats.failed}
+            icon={<CircleX className="size-4.5" />}
+          />
+          <InvoiceStat
+            label="Total cancelled"
+            value={stats.cancelled}
+            icon={<CircleX className="size-4.5" />}
+          />
+          <InvoiceStat
+            label="Receipts issued"
+            value={stats.issuedReceipts}
+            icon={<ReceiptText className="size-4.5" />}
+          />
+        </section>
+      )}
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
 
@@ -373,6 +415,30 @@ export default function InvoicesPage() {
           />
         </>
       )}
+    </div>
+  )
+}
+
+function InvoiceStat({
+  label,
+  value,
+  icon,
+}: {
+  label: string
+  value: number
+  icon: React.ReactNode
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-5 text-card-foreground shadow-sm">
+      <div className="flex items-start justify-between">
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          {icon}
+        </span>
+      </div>
+      <p className="mt-3 text-2xl font-semibold tracking-tight tabular-nums">
+        {value}
+      </p>
     </div>
   )
 }

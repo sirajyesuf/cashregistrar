@@ -30,7 +30,8 @@ export async function GET(request: Request) {
   )
 
   const where = { userId: user.id }
-  const [invoices, total] = await Promise.all([
+  const [invoices, total, failed, cancelled, issuedReceipts] =
+    await Promise.all([
     prisma.invoice.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -51,9 +52,22 @@ export async function GET(request: Request) {
       },
     }),
     prisma.invoice.count({ where }),
+    prisma.invoice.count({ where: { ...where, registrationStatus: "FAILED" } }),
+    prisma.invoice.count({
+      where: { ...where, registrationStatus: "CANCELLED" },
+    }),
+    prisma.receipt.count({
+      where: { status: "ISSUED", invoice: { userId: user.id } },
+    }),
   ])
 
-  return NextResponse.json({ invoices, total, page, pageSize })
+  return NextResponse.json({
+    invoices,
+    total,
+    page,
+    pageSize,
+    stats: { totalInvoices: total, failed, cancelled, issuedReceipts },
+  })
 }
 
 export async function POST(request: Request) {

@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Menu } from "@base-ui/react/menu"
-import { LogOut, Menu as MenuIcon, Receipt, UserRoundCog } from "lucide-react"
+import { LogOut, Menu as MenuIcon, UserRoundCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/user-menu"
 import { authClient } from "@/lib/auth-client"
@@ -18,7 +18,6 @@ type SessionUser = {
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/invoices", label: "Invoices" },
-  { href: "/settings", label: "Settings" },
 ]
 
 const UserContext = createContext<{ user: SessionUser | null }>({ user: null })
@@ -66,8 +65,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href="/dashboard"
                 className="flex shrink-0 items-center gap-2"
               >
-                <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Receipt className="size-4" />
+                <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
+                  CR
                 </span>
                 <span className="text-sm font-semibold tracking-tight">
                   CashRegistrar
