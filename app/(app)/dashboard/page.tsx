@@ -50,11 +50,41 @@ type DashboardData = {
   }[]
 }
 
-function greeting(): string {
-  const hour = new Date().getHours()
+const TIME_ZONE = "Africa/Addis_Ababa"
+
+function greeting(date: Date): string {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: TIME_ZONE,
+    }).format(date)
+  )
   if (hour < 12) return "Good morning"
   if (hour < 17) return "Good afternoon"
   return "Good evening"
+}
+
+function formatDateLabels(date: Date): {
+  gregorian: string
+  ethiopian: string
+} {
+  return {
+    gregorian: new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: TIME_ZONE,
+    }).format(date),
+    ethiopian: new Intl.DateTimeFormat("am-ET-u-ca-ethiopic", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: TIME_ZONE,
+    }).format(date),
+  }
 }
 
 function formatNumber(value: number): string {
@@ -101,11 +131,8 @@ export default function DashboardPage() {
       .catch(() => setData(null))
   }, [])
 
-  const today = new Date().toLocaleDateString("en", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  })
+  const now = new Date()
+  const dateLabels = formatDateLabels(now)
   const firstName = user?.name?.trim().split(/\s+/)[0] || "there"
 
   const stats = data?.stats
@@ -132,9 +159,14 @@ export default function DashboardPage() {
         <>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">{today}</p>
+              <p className="text-sm text-muted-foreground">
+                {dateLabels.gregorian}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {dateLabels.ethiopian}
+              </p>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-                {greeting()}, {firstName}
+                {greeting(now)}, {firstName}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 Here’s what’s happening with your business.

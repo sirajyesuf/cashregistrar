@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Menu } from "@base-ui/react/menu"
 import { useTheme } from "@/components/theme-provider"
-import { ChevronDown, LogOut, Moon, Settings, Shield, Sun } from "lucide-react"
+import {
+  ChevronDown,
+  LogOut,
+  Moon,
+  Settings,
+  Shield,
+  Sun,
+  UserRound,
+} from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 
 type Props = {
@@ -68,6 +76,13 @@ export function UserMenu({ name, email, isAdmin }: Props) {
               )}
               {isDark ? "Light Mode" : "Dark Mode"}
             </Menu.Item>
+            <Menu.LinkItem
+              className="flex cursor-default items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none select-none data-highlighted:bg-muted data-disabled:opacity-50"
+              render={<Link href="/profile" />}
+            >
+              <UserRound className="size-4 text-muted-foreground" />
+              Profile
+            </Menu.LinkItem>
             <Menu.LinkItem
               className="flex cursor-default items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none select-none data-highlighted:bg-muted data-disabled:opacity-50"
               render={<Link href="/settings" />}
