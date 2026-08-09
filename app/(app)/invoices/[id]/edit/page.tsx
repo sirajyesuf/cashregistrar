@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import {
   InvoiceForm,
@@ -82,29 +82,25 @@ function formInitialFromApi(invoice: ApiInvoice): InvoiceFormInitial {
 
 export default function EditInvoicePage() {
   const { id } = useParams<{ id: string }>()
-  const [invoice, setInvoice] = useState<ApiInvoice | null>(null)
-  const [notFound, setNotFound] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    fetch(`/api/invoices/${id}`)
-      .then(async (res) => {
-        if (!res.ok) {
-          if (res.status === 404) setNotFound(true)
-          throw new Error("Failed to load invoice")
-        }
-        const body = (await res.json()) as { invoice: ApiInvoice }
-        if (!cancelled) setInvoice(body.invoice)
-      })
-      .catch((err) => {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : "Failed to load invoice")
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [id])
+  const {
+    data: invoice,
+    error,
+    isLoading,
+  } = useQuery({
+    queryKey: ["invoice", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/invoices/${id}`)
+      if (res.status === 404) throw new Error("NOT_FOUND")
+      if (!res.ok) throw new Error("Failed to load invoice")
+      const body = (await res.json()) as { invoice: ApiInvoice }
+      return body.invoice
+    },
+  })
+
+  const notFound = error?.message === "NOT_FOUND"
+  const errorMessage =
+    error && error.message !== "NOT_FOUND" ? error.message : null
 
   const locked = invoice?.registrationStatus === "REGISTERED"
 
@@ -119,13 +115,13 @@ export default function EditInvoicePage() {
         </Link>
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
 
-      {!error && notFound && (
+      {!errorMessage && notFound && (
         <p className="text-sm text-muted-foreground">Invoice not found.</p>
       )}
 
-      {!error && !notFound && !invoice && (
+      {!errorMessage && !notFound && isLoading && (
         <p className="text-sm text-muted-foreground">Loading…</p>
       )}
 

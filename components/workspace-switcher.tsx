@@ -1,7 +1,9 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
 import {
   Building2,
   Check,
@@ -18,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useWorkspace } from "@/components/workspace-provider"
 import { cn } from "@/lib/utils"
 
 type WorkspaceBusiness = {
@@ -28,31 +31,21 @@ type WorkspaceBusiness = {
   branches: { id: string; name: string; active: boolean }[]
 }
 
-type Workspace = { businessId: string; branchId: string | null }
+async function fetchBusinesses(): Promise<WorkspaceBusiness[]> {
+  const res = await fetch("/api/businesses")
+  if (!res.ok) throw new Error("Failed to load businesses")
+  const body = (await res.json()) as { businesses: WorkspaceBusiness[] }
+  return body.businesses
+}
 
 export function WorkspaceSwitcher() {
-  const [businesses, setBusinesses] = useState<WorkspaceBusiness[] | null>(null)
-  const [workspace, setWorkspace] = useState<Workspace | null>(null)
+  const router = useRouter()
+  const { workspace, setWorkspace } = useWorkspace()
+  const { data: businesses } = useQuery({
+    queryKey: ["businesses"],
+    queryFn: fetchBusinesses,
+  })
   const [open, setOpen] = useState(false)
-
-  const load = useCallback(() => {
-    Promise.all([fetch("/api/workspace"), fetch("/api/businesses")])
-      .then(async ([workspaceRes, businessesRes]) => {
-        const workspaceBody = (await workspaceRes.json()) as {
-          workspace: Workspace | null
-        }
-        const businessesBody = (await businessesRes.json()) as {
-          businesses: WorkspaceBusiness[]
-        }
-        setWorkspace(workspaceBody.workspace)
-        setBusinesses(businessesBody.businesses)
-      })
-      .catch(() => setBusinesses([]))
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   const currentBusiness = businesses?.find((b) => b.id === workspace?.businessId)
   const currentBranch = currentBusiness?.branches.find(
@@ -60,18 +53,13 @@ export function WorkspaceSwitcher() {
   )
   const isOwner = currentBusiness?.role === "OWNER"
 
-  const switchWorkspace = async (next: Workspace) => {
-    setWorkspace(next)
+  const switchWorkspace = async (next: {
+    businessId: string
+    branchId: string
+  }) => {
     setOpen(false)
-    try {
-      await fetch("/api/workspace", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
-      })
-    } catch {
-      // Selection stays local even if persistence fails
-    }
+    await setWorkspace(next)
+    router.refresh()
   }
 
   const label = currentBusiness

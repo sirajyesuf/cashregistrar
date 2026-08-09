@@ -89,7 +89,7 @@ export async function POST(request: Request) {
           ownerId: result.user.id,
         },
       })
-      await tx.branch.create({
+      const createdBranch = await tx.branch.create({
         data: {
           businessId: createdBusiness.id,
           name: branch.name,
@@ -101,6 +101,13 @@ export async function POST(request: Request) {
           userId: result.user.id,
           businessId: createdBusiness.id,
           role: "OWNER",
+        },
+      })
+      await tx.userPreference.create({
+        data: {
+          userId: result.user.id,
+          businessId: createdBusiness.id,
+          branchId: createdBranch.id,
         },
       })
 

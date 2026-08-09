@@ -10,7 +10,7 @@ import {
   isSequenceError,
   parseExpectedCounter,
 } from "@/lib/einvoice/eims-error"
-import { SYSTEM_COUNTER } from "@/lib/workspace"
+import { canAccessInvoice, getWorkspace, SYSTEM_COUNTER } from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -90,6 +90,11 @@ export async function POST(request: Request) {
     include: { receipt: true },
   })
   if (!invoice) {
+    return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
+  }
+
+  const workspace = await getWorkspace(user.id)
+  if (!workspace || !canAccessInvoice(workspace, invoice)) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   }
 

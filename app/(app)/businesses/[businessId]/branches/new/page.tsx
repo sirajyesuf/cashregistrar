@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
+import { useMutation } from "@tanstack/react-query"
 import { ArrowLeft, Store } from "lucide-react"
 import {
   Field,
@@ -14,12 +15,14 @@ import {
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { branchCreateSchema } from "@/lib/business-schema"
+import { useWorkspace } from "@/components/workspace-provider"
+import { branchCreateSchema, type BranchCreateValues } from "@/lib/business-schema"
 
 export default function AddBranchPage() {
   const router = useRouter()
   const params = useParams<{ businessId: string }>()
   const businessId = params.businessId
+  const { setWorkspace } = useWorkspace()
   const [businessName, setBusinessName] = useState<string | null>(null)
   const [isOwner, setIsOwner] = useState(false)
   const [loaded, setLoaded] = useState(false)
@@ -40,6 +43,46 @@ export default function AddBranchPage() {
       .catch(() => setLoaded(true))
   }, [businessId])
 
+  const createMutation = useMutation({
+    mutationFn: async (value: BranchCreateValues) => {
+      const res = await fetch(`/api/businesses/${businessId}/branches`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(value),
+      })
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string
+        branch?: { id: string }
+      }
+      if (!res.ok) {
+        throw new Error(body.error ?? `Failed to create branch (${res.status})`)
+      }
+      return body
+    },
+    onSuccess: async (body, value) => {
+      const branchId = body.branch?.id
+      if (branchId) {
+        await setWorkspace({ businessId, branchId })
+      }
+      toast.add({
+        title: "Branch created",
+        description: `${value.name.trim()} is ready.`,
+        type: "success",
+      })
+      router.push("/dashboard")
+    },
+    onError: (err) => {
+      const message =
+        err instanceof Error ? err.message : "Failed to create branch"
+      setError(message)
+      toast.add({
+        title: "Could not create branch",
+        description: message,
+        type: "destructive",
+      })
+    },
+  })
+
   const form = useForm({
     defaultValues: {
       name: "",
@@ -51,43 +94,7 @@ export default function AddBranchPage() {
     },
     onSubmit: async ({ value }) => {
       setError(null)
-      try {
-        const res = await fetch(`/api/businesses/${businessId}/branches`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(value),
-        })
-        const body = (await res.json().catch(() => ({}))) as {
-          error?: string
-          branch?: { id: string }
-        }
-        if (!res.ok) {
-          throw new Error(body.error ?? `Failed to create branch (${res.status})`)
-        }
-        const branchId = body.branch?.id
-        if (branchId) {
-          await fetch("/api/workspace", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ businessId, branchId }),
-          })
-        }
-        toast.add({
-          title: "Branch created",
-          description: `${value.name.trim()} is ready.`,
-          type: "success",
-        })
-        router.push("/dashboard")
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to create branch"
-        setError(message)
-        toast.add({
-          title: "Could not create branch",
-          description: message,
-          type: "destructive",
-        })
-      }
+      await createMutation.mutateAsync(value)
     },
   })
 

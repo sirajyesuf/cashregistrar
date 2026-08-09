@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
+import { useQueryClient } from "@tanstack/react-query"
 import { Building2, ChevronDown, Plus, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -211,6 +212,7 @@ function TableInput({
 
 export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
@@ -266,6 +268,9 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
         if (!res.ok || !body.invoice) {
           throw new Error(body.error ?? `Failed to save invoice (${res.status})`)
         }
+        queryClient.invalidateQueries({ queryKey: ["invoices"] })
+        queryClient.invalidateQueries({ queryKey: ["invoice"] })
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] })
         router.push(
           invoiceId ? `/invoices/${invoiceId}` : `/invoices/${body.invoice.id}`
         )

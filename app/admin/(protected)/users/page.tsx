@@ -1,8 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { Plus, UserRoundCog } from "lucide-react"
 import { toast } from "@/components/toast"
 import { Badge } from "@/components/ui/badge"
@@ -30,53 +30,50 @@ export default function AdminUsersPage() {
   const router = useRouter()
   const { data: session } = authClient.useSession()
   const currentUserId = session?.user?.id
-  const [users, setUsers] = useState<AdminUser[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [impersonatingId, setImpersonatingId] = useState<string | null>(null)
 
-  const loadUsers = useCallback(() => {
-    fetch("/api/admin/users")
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Failed to load users")
-        const body = (await res.json()) as { users: AdminUser[] }
-        setUsers(body.users)
-        setError(null)
-      })
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to load users")
-      )
-  }, [])
+  const {
+    data: users,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["admin", "users"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/users")
+      if (!res.ok) throw new Error("Failed to load users")
+      const body = (await res.json()) as { users: AdminUser[] }
+      return body.users
+    },
+  })
 
-  useEffect(() => {
-    loadUsers()
-  }, [loadUsers])
-
-  const handleImpersonate = async (user: AdminUser) => {
-    if (impersonatingId) return
-    setImpersonatingId(user.id)
-    try {
+  const impersonateMutation = useMutation({
+    mutationFn: async (user: AdminUser) => {
       await authClient.admin.impersonateUser({ userId: user.id })
+    },
+    onSuccess: (_data, user) => {
       toast.add({
         title: "Impersonating",
         description: `You are now viewing as ${user.name}.`,
         type: "success",
       })
       router.push("/dashboard")
-    } catch (err) {
+    },
+    onError: (err) => {
       const message =
-        err instanceof Error && err.message ? err.message : "Could not impersonate"
+        err instanceof Error && err.message
+          ? err.message
+          : "Could not impersonate"
       toast.add({
         title: "Could not impersonate",
         description: message,
         type: "destructive",
       })
-    } finally {
-      setImpersonatingId(null)
-    }
-  }
+    },
+  })
 
-  if (error) return <p className="text-sm text-destructive">{error}</p>
-  if (!users) return <p className="text-sm text-muted-foreground">Loading…</p>
+  const impersonatingId = impersonateMutation.variables?.id ?? null
+
+  if (error) return <p className="text-sm text-destructive">{error.message}</p>
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
 
   return (
     <div className="space-y-4">
@@ -108,7 +105,7 @@ export default function AdminUsersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => {
+            {users?.map((user) => {
               const isSelf = user.id === currentUserId
               const canImpersonate = !isSelf && user.role !== "ADMIN"
               return (
@@ -138,7 +135,7 @@ export default function AdminUsersPage() {
                       disabled={
                         !canImpersonate || impersonatingId !== null
                       }
-                      onClick={() => handleImpersonate(user)}
+                      onClick={() => impersonateMutation.mutate(user)}
                       title={
                         isSelf
                           ? "You are already signed in as this user"

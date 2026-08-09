@@ -2,14 +2,12 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { getSessionUser } from "@/lib/auth/user"
 import {
-  WORKSPACE_COOKIE,
   canAccessWorkspace,
   getWorkspace,
+  saveWorkspace,
 } from "@/lib/workspace"
 
 export const runtime = "nodejs"
-
-const WORKSPACE_MAX_AGE = 60 * 60 * 24 * 365 // 1 year
 
 const workspaceBodySchema = z.object({
   businessId: z.string().trim().min(1),
@@ -58,17 +56,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Workspace not found" }, { status: 404 })
   }
 
-  const response = NextResponse.json({ workspace: { businessId, branchId } })
-  response.cookies.set(
-    WORKSPACE_COOKIE,
-    JSON.stringify({ businessId, branchId }),
-    {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: WORKSPACE_MAX_AGE,
-    }
-  )
-  return response
+  await saveWorkspace(user.id, businessId, branchId)
+  return NextResponse.json({ workspace: { businessId, branchId } })
 }

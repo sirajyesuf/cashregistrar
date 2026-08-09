@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
+import { useQuery } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -30,6 +31,7 @@ type AdminInvoice = {
   buyerLegalName: string | null
   grandTotal: string
   registrationStatus: string | null
+  branch: { name: string } | null
   _count: { lines: number }
 }
 
@@ -43,55 +45,39 @@ const STATUSES = ["", "REGISTERED", "CANCELLED", "FAILED", "UNREGISTERED"]
 const PAGE_SIZE = 10
 
 export default function AdminInvoicesPage() {
-  const [invoices, setInvoices] = useState<AdminInvoice[] | null>(null)
-  const [businesses, setBusinesses] = useState<AdminBusiness[] | null>(null)
   const [businessId, setBusinessId] = useState("")
-  const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState("")
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    fetch("/api/admin/businesses")
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Failed to load businesses")
-        const body = (await res.json()) as { businesses: AdminBusiness[] }
-        if (cancelled) return
-        setBusinesses(body.businesses)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const { data: businesses } = useQuery({
+    queryKey: ["admin", "businesses"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/businesses")
+      if (!res.ok) throw new Error("Failed to load businesses")
+      const body = (await res.json()) as { businesses: AdminBusiness[] }
+      return body.businesses
+    },
+  })
 
-  useEffect(() => {
-    let cancelled = false
-    fetch(
-      `/api/admin/invoices?page=${page}&pageSize=${PAGE_SIZE}&status=${status}&businessId=${businessId}`
-    )
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Failed to load invoices")
-        const body = (await res.json()) as {
-          invoices: AdminInvoice[]
-          total: number
-        }
-        if (cancelled) return
-        setInvoices(body.invoices)
-        setTotal(body.total)
-      })
-      .catch((err) => {
-        if (!cancelled)
-          setError(
-            err instanceof Error ? err.message : "Failed to load invoices"
-          )
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [page, status, businessId])
+  const {
+    data,
+    error,
+  } = useQuery({
+    queryKey: ["admin", "invoices", businessId, status, page],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/admin/invoices?page=${page}&pageSize=${PAGE_SIZE}&status=${status}&businessId=${businessId}`
+      )
+      if (!res.ok) throw new Error("Failed to load invoices")
+      return (await res.json()) as {
+        invoices: AdminInvoice[]
+        total: number
+      }
+    },
+  })
 
+  const invoices = data?.invoices ?? null
+  const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
@@ -144,7 +130,7 @@ export default function AdminInvoicesPage() {
         ))}
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error.message}</p>}
 
       {!error && !invoices && (
         <p className="text-sm text-muted-foreground">Loading…</p>
@@ -157,6 +143,7 @@ export default function AdminInvoicesPage() {
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead>Number</TableHead>
                 <TableHead>Customer</TableHead>
+                <TableHead>Branch</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Lines</TableHead>
                 <TableHead className="text-right">Total</TableHead>
@@ -176,6 +163,9 @@ export default function AdminInvoicesPage() {
                     </Link>
                   </TableCell>
                   <TableCell>{inv.buyerLegalName || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {inv.branch?.name ?? "—"}
+                  </TableCell>
                   <TableCell>{inv.date}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {inv._count.lines}

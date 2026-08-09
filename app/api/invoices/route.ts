@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db"
 import { invoiceInputSchema } from "@/lib/invoice-schema"
 import {
   getWorkspace,
+  getWorkspaceAccess,
   workspaceInvoiceScope,
 } from "@/lib/workspace"
 
@@ -32,7 +33,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const workspace = await requireWorkspace(user.id)
+  const url = new URL(request.url)
+  const businessId = url.searchParams.get("businessId")
+  const branchId = url.searchParams.get("branchId")
+
+  const workspace =
+    businessId && branchId
+      ? await getWorkspaceAccess(user.id, businessId, branchId)
+      : await getWorkspace(user.id)
   if (!workspace) {
     return NextResponse.json(
       { error: "No active workspace. Select a business and branch." },
@@ -40,7 +48,6 @@ export async function GET(request: Request) {
     )
   }
 
-  const url = new URL(request.url)
   const page = Math.max(1, Number(url.searchParams.get("page")) || 1)
   const pageSize = Math.min(
     50,

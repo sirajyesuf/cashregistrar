@@ -13,12 +13,61 @@ import {
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useWorkspace } from "@/components/workspace-provider"
+import { useMutation } from "@tanstack/react-query"
 import { Store } from "lucide-react"
-import { createBusinessFormSchema } from "@/lib/business-schema"
+import {
+  createBusinessFormSchema,
+  type CreateBusinessFormValues,
+} from "@/lib/business-schema"
 
 export default function AddBusinessPage() {
   const router = useRouter()
+  const { setWorkspace } = useWorkspace()
   const [error, setError] = useState<string | null>(null)
+
+  const createMutation = useMutation({
+    mutationFn: async (value: CreateBusinessFormValues) => {
+      const res = await fetch("/api/businesses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(value),
+      })
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string
+        business?: { id: string; branches: { id: string }[] }
+      }
+      if (!res.ok) {
+        throw new Error(
+          body.error ?? `Failed to create business (${res.status})`
+        )
+      }
+      return body
+    },
+    onSuccess: async (body, value) => {
+      const business = body.business
+      const branchId = business?.branches?.[0]?.id
+      if (business?.id && branchId) {
+        await setWorkspace({ businessId: business.id, branchId })
+      }
+      toast.add({
+        title: "Business created",
+        description: `${value.name.trim()} is ready.`,
+        type: "success",
+      })
+      router.push("/dashboard")
+    },
+    onError: (err) => {
+      const message =
+        err instanceof Error ? err.message : "Failed to create business"
+      setError(message)
+      toast.add({
+        title: "Could not create business",
+        description: message,
+        type: "destructive",
+      })
+    },
+  })
 
   const form = useForm({
     defaultValues: {
@@ -37,49 +86,7 @@ export default function AddBusinessPage() {
     },
     onSubmit: async ({ value }) => {
       setError(null)
-      try {
-        const res = await fetch("/api/businesses", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(value),
-        })
-        const body = (await res.json().catch(() => ({}))) as {
-          error?: string
-          business?: { id: string; branches: { id: string }[] }
-        }
-        if (!res.ok) {
-          throw new Error(
-            body.error ?? `Failed to create business (${res.status})`
-          )
-        }
-        const business = body.business
-        const branchId = business?.branches?.[0]?.id
-        if (business?.id && branchId) {
-          await fetch("/api/workspace", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              businessId: business.id,
-              branchId,
-            }),
-          })
-        }
-        toast.add({
-          title: "Business created",
-          description: `${value.name.trim()} is ready.`,
-          type: "success",
-        })
-        router.push("/dashboard")
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to create business"
-        setError(message)
-        toast.add({
-          title: "Could not create business",
-          description: message,
-          type: "destructive",
-        })
-      }
+      await createMutation.mutateAsync(value)
     },
   })
 

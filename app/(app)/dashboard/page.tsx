@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useQuery } from "@tanstack/react-query"
 import {
   ArrowUpRight,
   FilePlus2,
@@ -12,6 +12,7 @@ import {
   Wallet,
 } from "lucide-react"
 import { useUser } from "@/components/app-shell"
+import { useWorkspace } from "@/components/workspace-provider"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -120,16 +121,23 @@ function StatCard({
 
 export default function DashboardPage() {
   const { user } = useUser()
-  const [data, setData] = useState<DashboardData | null>(null)
+  const { workspace } = useWorkspace()
+  const businessId = workspace?.businessId ?? ""
+  const branchId = workspace?.branchId ?? ""
 
-  useEffect(() => {
-    fetch("/api/dashboard")
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Failed to load dashboard")
-        setData(await res.json())
-      })
-      .catch(() => setData(null))
-  }, [])
+  const { data } = useQuery({
+    queryKey: ["dashboard", businessId, branchId],
+    queryFn: async () => {
+      const params = new URLSearchParams()
+      if (businessId) params.set("businessId", businessId)
+      if (branchId) params.set("branchId", branchId)
+      const qs = params.toString()
+      const res = await fetch(`/api/dashboard${qs ? `?${qs}` : ""}`)
+      if (!res.ok) throw new Error("Failed to load dashboard")
+      return (await res.json()) as DashboardData
+    },
+    enabled: Boolean(workspace),
+  })
 
   const now = new Date()
   const dateLabels = formatDateLabels(now)
@@ -139,7 +147,16 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      {!data ? (
+      {!workspace ? (
+        <div className="rounded-xl border border-dashed p-10 text-center">
+          <p className="text-sm text-muted-foreground">
+            No business selected. Create a business to get started.
+          </p>
+          <Link href="/businesses/new" className="mt-4 inline-block">
+            <Button>Create business</Button>
+          </Link>
+        </div>
+      ) : !data ? (
         <div className="space-y-6">
           <div className="h-16 w-2/3 animate-pulse rounded-lg bg-muted" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

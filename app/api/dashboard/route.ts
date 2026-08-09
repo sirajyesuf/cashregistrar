@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
-import { getWorkspace, workspaceInvoiceScope } from "@/lib/workspace"
+import { getWorkspace, getWorkspaceAccess, workspaceInvoiceScope } from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -13,13 +13,20 @@ function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const workspace = await getWorkspace(user.id)
+  const url = new URL(request.url)
+  const businessId = url.searchParams.get("businessId")
+  const branchId = url.searchParams.get("branchId")
+
+  const workspace =
+    businessId && branchId
+      ? await getWorkspaceAccess(user.id, businessId, branchId)
+      : await getWorkspace(user.id)
   if (!workspace) {
     return NextResponse.json({ error: "No workspace selected" }, { status: 409 })
   }

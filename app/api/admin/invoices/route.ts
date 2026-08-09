@@ -43,6 +43,7 @@ export async function GET(request: Request) {
         irn: true,
         registrationStatus: true,
         createdAt: true,
+        branch: { select: { name: true } },
         _count: { select: { lines: true } },
       },
     }),

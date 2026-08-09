@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Ban, Loader2 } from "lucide-react"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
@@ -12,15 +12,55 @@ type CancelButtonProps = {
   onCancelled?: () => void
 }
 
+async function cancelInvoice(invoiceId: string) {
+  const res = await fetch("/api/einvoice/cancel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ invoiceId }),
+  })
+  const body = (await res.json().catch(() => ({}))) as {
+    ok?: boolean
+    error?: string
+  }
+  if (!res.ok || !body.ok) {
+    throw new Error(body.error ?? `Cancellation failed (${res.status})`)
+  }
+}
+
 export function CancelButton({
   invoiceId,
   invoiceNumber,
   size,
   onCancelled,
 }: CancelButtonProps) {
-  const [pending, setPending] = useState(false)
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: () => cancelInvoice(invoiceId),
+    onSuccess: () => {
+      toast.add({
+        title: "Invoice cancelled",
+        description: `Invoice ${invoiceNumber} was cancelled with EIMS.`,
+        type: "success",
+      })
+      queryClient.invalidateQueries({ queryKey: ["invoices"] })
+      queryClient.invalidateQueries({ queryKey: ["invoice"] })
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] })
+      onCancelled?.()
+    },
+    onError: (err) => {
+      const message =
+        err instanceof Error ? err.message : "Cancellation failed"
+      toast.add({
+        title: "Could not cancel invoice",
+        description: message,
+        type: "destructive",
+      })
+    },
+  })
 
-  const handleCancel = async () => {
+  const pending = mutation.isPending
+
+  const handleCancel = () => {
     if (pending) return
     if (
       !window.confirm(
@@ -29,36 +69,7 @@ export function CancelButton({
     ) {
       return
     }
-    setPending(true)
-    try {
-      const res = await fetch("/api/einvoice/cancel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceId }),
-      })
-      const body = (await res.json().catch(() => ({}))) as {
-        ok?: boolean
-        error?: string
-      }
-      if (!res.ok || !body.ok) {
-        throw new Error(body.error ?? `Cancellation failed (${res.status})`)
-      }
-      toast.add({
-        title: "Invoice cancelled",
-        description: `Invoice ${invoiceNumber} was cancelled with EIMS.`,
-        type: "success",
-      })
-      onCancelled?.()
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Cancellation failed"
-      toast.add({
-        title: "Could not cancel invoice",
-        description: message,
-        type: "destructive",
-      })
-    } finally {
-      setPending(false)
-    }
+    mutation.mutate()
   }
 
   return (

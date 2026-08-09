@@ -24,6 +24,19 @@ model User {
   invoices        Invoice[]
   ownedBusinesses Business[]
   memberships     BusinessMember[]
+  preference      UserPreference?
+}
+
+model UserPreference {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  businessId String?
+  branchId   String?
+  updatedAt  DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  branch   Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
 }
 
 model Business {
@@ -42,6 +55,7 @@ model Business {
   branches Branch[]
   members  BusinessMember[]
   invoices Invoice[]
+  preferences UserPreference[]
 
   @@index([ownerId])
 }
@@ -58,6 +72,7 @@ model Branch {
   business Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
   members  BusinessMember[]
   invoices Invoice[]
+  preferences UserPreference[]
 
   @@unique([businessId, name])
   @@index([businessId])
@@ -184,7 +199,7 @@ enum TransactionType {
 
 model Invoice {
   id         String  @id @default(cuid())
-  number     String  @unique
+  number     String
   date       String  @db.VarChar(10)
   taxRate    Decimal @db.Decimal(5, 2)
   subtotal   Decimal @db.Decimal(14, 2)
@@ -234,6 +249,7 @@ model Invoice {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
+  @@unique([businessId, branchId, number])
   @@index([businessId, branchId, createdAt])
   @@index([businessId])
   @@index([branchId])

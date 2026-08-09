@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Send, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -19,6 +19,20 @@ type RegisterButtonProps = {
   onRegistered?: (irn: string | null) => void
 }
 
+async function registerInvoice(invoiceId: string) {
+  const res = await fetch("/api/einvoice/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ invoiceId }),
+  })
+  const body = (await res.json().catch(() => ({}))) as RegisterError & {
+    ok?: boolean
+    irn?: string | null
+  }
+  if (!res.ok || !body.ok) throw body
+  return body as { ok: boolean; irn?: string | null }
+}
+
 export function RegisterButton({
   invoiceId,
   disabled,
@@ -26,36 +40,24 @@ export function RegisterButton({
   className,
   onRegistered,
 }: RegisterButtonProps) {
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<RegisterError | null>(null)
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: () => registerInvoice(invoiceId),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] })
+      queryClient.invalidateQueries({ queryKey: ["invoice"] })
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] })
+      onRegistered?.(data.irn ?? null)
+    },
+  })
 
-  const handleRegister = async () => {
+  const pending = mutation.isPending
+  const error = mutation.error as RegisterError | null
+
+  const handleRegister = () => {
     if (pending) return
     if (!window.confirm("Register this invoice with EIMS?")) return
-    setPending(true)
-    setError(null)
-    try {
-      const res = await fetch("/api/einvoice/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceId }),
-      })
-      const body = (await res.json().catch(() => ({}))) as RegisterError & {
-        ok?: boolean
-        irn?: string | null
-      }
-      if (!res.ok || !body.ok) {
-        setError(body)
-        return
-      }
-      onRegistered?.(body.irn ?? null)
-    } catch (err) {
-      setError({
-        error: err instanceof Error ? err.message : "Registration failed",
-      })
-    } finally {
-      setPending(false)
-    }
+    mutation.mutate()
   }
 
   const headline =

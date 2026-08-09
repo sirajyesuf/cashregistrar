@@ -6,7 +6,9 @@ import Link from "next/link"
 import { Menu } from "@base-ui/react/menu"
 import { LogOut, Menu as MenuIcon, UserRoundCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { QueryProvider } from "@/components/query-provider"
 import { UserMenu } from "@/components/user-menu"
+import { WorkspaceProvider } from "@/components/workspace-provider"
 import { WorkspaceSwitcher } from "@/components/workspace-switcher"
 import { authClient } from "@/lib/auth-client"
 
@@ -58,7 +60,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <UserContext.Provider value={{ user }}>
-      <div className="flex min-h-svh flex-col">
+      <QueryProvider>
+        <WorkspaceProvider>
+          <div className="flex min-h-svh flex-col">
         <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-3 sm:gap-6">
@@ -162,7 +166,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </footer>
         )}
-      </div>
+        </div>
+        </WorkspaceProvider>
+      </QueryProvider>
     </UserContext.Provider>
   )
 }

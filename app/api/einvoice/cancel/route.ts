@@ -6,6 +6,7 @@ import { callEims } from "@/lib/einvoice/client"
 import { getConfig } from "@/lib/einvoice/config"
 import { parseEimsError } from "@/lib/einvoice/eims-error"
 import { hasIssuedReceipt } from "@/lib/invoice"
+import { canAccessInvoice, getWorkspace } from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -61,10 +62,17 @@ export async function POST(request: Request) {
       number: true,
       irn: true,
       registrationStatus: true,
+      businessId: true,
+      branchId: true,
       receipt: { select: { status: true } },
     },
   })
   if (!invoice) {
+    return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
+  }
+
+  const workspace = await getWorkspace(user.id)
+  if (!workspace || !canAccessInvoice(workspace, invoice)) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   }
   if (invoice.registrationStatus !== "REGISTERED" || !invoice.irn) {

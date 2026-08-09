@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Receipt as ReceiptIcon } from "lucide-react"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
@@ -16,15 +16,63 @@ type ReceiptButtonProps = {
   }) => void
 }
 
+async function issueReceipt(invoiceId: string) {
+  const res = await fetch("/api/einvoice/receipt/sales", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ invoiceId }),
+  })
+  const body = (await res.json().catch(() => ({}))) as {
+    ok?: boolean
+    rrn?: string | null
+    qr?: string | null
+    status?: string | null
+    error?: string
+  }
+  if (!res.ok || !body.ok) {
+    throw new Error(body.error ?? `Receipt failed (${res.status})`)
+  }
+  return body
+}
+
 export function ReceiptButton({
   invoiceId,
   invoiceNumber,
   size,
   onIssued,
 }: ReceiptButtonProps) {
-  const [pending, setPending] = useState(false)
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: () => issueReceipt(invoiceId),
+    onSuccess: (data) => {
+      toast.add({
+        title: "Receipt issued",
+        description: `Sales receipt issued for invoice ${invoiceNumber}.`,
+        type: "success",
+      })
+      queryClient.invalidateQueries({ queryKey: ["invoices"] })
+      queryClient.invalidateQueries({ queryKey: ["invoice"] })
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] })
+      onIssued?.({
+        rrn: data.rrn ?? null,
+        qr: data.qr ?? null,
+        status: data.status ?? null,
+      })
+    },
+    onError: (err) => {
+      const message =
+        err instanceof Error ? err.message : "Could not issue receipt"
+      toast.add({
+        title: "Could not issue receipt",
+        description: message,
+        type: "destructive",
+      })
+    },
+  })
 
-  const handleIssue = async () => {
+  const pending = mutation.isPending
+
+  const handleIssue = () => {
     if (pending) return
     if (
       !window.confirm(
@@ -33,44 +81,7 @@ export function ReceiptButton({
     ) {
       return
     }
-    setPending(true)
-    try {
-      const res = await fetch("/api/einvoice/receipt/sales", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceId }),
-      })
-      const body = (await res.json().catch(() => ({}))) as {
-        ok?: boolean
-        rrn?: string | null
-        qr?: string | null
-        status?: string | null
-        error?: string
-      }
-      if (!res.ok || !body.ok) {
-        throw new Error(body.error ?? `Receipt failed (${res.status})`)
-      }
-      toast.add({
-        title: "Receipt issued",
-        description: `Sales receipt issued for invoice ${invoiceNumber}.`,
-        type: "success",
-      })
-      onIssued?.({
-        rrn: body.rrn ?? null,
-        qr: body.qr ?? null,
-        status: body.status ?? null,
-      })
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Could not issue receipt"
-      toast.add({
-        title: "Could not issue receipt",
-        description: message,
-        type: "destructive",
-      })
-    } finally {
-      setPending(false)
-    }
+    mutation.mutate()
   }
 
   return (

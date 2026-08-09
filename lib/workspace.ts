@@ -1,8 +1,5 @@
-import { cookies } from "next/headers"
 import type { Role } from "@prisma/client"
 import { prisma } from "@/lib/db"
-
-export const WORKSPACE_COOKIE = "cashreg_workspace"
 
 // System-wide EIMS counters are not per-workspace. The Counter model requires
 // businessId/branchId (no FK constraints), so store them under sentinel keys.
@@ -18,13 +15,15 @@ export type WorkspaceAccess = WorkspaceSelection & {
 }
 
 /**
- * Prisma where-clause that scopes tenant data to the user's workspace:
- * owners see every branch in the business, members only their assigned branch.
+ * Prisma where-clause that scopes tenant data to the user's active workspace.
+ * The branch is the workspace, so data is always scoped to the selected
+ * business AND branch — for owners and members alike.
  */
 export function workspaceInvoiceScope(workspace: WorkspaceAccess) {
-  return workspace.role === "OWNER"
-    ? { businessId: workspace.businessId }
-    : { businessId: workspace.businessId, branchId: workspace.branchId }
+  return {
+    businessId: workspace.businessId,
+    branchId: workspace.branchId,
+  }
 }
 
 /** Whether the user can access a specific invoice within their workspace. */
@@ -32,32 +31,37 @@ export function canAccessInvoice(
   workspace: WorkspaceAccess,
   invoice: { businessId: string; branchId: string }
 ): boolean {
-  if (invoice.businessId !== workspace.businessId) return false
-  if (workspace.role === "OWNER") return true
-  return invoice.branchId === workspace.branchId
+  return (
+    invoice.businessId === workspace.businessId &&
+    invoice.branchId === workspace.branchId
+  )
 }
 
-export function parseWorkspaceCookie(
-  value: string | undefined
-): WorkspaceSelection | null {
-  if (!value) return null
-  try {
-    const parsed: unknown = JSON.parse(value)
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      typeof (parsed as WorkspaceSelection).businessId === "string" &&
-      typeof (parsed as WorkspaceSelection).branchId === "string"
-    ) {
-      return {
-        businessId: (parsed as WorkspaceSelection).businessId,
-        branchId: (parsed as WorkspaceSelection).branchId,
-      }
-    }
-  } catch {
-    // ignore malformed cookies
+/**
+ * Resolves and authorizes an explicit workspace for a user. The caller must
+ * pass the ids — never the persisted preference — so data queries are a pure
+ * function of their cache key.
+ */
+export async function getWorkspaceAccess(
+  userId: string,
+  businessId: string,
+  branchId: string
+): Promise<WorkspaceAccess | null> {
+  const member = await prisma.businessMember.findUnique({
+    where: { userId_businessId: { userId, businessId } },
+    select: { role: true, branchId: true },
+  })
+  if (!member) return null
+  const branch = await prisma.branch.findFirst({
+    where: { id: branchId, businessId, active: true },
+    select: { id: true },
+  })
+  if (!branch) return null
+  if (member.role === "OWNER") {
+    return { businessId, branchId, role: member.role }
   }
-  return null
+  if (member.branchId !== branchId) return null
+  return { businessId, branchId, role: member.role }
 }
 
 export async function canAccessWorkspace(
@@ -65,39 +69,53 @@ export async function canAccessWorkspace(
   businessId: string,
   branchId: string
 ): Promise<boolean> {
-  const member = await prisma.businessMember.findUnique({
-    where: { userId_businessId: { userId, businessId } },
-    select: { role: true, branchId: true },
+  return (await getWorkspaceAccess(userId, businessId, branchId)) !== null
+}
+
+/** Persists the user's active workspace. */
+export async function saveWorkspace(
+  userId: string,
+  businessId: string,
+  branchId: string
+): Promise<void> {
+  await prisma.userPreference.upsert({
+    where: { userId },
+    create: { userId, businessId, branchId },
+    update: { businessId, branchId },
   })
-  if (!member) return false
-  const branch = await prisma.branch.findFirst({
-    where: { id: branchId, businessId, active: true },
-    select: { id: true },
-  })
-  if (!branch) return false
-  if (member.role === "OWNER") return true
-  return branchId === member.branchId
 }
 
 /**
  * Returns the validated active workspace for the user. Prefers the saved
- * cookie selection; otherwise falls back to the user's first active business
- * and (for owners) its first branch or (for members) their assigned branch.
+ * preference; otherwise falls back to the user's first active business and
+ * (for owners) its first branch or (for members) their assigned branch.
  */
 export async function getWorkspace(
   userId: string
 ): Promise<WorkspaceAccess | null> {
-  const saved = parseWorkspaceCookie(
-    (await cookies()).get(WORKSPACE_COOKIE)?.value
-  )
-  if (saved && (await canAccessWorkspace(userId, saved.businessId, saved.branchId))) {
+  const preference = await prisma.userPreference.findUnique({
+    where: { userId },
+    select: { businessId: true, branchId: true },
+  })
+
+  if (
+    preference?.businessId &&
+    preference.branchId &&
+    (await canAccessWorkspace(userId, preference.businessId, preference.branchId))
+  ) {
     const member = await prisma.businessMember.findUnique({
       where: {
-        userId_businessId: { userId, businessId: saved.businessId },
+        userId_businessId: { userId, businessId: preference.businessId },
       },
       select: { role: true },
     })
-    if (member) return { ...saved, role: member.role }
+    if (member) {
+      return {
+        businessId: preference.businessId,
+        branchId: preference.branchId,
+        role: member.role,
+      }
+    }
   }
 
   const memberships = await prisma.businessMember.findMany({

@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   CircleX,
   FileText,
@@ -22,6 +23,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Pagination } from "@/components/ui/pagination"
+import { toast } from "@/components/toast"
+import { useWorkspace } from "@/components/workspace-provider"
 import { RegisterButton } from "@/components/invoice/register-button"
 import { CancelButton } from "@/components/invoice/cancel-button"
 import { BulkActions } from "@/components/invoice/bulk-actions"
@@ -88,102 +91,113 @@ function StatusBadge({
 }
 
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState<InvoiceRow[] | null>(null)
+  const { workspace } = useWorkspace()
+  const queryClient = useQueryClient()
+  const businessId = workspace?.businessId ?? ""
+  const branchId = workspace?.branchId ?? ""
+  const workspaceKey = workspace ? `${businessId}:${branchId}` : "none"
   const [page, setPage] = useState(1)
-  const [total, setTotal] = useState(0)
-  const [stats, setStats] = useState<InvoiceStats | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [selected, setSelected] = useState<string[]>([])
-  const [bulkDeleting, setBulkDeleting] = useState(false)
-  const [reloadKey, setReloadKey] = useState(0)
 
-  useEffect(() => {
-    let cancelled = false
-    fetch(`/api/invoices?page=${page}&pageSize=${PAGE_SIZE}`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Failed to load invoices")
-        const body = (await res.json()) as {
-          invoices: InvoiceRow[]
-          total: number
-          stats: InvoiceStats
-        }
-        if (cancelled) return
-        setError(null)
-        setInvoices(body.invoices)
-        setTotal(body.total)
-        setStats(body.stats)
-      })
-      .catch((err) => {
-        if (cancelled) return
-        setInvoices(null)
-        setError(err instanceof Error ? err.message : "Failed to load invoices")
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [page, reloadKey])
-
-  const hasProcessingInvoices = invoices?.some(
-    (invoice) => invoice.registrationStatus === "PROCESSING"
-  )
-
-  useEffect(() => {
-    if (!hasProcessingInvoices) return
-    const interval = window.setInterval(() => {
-      setReloadKey((key) => key + 1)
-    }, 5000)
-    return () => window.clearInterval(interval)
-  }, [hasProcessingInvoices])
-
-  const handleRegistered = (id: string) => {
-    setInvoices(
-      (prev) =>
-        prev?.map((invoice) =>
-          invoice.id === id
-            ? { ...invoice, registrationStatus: "REGISTERED" }
-            : invoice
-        ) ?? prev
-    )
+  const [prevWorkspaceKey, setPrevWorkspaceKey] = useState(workspaceKey)
+  if (prevWorkspaceKey !== workspaceKey) {
+    setPrevWorkspaceKey(workspaceKey)
+    setPage(1)
+    setSelected([])
   }
 
-  const handleCancelled = (id: string) => {
-    setInvoices(
-      (prev) =>
-        prev?.map((invoice) =>
-          invoice.id === id
-            ? { ...invoice, registrationStatus: "CANCELLED" }
-            : invoice
-        ) ?? prev
-    )
+  const { data, error } = useQuery({
+    queryKey: ["invoices", businessId, branchId, page],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+      })
+      if (businessId) params.set("businessId", businessId)
+      if (branchId) params.set("branchId", branchId)
+      const res = await fetch(`/api/invoices?${params}`)
+      if (!res.ok) throw new Error("Failed to load invoices")
+      return (await res.json()) as {
+        invoices: InvoiceRow[]
+        total: number
+        stats: InvoiceStats
+      }
+    },
+    enabled: Boolean(workspace),
+    refetchInterval: (query) =>
+      (query.state.data as { invoices?: InvoiceRow[] } | undefined)?.invoices
+        ?.some((invoice) => invoice.registrationStatus === "PROCESSING")
+        ? 5000
+        : false,
+  })
+
+  const invoices = data?.invoices ?? null
+  const total = data?.total ?? 0
+  const stats = data?.stats ?? null
+  const errorMessage = error instanceof Error ? error.message : null
+
+  const invalidateScoped = () => {
+    queryClient.invalidateQueries({ queryKey: ["invoices", businessId] })
+    queryClient.invalidateQueries({ queryKey: ["invoice"] })
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] })
   }
 
-  const handleDelete = async (invoice: InvoiceRow) => {
-    if (
-      !window.confirm(
-        `Delete invoice ${invoice.number}? This cannot be undone.`
-      )
-    ) {
-      return
-    }
-    setDeletingId(invoice.id)
-    setError(null)
-    try {
-      const res = await fetch(`/api/invoices/${invoice.id}`, {
-        method: "DELETE",
-      })
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/invoices/${id}`, { method: "DELETE" })
       if (!res.ok) throw new Error(`Failed to delete invoice (${res.status})`)
+    },
+    onSuccess: () => {
       if (invoices && invoices.length === 1 && page > 1) {
         setPage((prev) => prev - 1)
-      } else {
-        setReloadKey((key) => key + 1)
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete invoice")
-    } finally {
-      setDeletingId(null)
-    }
-  }
+      invalidateScoped()
+    },
+    onError: (err) => {
+      toast.add({
+        title: "Could not delete invoice",
+        description: err instanceof Error ? err.message : "Failed to delete",
+        type: "destructive",
+      })
+    },
+    onSettled: () => setDeletingId(null),
+  })
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await fetch("/api/invoices/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      })
+      const body = (await res.json().catch(() => ({}))) as {
+        deleted?: number
+        skipped?: number
+        error?: string
+      }
+      if (!res.ok) {
+        throw new Error(
+          body.error ?? `Failed to delete invoices (${res.status})`
+        )
+      }
+    },
+    onSuccess: (_data, ids) => {
+      setSelected([])
+      if (invoices && invoices.length === ids.length && page > 1) {
+        setPage((prev) => prev - 1)
+      }
+      invalidateScoped()
+    },
+    onError: (err) => {
+      toast.add({
+        title: "Could not delete invoices",
+        description:
+          err instanceof Error ? err.message : "Failed to delete invoices",
+        type: "destructive",
+      })
+    },
+  })
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -206,7 +220,19 @@ export default function InvoicesPage() {
     )
   }
 
-  const handleBulkDelete = async () => {
+  const handleDelete = (invoice: InvoiceRow) => {
+    if (
+      !window.confirm(
+        `Delete invoice ${invoice.number}? This cannot be undone.`
+      )
+    ) {
+      return
+    }
+    setDeletingId(invoice.id)
+    deleteMutation.mutate(invoice.id)
+  }
+
+  const handleBulkDelete = () => {
     const ids = selected.filter((id) => {
       const inv = invoices?.find((i) => i.id === id)
       return inv
@@ -221,35 +247,7 @@ export default function InvoicesPage() {
     ) {
       return
     }
-    setBulkDeleting(true)
-    setError(null)
-    try {
-      const res = await fetch("/api/invoices/bulk-delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      })
-      const body = (await res.json().catch(() => ({}))) as {
-        deleted?: number
-        skipped?: number
-        error?: string
-      }
-      if (!res.ok) {
-        throw new Error(
-          body.error ?? `Failed to delete invoices (${res.status})`
-        )
-      }
-      setSelected([])
-      if (invoices && invoices.length === ids.length && page > 1) {
-        setPage((prev) => prev - 1)
-      } else {
-        setReloadKey((key) => key + 1)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete invoices")
-    } finally {
-      setBulkDeleting(false)
-    }
+    bulkDeleteMutation.mutate(ids)
   }
 
   return (
@@ -291,20 +289,27 @@ export default function InvoicesPage() {
         </section>
       )}
 
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
-
-      {!error && invoices === null && (
+      {!workspace ? (
+        <div className="rounded-lg border border-dashed p-10 text-center">
+          <p className="text-sm text-muted-foreground">
+            No business selected. Create or select a business to view invoices.
+          </p>
+          <Link href="/businesses/new" className="mt-4 inline-block">
+            <Button>Create business</Button>
+          </Link>
+        </div>
+      ) : errorMessage ? (
+        <p className="mb-4 text-sm text-destructive">{errorMessage}</p>
+      ) : invoices === null ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
-      )}
-
-      {invoices && invoices.length === 0 && (
+      ) : invoices.length === 0 ? (
         <div className="rounded-lg border p-10 text-center">
           <p className="text-muted-foreground">No invoices yet.</p>
           <Link href="/invoices/new" className="mt-4 inline-block">
             <Button>Create your first invoice</Button>
           </Link>
         </div>
-      )}
+      ) : null}
 
       {invoices && invoices.length > 0 && (
         <>
@@ -317,9 +322,9 @@ export default function InvoicesPage() {
               onDelete={handleBulkDelete}
               onSubmitted={() => {
                 setSelected([])
-                setReloadKey((key) => key + 1)
+                invalidateScoped()
               }}
-              deleting={bulkDeleting}
+              deleting={bulkDeleteMutation.isPending}
             />
           )}
           <div className="rounded-md border">
@@ -392,7 +397,6 @@ export default function InvoicesPage() {
                             invoice.registrationStatus === "REGISTERED" ||
                             invoice.registrationStatus === "PROCESSING"
                           }
-                          onRegistered={() => handleRegistered(invoice.id)}
                         />
                         {invoice.registrationStatus === "REGISTERED" &&
                           !hasIssuedReceipt(invoice) && (
@@ -400,7 +404,6 @@ export default function InvoicesPage() {
                               invoiceId={invoice.id}
                               invoiceNumber={invoice.number}
                               size="sm"
-                              onCancelled={() => handleCancelled(invoice.id)}
                             />
                           )}
                         <Link

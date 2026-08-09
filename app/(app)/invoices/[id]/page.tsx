@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import { useParams } from "next/navigation"
 import Link from "next/link"
+import { useQuery } from "@tanstack/react-query"
 import { Pencil, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +14,7 @@ import { CancelButton } from "@/components/invoice/cancel-button"
 import { ReceiptButton } from "@/components/invoice/receipt-button"
 import { HashField } from "@/components/invoice/hash-field"
 import { formatCents, hasIssuedReceipt, invoiceFromApi } from "@/lib/invoice"
-import type { PreviewInvoice, SellerInfo } from "@/lib/invoice"
+import type { SellerInfo } from "@/lib/invoice"
 
 type ApiInvoice = {
   id: string
@@ -41,68 +42,39 @@ const DEFAULT_SELLER: SellerInfo = {
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [invoice, setInvoice] = useState<PreviewInvoice | null>(null)
-  const [seller, setSeller] = useState<SellerInfo>(DEFAULT_SELLER)
-  const [notFound, setNotFound] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [panelOpen, setPanelOpen] = useState(true)
 
-  useEffect(() => {
-    Promise.all([fetch(`/api/invoices/${id}`), fetch("/api/settings/seller")])
-      .then(async ([invoiceRes, sellerRes]) => {
-        if (!invoiceRes.ok) {
-          if (invoiceRes.status === 404) setNotFound(true)
-          throw new Error("Failed to load invoice")
-        }
-        const invoiceBody = (await invoiceRes.json()) as { invoice: ApiInvoice }
-        setInvoice(invoiceFromApi(invoiceBody.invoice))
-        if (sellerRes.ok) {
-          const sellerBody = (await sellerRes.json()) as {
-            profile: SellerInfo
-          }
-          setSeller(sellerBody.profile)
-        }
-      })
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Failed to load invoice")
-      )
-  }, [id])
+  const {
+    data: invoice,
+    error,
+    isLoading,
+  } = useQuery({
+    queryKey: ["invoice", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/invoices/${id}`)
+      if (res.status === 404) throw new Error("NOT_FOUND")
+      if (!res.ok) throw new Error("Failed to load invoice")
+      const body = (await res.json()) as { invoice: ApiInvoice }
+      return invoiceFromApi(body.invoice)
+    },
+  })
 
-  const handleRegistered = (irn: string | null) => {
-    setInvoice((prev) =>
-      prev ? { ...prev, irn, registrationStatus: "REGISTERED" } : prev
-    )
-  }
+  const { data: seller = DEFAULT_SELLER } = useQuery({
+    queryKey: ["seller-profile"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/seller")
+      if (!res.ok) return DEFAULT_SELLER
+      const body = (await res.json()) as { profile: SellerInfo }
+      return body.profile
+    },
+  })
 
-  const handleCancelled = () => {
-    setInvoice((prev) =>
-      prev ? { ...prev, registrationStatus: "CANCELLED" } : prev
-    )
-  }
-
-  const handleReceiptIssued = (receipt: {
-    rrn: string | null
-    qr: string | null
-    status: string | null
-  }) => {
-    setInvoice((prev) =>
-      prev
-        ? {
-            ...prev,
-            receipt: {
-              number: prev.receipt?.number ?? null,
-              rrn: receipt.rrn,
-              qr: receipt.qr,
-              eimsStatus: receipt.status,
-              status: "ISSUED",
-            },
-          }
-        : prev
-    )
-  }
+  const notFound = error?.message === "NOT_FOUND"
+  const errorMessage =
+    error && error.message !== "NOT_FOUND" ? error.message : null
 
   const cannotRegister = invoice?.registrationStatus === "REGISTERED"
-  const receiptIssued = hasIssuedReceipt(invoice)
+  const receiptIssued = hasIssuedReceipt(invoice ?? null)
 
   return (
     <div className="mx-auto max-w-4xl p-4 sm:p-6">
@@ -115,13 +87,13 @@ export default function InvoiceDetailPage() {
         </Link>
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
 
-      {!error && notFound && (
+      {!errorMessage && notFound && (
         <p className="text-sm text-muted-foreground">Invoice not found.</p>
       )}
 
-      {!error && !notFound && !invoice && (
+      {!errorMessage && !notFound && isLoading && (
         <p className="text-sm text-muted-foreground">Loading…</p>
       )}
 
@@ -216,7 +188,6 @@ export default function InvoiceDetailPage() {
                     invoiceId={invoice.id}
                     size="sm"
                     disabled={cannotRegister}
-                    onRegistered={handleRegistered}
                   />
                   {invoice.registrationStatus === "REGISTERED" &&
                     !receiptIssued && (
@@ -224,7 +195,6 @@ export default function InvoiceDetailPage() {
                         invoiceId={invoice.id}
                         invoiceNumber={invoice.number}
                         size="sm"
-                        onCancelled={handleCancelled}
                       />
                     )}
                   {invoice.registrationStatus === "REGISTERED" &&
@@ -233,7 +203,6 @@ export default function InvoiceDetailPage() {
                         invoiceId={invoice.id}
                         invoiceNumber={invoice.number}
                         size="sm"
-                        onIssued={handleReceiptIssued}
                       />
                     )}
                 </div>

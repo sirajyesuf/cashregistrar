@@ -6,7 +6,7 @@ import { getConfig } from "@/lib/einvoice/config"
 import { buildRegisterPayload } from "@/lib/einvoice/payload"
 import { validateLineTotals } from "@/lib/einvoice/validate"
 import { extractErrorMessage } from "@/lib/einvoice/eims-error"
-import { SYSTEM_COUNTER } from "@/lib/workspace"
+import { getWorkspace, SYSTEM_COUNTER, workspaceInvoiceScope } from "@/lib/workspace"
 import {
   getCallbackHeaders,
   parseBulkOperationResponse,
@@ -46,8 +46,16 @@ export async function POST(request: Request) {
       { status: 400 }
     )
 
+  const workspace = await getWorkspace(user.id)
+  if (!workspace) {
+    return NextResponse.json(
+      { error: "No active workspace. Select a business and branch." },
+      { status: 409 }
+    )
+  }
+
   const invoices = await prisma.invoice.findMany({
-    where: { id: { in: invoiceIds }, userId: user.id },
+    where: { id: { in: invoiceIds }, ...workspaceInvoiceScope(workspace) },
     include: { lines: true },
   })
   if (invoices.length !== invoiceIds.length)
