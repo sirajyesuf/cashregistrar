@@ -55,6 +55,7 @@ model Business {
   branches Branch[]
   members  BusinessMember[]
   invoices Invoice[]
+  products Product[]
   preferences UserPreference[]
 
   @@index([ownerId])
@@ -334,4 +335,18 @@ model SellerProfile {
   houseNumber  String?
   locality     String?
   updatedAt    DateTime @updatedAt
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  businessId   String
+  name         String
+  sellingPrice Decimal  @db.Decimal(14, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, name])
+  @@index([businessId])
 }

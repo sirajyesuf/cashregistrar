@@ -21,6 +21,7 @@ type SessionUser = {
 const NAV = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/invoices", label: "Invoices" },
+  { href: "/products", label: "Products" },
 ]
 
 const UserContext = createContext<{ user: SessionUser | null }>({ user: null })
