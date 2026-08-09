@@ -51,13 +51,18 @@ export async function PUT(
     )
   }
 
-  const { name, sellingPrice } = parsed.data
+  const { name, itemCode, unit, sellingPrice } = parsed.data
   const price = new Prisma.Decimal(Math.round(sellingPrice * 100)).div(100)
 
   try {
     const updated = await prisma.product.update({
       where: { id: product.id },
-      data: { name, sellingPrice: price },
+      data: {
+        name,
+        itemCode: itemCode || null,
+        unit: unit || "PCS",
+        sellingPrice: price,
+      },
     })
     return NextResponse.json({ product: updated })
   } catch (err) {

@@ -76,12 +76,18 @@ export async function POST(request: Request) {
     )
   }
 
-  const { name, sellingPrice } = parsed.data
+  const { name, itemCode, unit, sellingPrice } = parsed.data
   const price = new Prisma.Decimal(Math.round(sellingPrice * 100)).div(100)
 
   try {
     const product = await prisma.product.create({
-      data: { businessId: workspace.businessId, name, sellingPrice: price },
+      data: {
+        businessId: workspace.businessId,
+        name,
+        itemCode: itemCode || null,
+        unit: unit || "PCS",
+        sellingPrice: price,
+      },
     })
     return NextResponse.json({ product }, { status: 201 })
   } catch (err) {

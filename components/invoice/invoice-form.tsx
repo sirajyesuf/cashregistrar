@@ -3,8 +3,9 @@
 import { Fragment, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
-import { useQueryClient } from "@tanstack/react-query"
-import { Building2, ChevronDown, Plus, User, X } from "lucide-react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { Building2, ChevronDown, ChevronsUpDown, Plus, User, X } from "lucide-react"
+import { Combobox } from "@base-ui/react/combobox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -42,14 +43,15 @@ import {
   type BuyerDetails,
   type TransactionType,
 } from "@/lib/invoice"
+import { UNITS } from "@/lib/units"
 import {
   invoiceFormSchema,
   type InvoiceFormLine,
 } from "@/lib/invoice-schema"
 import { cn, uid } from "@/lib/utils"
+import { useWorkspace } from "@/components/workspace-provider"
 
 const ID_TYPES = ["KID"]
-const UNITS = ["PCS", "KG", "M", "L", "BOX", "EA", "Other"]
 const TRANSACTION_TYPES = [
   { value: "B2B", label: "B2B — Business" },
   { value: "B2C", label: "B2C — Consumer" },
@@ -57,13 +59,21 @@ const TRANSACTION_TYPES = [
 
 export type InvoiceFormInitial = {
   date: string
-  lines: Array<Omit<InvoiceFormLine, "id">>
+  lines: Array<Omit<InvoiceFormLine, "id" | "productId"> & { productId?: string }>
   taxRate: number
   transactionType: TransactionType
   buyer: BuyerDetails
   cashierName: string
   salesPersonName: string
   incomeWithholdRate: number
+}
+
+type Product = {
+  id: string
+  name: string
+  itemCode: string | null
+  unit: string | null
+  sellingPrice: string
 }
 
 type InvoiceFormProps = {
@@ -74,6 +84,7 @@ type InvoiceFormProps = {
 function createLineItem(): InvoiceFormLine {
   return {
     id: uid(),
+    productId: "",
     description: "",
     quantity: "1",
     unitPrice: "",
@@ -213,16 +224,31 @@ function TableInput({
 export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { workspace } = useWorkspace()
+  const businessId = workspace?.businessId ?? ""
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+
+  const { data: products = [] } = useQuery({
+    queryKey: ["products", businessId],
+    queryFn: async () => {
+      const res = await fetch(`/api/products?businessId=${businessId}`)
+      if (!res.ok) throw new Error("Failed to load products")
+      const body = (await res.json()) as { products: Product[] }
+      return body.products
+    },
+    enabled: Boolean(workspace),
+  })
 
   const form = useForm({
     defaultValues: {
       date: initial?.date ?? todayString(),
       lines:
-        initial?.lines.map((line) => ({ ...line, id: uid() })) ?? [
-          createLineItem(),
-        ],
+        initial?.lines.map((line) => ({
+          ...line,
+          id: uid(),
+          productId: line.productId ?? "",
+        })) ?? [createLineItem()],
       taxRate: initial?.taxRate ?? 15,
       transactionType: initial?.transactionType ?? "B2B",
       buyer: initial?.buyer ?? EMPTY_BUYER,
@@ -571,6 +597,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead className="w-40">Product</TableHead>
                         <TableHead className="w-24">Code</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead className="w-20 text-right">Qty</TableHead>
@@ -609,6 +636,89 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                           <Fragment key={line.id}>
                             <TableRow>
                               <TableCell>
+                                <form.Field name={`lines[${index}].productId` as never}>
+                                  {(field) => {
+                                    const selectedId = field.state.value as string
+                                    const selectedProduct =
+                                      products.find((p) => p.id === selectedId) ??
+                                      null
+                                    return (
+                                      <Combobox.Root
+                                        items={products}
+                                        itemToStringLabel={(product) => product.name}
+                                        value={selectedProduct}
+                                        onValueChange={(product) => {
+                                          field.handleChange(
+                                            (product ? product.id : "") as never
+                                          )
+                                          if (product) {
+                                            form.setFieldValue(
+                                              `lines[${index}].itemCode` as never,
+                                              (product.itemCode ?? "") as never
+                                            )
+                                            form.setFieldValue(
+                                              `lines[${index}].description` as never,
+                                              product.name as never
+                                            )
+                                            form.setFieldValue(
+                                              `lines[${index}].unit` as never,
+                                              (product.unit ?? "PCS") as never
+                                            )
+                                            form.setFieldValue(
+                                              `lines[${index}].unitPrice` as never,
+                                              Number(
+                                                product.sellingPrice
+                                              ).toFixed(2) as never
+                                            )
+                                          }
+                                        }}
+                                      >
+                                        <Combobox.InputGroup className="relative w-full">
+                                          <Combobox.Input
+                                            aria-label="Product"
+                                            placeholder="Search product…"
+                                            className="h-7 w-full rounded-md border border-input bg-transparent pr-7 pl-2 text-sm outline-none transition-colors focus:border-ring"
+                                          />
+                                          <span className="pointer-events-none absolute inset-y-0 right-1 flex items-center">
+                                            <ChevronsUpDown className="size-3.5 text-muted-foreground" />
+                                          </span>
+                                        </Combobox.InputGroup>
+                                        <Combobox.Portal>
+                                          <Combobox.Positioner
+                                            className="z-50"
+                                            sideOffset={4}
+                                          >
+                                            <Combobox.Popup className="min-w-[var(--anchor-width)] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md focus:outline-none">
+                                              <Combobox.Empty className="px-2 py-1.5 text-sm text-muted-foreground">
+                                                No products found
+                                              </Combobox.Empty>
+                                              <Combobox.List className="max-h-[min(20rem,var(--available-height))] overflow-y-auto overscroll-contain py-1 outline-none">
+                                                {(product: Product) => (
+                                                  <Combobox.Item
+                                                    key={product.id}
+                                                    value={product}
+                                                    className="relative flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+                                                  >
+                                                    <span className="min-w-0 flex-1 truncate">
+                                                      {product.name}
+                                                    </span>
+                                                    {product.itemCode && (
+                                                      <span className="ml-2 shrink-0 text-xs text-muted-foreground">
+                                                        {product.itemCode}
+                                                      </span>
+                                                    )}
+                                                  </Combobox.Item>
+                                                )}
+                                              </Combobox.List>
+                                            </Combobox.Popup>
+                                          </Combobox.Positioner>
+                                        </Combobox.Portal>
+                                      </Combobox.Root>
+                                    )
+                                  }}
+                                </form.Field>
+                              </TableCell>
+                              <TableCell>
                                 <form.Field name={`lines[${index}].itemCode` as never}>
                                   {(field) => (
                                     <TableInput
@@ -637,10 +747,10 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                                   {(field) => (
                                     <TableInput
                                       field={field}
-                                      type="number"
-                                      min={0}
-                                      step="any"
+                                      type="text"
+                                      inputMode="decimal"
                                       aria-label="Quantity"
+                                      placeholder="1"
                                       className="text-right"
                                     />
                                   )}
@@ -715,7 +825,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                             {rowMessages.length > 0 && (
                               <TableRow>
                                 <TableCell
-                                  colSpan={7}
+                                  colSpan={8}
                                   className="pb-2 pt-0"
                                 >
                                   <p className="text-xs text-destructive">

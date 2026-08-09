@@ -16,18 +16,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { toast } from "@/components/toast"
 import { useWorkspace } from "@/components/workspace-provider"
 import { formatCents, moneyToCents } from "@/lib/invoice"
+import { UNIT_OPTIONS } from "@/lib/units"
 
 type Product = {
   id: string
   name: string
+  itemCode: string | null
+  unit: string | null
   sellingPrice: string
 }
 
 type ProductDraft = {
   name: string
+  itemCode: string
+  unit: string
   sellingPrice: number
 }
 
@@ -47,6 +59,8 @@ function ProductFormDialog({
   error: string | null
 }) {
   const [name, setName] = useState(product?.name ?? "")
+  const [itemCode, setItemCode] = useState(product?.itemCode ?? "")
+  const [unit, setUnit] = useState(product?.unit ?? "PCS")
   const [price, setPrice] = useState(
     product ? Number(product.sellingPrice).toFixed(2) : ""
   )
@@ -67,7 +81,12 @@ function ProductFormDialog({
       return
     }
     setLocalError(null)
-    onSubmit({ name: trimmed, sellingPrice: value })
+    onSubmit({
+      name: trimmed,
+      itemCode: itemCode.trim(),
+      unit,
+      sellingPrice: value,
+    })
   }
 
   const message = localError ?? error
@@ -96,6 +115,32 @@ function ProductFormDialog({
                 placeholder="e.g. Sugar 1kg"
                 autoFocus
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="product-code">Item Code</Label>
+                <Input
+                  id="product-code"
+                  value={itemCode}
+                  onChange={(e) => setItemCode(e.target.value)}
+                  placeholder="SKU (optional)"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="product-unit">Unit</Label>
+                <Select value={unit} onValueChange={(value) => setUnit(value ?? "PCS")}>
+                  <SelectTrigger id="product-unit" aria-label="Unit">
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {UNIT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-price">Selling Price (ETB)</Label>
@@ -158,7 +203,12 @@ export default function ProductsPage() {
         {
           method: draft.id ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: draft.name, sellingPrice: draft.sellingPrice }),
+          body: JSON.stringify({
+            name: draft.name,
+            itemCode: draft.itemCode,
+            unit: draft.unit,
+            sellingPrice: draft.sellingPrice,
+          }),
         }
       )
       const body = (await res.json().catch(() => ({}))) as { error?: string }
@@ -265,6 +315,8 @@ export default function ProductsPage() {
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead>Name</TableHead>
+                <TableHead className="w-28">Item Code</TableHead>
+                <TableHead className="w-20">Unit</TableHead>
                 <TableHead className="w-40 text-right">Selling Price</TableHead>
                 <TableHead className="w-24 text-right">Actions</TableHead>
               </TableRow>
@@ -273,6 +325,12 @@ export default function ProductsPage() {
               {products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {product.itemCode || "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {product.unit || "PCS"}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatCents(moneyToCents(product.sellingPrice))}
                   </TableCell>

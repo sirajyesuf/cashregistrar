@@ -130,6 +130,7 @@ export function isFutureDate(date: string): boolean {
 
 export const invoiceFormLineSchema = z.object({
   id: z.string(),
+  productId: z.string(),
   description: z
     .string()
     .trim()
