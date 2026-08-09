@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { hasIssuedReceipt } from "@/lib/invoice"
+import { getWorkspace, workspaceInvoiceScope } from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -9,6 +10,14 @@ export async function POST(request: Request) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  }
+
+  const workspace = await getWorkspace(user.id)
+  if (!workspace) {
+    return NextResponse.json(
+      { error: "No active workspace. Select a business and branch." },
+      { status: 409 }
+    )
   }
 
   let body: { ids?: unknown }
@@ -26,7 +35,7 @@ export async function POST(request: Request) {
   }
 
   const invoices = await prisma.invoice.findMany({
-    where: { id: { in: ids }, userId: user.id },
+    where: { id: { in: ids }, ...workspaceInvoiceScope(workspace) },
     select: {
       id: true,
       registrationStatus: true,
@@ -45,7 +54,7 @@ export async function POST(request: Request) {
   const deleted = deletableIds.length
     ? (
         await prisma.invoice.deleteMany({
-          where: { id: { in: deletableIds }, userId: user.id },
+          where: { id: { in: deletableIds }, ...workspaceInvoiceScope(workspace) },
         })
       ).count
     : 0

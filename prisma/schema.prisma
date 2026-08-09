@@ -30,8 +30,8 @@ model Business {
   id        String   @id @default(cuid())
   ownerId   String
   name      String
-  phone     String?
-  email     String?
+  tin       String?
+  vatNumber String?
   address   String?
   currency  String   @default("ETB")
   active    Boolean  @default(true)
@@ -41,6 +41,7 @@ model Business {
   owner    User             @relation(fields: [ownerId], references: [id])
   branches Branch[]
   members  BusinessMember[]
+  invoices Invoice[]
 
   @@index([ownerId])
 }
@@ -49,7 +50,6 @@ model Branch {
   id         String   @id @default(cuid())
   businessId String
   name       String
-  phone      String?
   address    String?
   active     Boolean  @default(true)
   createdAt  DateTime @default(now())
@@ -57,6 +57,7 @@ model Branch {
 
   business Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
   members  BusinessMember[]
+  invoices Invoice[]
 
   @@unique([businessId, name])
   @@index([businessId])
@@ -136,9 +137,13 @@ model EimsToken {
 }
 
 model Counter {
-  id    String @id @default(cuid())
-  name  String @unique
-  value Int    @default(0)
+  id         String @id @default(cuid())
+  businessId String
+  branchId   String
+  name       String
+  value      Int    @default(0)
+
+  @@unique([businessId, branchId, name])
 }
 
 enum RegistrationStatus {
@@ -221,9 +226,17 @@ model Invoice {
 
   userId    String
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId String
+  business  Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  branchId  String
+  branch    Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
   lines     InvoiceLine[]
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+
+  @@index([businessId, branchId, createdAt])
+  @@index([businessId])
+  @@index([branchId])
 }
 
 model InvoiceLine {

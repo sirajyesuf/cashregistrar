@@ -1,22 +1,16 @@
 import { NextResponse } from "next/server"
-import { z } from "zod"
 import { getSessionUser } from "@/lib/auth/user"
 import {
   canManageBusiness,
   getBusinessAccess,
   isPrismaUniqueError,
 } from "@/lib/business"
+import { branchCreateSchema } from "@/lib/business-schema"
 import { prisma } from "@/lib/db"
 
 export const runtime = "nodejs"
 
 type Context = { params: Promise<{ businessId: string }> }
-
-const createBranchSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  phone: z.string().trim().max(40).optional(),
-  address: z.string().trim().max(240).optional(),
-})
 
 export async function GET(_request: Request, { params }: Context) {
   const user = await getSessionUser()
@@ -56,7 +50,7 @@ export async function POST(request: Request, { params }: Context) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const parsed = createBranchSchema.safeParse(body)
+  const parsed = branchCreateSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
@@ -66,7 +60,11 @@ export async function POST(request: Request, { params }: Context) {
 
   try {
     const branch = await prisma.branch.create({
-      data: { ...parsed.data, businessId },
+      data: {
+        name: parsed.data.name,
+        address: parsed.data.address || null,
+        businessId,
+      },
     })
     return NextResponse.json({ branch }, { status: 201 })
   } catch (error) {

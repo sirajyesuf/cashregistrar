@@ -12,6 +12,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Pagination } from "@/components/ui/pagination"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { formatCents, moneyToCents } from "@/lib/invoice"
 import { StatusBadge } from "../status-badge"
@@ -26,11 +33,19 @@ type AdminInvoice = {
   _count: { lines: number }
 }
 
+type AdminBusiness = {
+  id: string
+  name: string
+  _count: { invoices: number; branches: number }
+}
+
 const STATUSES = ["", "REGISTERED", "CANCELLED", "FAILED", "UNREGISTERED"]
 const PAGE_SIZE = 10
 
 export default function AdminInvoicesPage() {
   const [invoices, setInvoices] = useState<AdminInvoice[] | null>(null)
+  const [businesses, setBusinesses] = useState<AdminBusiness[] | null>(null)
+  const [businessId, setBusinessId] = useState("")
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState("")
@@ -38,8 +53,23 @@ export default function AdminInvoicesPage() {
 
   useEffect(() => {
     let cancelled = false
+    fetch("/api/admin/businesses")
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load businesses")
+        const body = (await res.json()) as { businesses: AdminBusiness[] }
+        if (cancelled) return
+        setBusinesses(body.businesses)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
     fetch(
-      `/api/admin/invoices?page=${page}&pageSize=${PAGE_SIZE}&status=${status}`
+      `/api/admin/invoices?page=${page}&pageSize=${PAGE_SIZE}&status=${status}&businessId=${businessId}`
     )
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed to load invoices")
@@ -60,7 +90,7 @@ export default function AdminInvoicesPage() {
     return () => {
       cancelled = true
     }
-  }, [page, status])
+  }, [page, status, businessId])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -69,11 +99,31 @@ export default function AdminInvoicesPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Every invoice from every user.
+          Invoices across tenants.
         </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={businessId}
+          onValueChange={(value) => {
+            setBusinessId(value ?? "")
+            setPage(1)
+          }}
+        >
+          <SelectTrigger className="w-56" aria-label="Filter by business">
+            <SelectValue placeholder="All businesses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All businesses</SelectItem>
+            {businesses?.map((business) => (
+              <SelectItem key={business.id} value={business.id}>
+                {business.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         {STATUSES.map((s) => (
           <button
             key={s}

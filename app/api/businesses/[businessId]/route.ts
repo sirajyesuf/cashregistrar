@@ -10,8 +10,8 @@ type Context = { params: Promise<{ businessId: string }> }
 
 const updateBusinessSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
-  phone: z.string().trim().max(40).nullable().optional(),
-  email: z.string().trim().email().max(160).nullable().optional(),
+  tin: z.string().trim().max(40).nullable().optional(),
+  vatNumber: z.string().trim().max(40).nullable().optional(),
   address: z.string().trim().max(240).nullable().optional(),
   currency: z.string().trim().length(3).toUpperCase().optional(),
   active: z.boolean().optional(),
@@ -30,8 +30,8 @@ export async function GET(_request: Request, { params }: Context) {
     select: {
       id: true,
       name: true,
-      phone: true,
-      email: true,
+      tin: true,
+      vatNumber: true,
       address: true,
       currency: true,
       active: true,

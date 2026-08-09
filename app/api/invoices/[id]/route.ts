@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { invoiceInputSchema, type BuyerDetails } from "@/lib/invoice-schema"
+import { canAccessInvoice, getWorkspace } from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -46,7 +47,8 @@ export async function GET(
     },
   })
 
-  if (!invoice || invoice.userId !== user.id) {
+  const workspace = await getWorkspace(user.id)
+  if (!workspace || !invoice || !canAccessInvoice(workspace, invoice)) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   }
 
@@ -66,10 +68,16 @@ export async function PUT(
 
   const existing = await prisma.invoice.findUnique({
     where: { id },
-    select: { userId: true, registrationStatus: true },
+    select: {
+      userId: true,
+      businessId: true,
+      branchId: true,
+      registrationStatus: true,
+    },
   })
 
-  if (!existing || existing.userId !== user.id) {
+  const workspace = await getWorkspace(user.id)
+  if (!workspace || !existing || !canAccessInvoice(workspace, existing)) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   }
 
@@ -167,12 +175,15 @@ export async function DELETE(
     where: { id },
     select: {
       userId: true,
+      businessId: true,
+      branchId: true,
       registrationStatus: true,
       receipt: { select: { status: true } },
     },
   })
 
-  if (!invoice || invoice.userId !== user.id) {
+  const workspace = await getWorkspace(user.id)
+  if (!workspace || !invoice || !canAccessInvoice(workspace, invoice)) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   }
 

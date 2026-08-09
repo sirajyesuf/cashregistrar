@@ -10,6 +10,7 @@ import {
   isSequenceError,
   parseExpectedCounter,
 } from "@/lib/einvoice/eims-error"
+import { SYSTEM_COUNTER } from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -108,14 +109,12 @@ export async function POST(request: Request) {
     })
   }
 
-  let counter = await prisma.counter.findUnique({
-    where: { name: "eims_receipt" },
+  const counterKey = { ...SYSTEM_COUNTER, name: "eims_receipt" }
+  const counter = await prisma.counter.upsert({
+    where: { businessId_branchId_name: counterKey },
+    create: { ...counterKey, value: 1 },
+    update: {},
   })
-  if (!counter) {
-    counter = await prisma.counter.create({
-      data: { name: "eims_receipt", value: 1 },
-    })
-  }
 
   const cfg = getConfig()
   let { result, receiptNumber } = await attemptReceipt(
@@ -130,7 +129,7 @@ export async function POST(request: Request) {
     const expected = parseExpectedCounter(message)
     if (isSequenceError(message) && expected !== null) {
       await prisma.counter.update({
-        where: { name: "eims_receipt" },
+        where: { businessId_branchId_name: counterKey },
         data: { value: expected },
       })
       ;({ result, receiptNumber } = await attemptReceipt(
@@ -180,7 +179,7 @@ export async function POST(request: Request) {
             },
           }),
           prisma.counter.update({
-            where: { name: "eims_receipt" },
+            where: { businessId_branchId_name: counterKey },
             data: { value: { increment: 1 } },
           }),
         ])
@@ -193,7 +192,7 @@ export async function POST(request: Request) {
       // same IRN.
       try {
         await prisma.counter.update({
-          where: { name: "eims_receipt" },
+          where: { businessId_branchId_name: counterKey },
           data: { value: { increment: 1 } },
         })
       } catch {

@@ -1,18 +1,10 @@
 import { NextResponse } from "next/server"
-import { z } from "zod"
 import { getSessionUser } from "@/lib/auth/user"
+import { createBusinessApiSchema } from "@/lib/business-schema"
 import { prisma } from "@/lib/db"
 import { isPrismaUniqueError } from "@/lib/business"
 
 export const runtime = "nodejs"
-
-const createBusinessSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  phone: z.string().trim().max(40).optional(),
-  email: z.string().trim().email().max(160).optional().or(z.literal("")),
-  address: z.string().trim().max(240).optional(),
-  currency: z.string().trim().length(3).toUpperCase().default("ETB"),
-})
 
 export async function GET() {
   const user = await getSessionUser()
@@ -38,7 +30,31 @@ export async function GET() {
     },
   })
 
-  return NextResponse.json({ businesses })
+  const branchFilter = businesses.map((business) => {
+    const member = business.members[0]
+    if (member?.role === "OWNER") return { businessId: business.id }
+    return { businessId: business.id, id: member?.branchId ?? "__none__" }
+  })
+  const branches = await prisma.branch.findMany({
+    where: { OR: branchFilter },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, businessId: true, active: true },
+  })
+  const branchesByBusiness = new Map<string, typeof branches>()
+  for (const branch of branches) {
+    const list = branchesByBusiness.get(branch.businessId) ?? []
+    list.push(branch)
+    branchesByBusiness.set(branch.businessId, list)
+  }
+
+  return NextResponse.json({
+    businesses: businesses.map(({ members, ...business }) => ({
+      ...business,
+      role: members[0]?.role ?? null,
+      branchId: members[0]?.branchId ?? null,
+      branches: branchesByBusiness.get(business.id) ?? [],
+    })),
+  })
 }
 
 export async function POST(request: Request) {
@@ -54,7 +70,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const parsed = createBusinessSchema.safeParse(body)
+  const parsed = createBusinessApiSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
@@ -65,10 +81,20 @@ export async function POST(request: Request) {
   try {
     const business = await prisma.$transaction(async (tx) => {
       const createdBusiness = await tx.business.create({
-        data: { ...parsed.data, ownerId: user.id },
+        data: {
+          name: parsed.data.name,
+          tin: parsed.data.tin || null,
+          vatNumber: parsed.data.vatNumber || null,
+          address: parsed.data.address || null,
+          ownerId: user.id,
+        },
       })
       const branch = await tx.branch.create({
-        data: { businessId: createdBusiness.id, name: "Main Branch" },
+        data: {
+          businessId: createdBusiness.id,
+          name: parsed.data.branch?.name?.trim() || "Main Branch",
+          address: parsed.data.branch?.address || null,
+        },
       })
       await tx.businessMember.create({
         data: {

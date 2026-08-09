@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { requireAdmin } from "@/lib/auth/admin"
+import { isPrismaUniqueError } from "@/lib/business"
 import { prisma } from "@/lib/db"
 import { adminUserSchema } from "@/lib/admin-user-schema"
 
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const { name, password, role } = parsed.data
+  const { name, password, role, business, branch } = parsed.data
   const email = parsed.data.email.toLowerCase()
 
   try {
@@ -64,25 +65,61 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
-    const user = await prisma.user.update({
-      where: { id: result.user.id },
-      data: { role },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        createdAt: true,
-        _count: { select: { invoices: true } },
-      },
+
+    const user = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: result.user.id },
+        data: { role },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          _count: { select: { invoices: true } },
+        },
+      })
+
+      const createdBusiness = await tx.business.create({
+        data: {
+          name: business.name,
+          tin: business.tin || null,
+          vatNumber: business.vatNumber || null,
+          address: business.address || null,
+          ownerId: result.user.id,
+        },
+      })
+      await tx.branch.create({
+        data: {
+          businessId: createdBusiness.id,
+          name: branch.name,
+          address: branch.address || null,
+        },
+      })
+      await tx.businessMember.create({
+        data: {
+          userId: result.user.id,
+          businessId: createdBusiness.id,
+          role: "OWNER",
+        },
+      })
+
+      return updated
     })
+
     return NextResponse.json({ user }, { status: 201 })
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not create user"
     const isDuplicate = /exists|already/i.test(message)
     return NextResponse.json(
-      { error: isDuplicate ? "Email already exists" : message },
-      { status: isDuplicate ? 409 : 400 }
+      {
+        error: isPrismaUniqueError(err)
+          ? "A business with this information already exists"
+          : isDuplicate
+            ? "Email already exists"
+            : message,
+      },
+      { status: isDuplicate || isPrismaUniqueError(err) ? 409 : 400 }
     )
   }
 }

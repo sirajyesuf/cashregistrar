@@ -6,6 +6,7 @@ import { getConfig } from "@/lib/einvoice/config"
 import { buildRegisterPayload } from "@/lib/einvoice/payload"
 import { validateLineTotals } from "@/lib/einvoice/validate"
 import { extractErrorMessage } from "@/lib/einvoice/eims-error"
+import { SYSTEM_COUNTER } from "@/lib/workspace"
 import {
   getCallbackHeaders,
   parseBulkOperationResponse,
@@ -97,13 +98,14 @@ export async function POST(request: Request) {
     select: { irn: true },
   })
   const startCounter = await prisma.$transaction(async (tx) => {
+    const counterKey = { ...SYSTEM_COUNTER, name: "eims" }
     const counter = await tx.counter.upsert({
-      where: { name: "eims" },
-      create: { name: "eims", value: 1 },
+      where: { businessId_branchId_name: counterKey },
+      create: { ...counterKey, value: 1 },
       update: {},
     })
     await tx.counter.update({
-      where: { name: "eims" },
+      where: { businessId_branchId_name: counterKey },
       data: { value: { increment: orderedInvoices.length } },
     })
     return counter.value

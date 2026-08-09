@@ -15,7 +15,6 @@ type Context = { params: Promise<{ businessId: string; branchId: string }> }
 
 const updateBranchSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
-  phone: z.string().trim().max(40).nullable().optional(),
   address: z.string().trim().max(240).nullable().optional(),
   active: z.boolean().optional(),
 })

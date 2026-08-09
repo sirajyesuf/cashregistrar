@@ -17,13 +17,16 @@ export async function GET(request: Request) {
     Math.max(1, Number(url.searchParams.get("pageSize")) || 10)
   )
   const status = url.searchParams.get("status") ?? ""
+  const businessId = url.searchParams.get("businessId") ?? ""
 
-  const where =
-    status === "REGISTERED" || status === "CANCELLED" || status === "FAILED"
+  const where = {
+    ...(businessId ? { businessId } : {}),
+    ...(status === "REGISTERED" || status === "CANCELLED" || status === "FAILED"
       ? { registrationStatus: status as "REGISTERED" | "CANCELLED" | "FAILED" }
       : status === "UNREGISTERED"
         ? { registrationStatus: null }
-        : {}
+        : {}),
+  }
 
   const [invoices, total] = await Promise.all([
     prisma.invoice.findMany({

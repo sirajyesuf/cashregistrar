@@ -3,6 +3,10 @@ import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { invoiceInputSchema } from "@/lib/invoice-schema"
+import {
+  getWorkspace,
+  workspaceInvoiceScope,
+} from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -16,10 +20,24 @@ async function requireUser() {
   return user
 }
 
+async function requireWorkspace(userId: string) {
+  const workspace = await getWorkspace(userId)
+  if (!workspace) return null
+  return workspace
+}
+
 export async function GET(request: Request) {
   const user = await requireUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  }
+
+  const workspace = await requireWorkspace(user.id)
+  if (!workspace) {
+    return NextResponse.json(
+      { error: "No active workspace. Select a business and branch." },
+      { status: 409 }
+    )
   }
 
   const url = new URL(request.url)
@@ -29,7 +47,7 @@ export async function GET(request: Request) {
     Math.max(1, Number(url.searchParams.get("pageSize")) || 10)
   )
 
-  const where = { userId: user.id }
+  const where = workspaceInvoiceScope(workspace)
   const [invoices, total, failed, cancelled, issuedReceipts] =
     await Promise.all([
     prisma.invoice.findMany({
@@ -57,7 +75,7 @@ export async function GET(request: Request) {
       where: { ...where, registrationStatus: "CANCELLED" },
     }),
     prisma.receipt.count({
-      where: { status: "ISSUED", invoice: { userId: user.id } },
+      where: { status: "ISSUED", invoice: { businessId: workspace.businessId } },
     }),
   ])
 
@@ -74,6 +92,14 @@ export async function POST(request: Request) {
   const user = await requireUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  }
+
+  const workspace = await requireWorkspace(user.id)
+  if (!workspace) {
+    return NextResponse.json(
+      { error: "No active workspace. Select a business and branch." },
+      { status: 409 }
+    )
   }
 
   let body: unknown
@@ -115,8 +141,19 @@ export async function POST(request: Request) {
   const grandTotalCents = subtotalCents + taxAmountCents
 
   const counter = await prisma.counter.upsert({
-    where: { name: "invoice" },
-    create: { name: "invoice", value: 1 },
+    where: {
+      businessId_branchId_name: {
+        businessId: workspace.businessId,
+        branchId: workspace.branchId,
+        name: "invoice",
+      },
+    },
+    create: {
+      businessId: workspace.businessId,
+      branchId: workspace.branchId,
+      name: "invoice",
+      value: 1,
+    },
     update: { value: { increment: 1 } },
   })
   const number = `INV-${String(counter.value).padStart(4, "0")}`
@@ -125,6 +162,8 @@ export async function POST(request: Request) {
     data: {
       number,
       date,
+      businessId: workspace.businessId,
+      branchId: workspace.branchId,
       buyerLegalName: buyer.legalName,
       taxRate: new Prisma.Decimal(taxRate),
       subtotal: centsToDecimal(subtotalCents),

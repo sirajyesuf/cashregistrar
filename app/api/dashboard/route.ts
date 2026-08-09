@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
+import { getWorkspace, workspaceInvoiceScope } from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -18,8 +19,13 @@ export async function GET() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
+  const workspace = await getWorkspace(user.id)
+  if (!workspace) {
+    return NextResponse.json({ error: "No workspace selected" }, { status: 409 })
+  }
+
   const invoices = await prisma.invoice.findMany({
-    where: { userId: user.id },
+    where: workspaceInvoiceScope(workspace),
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

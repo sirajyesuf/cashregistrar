@@ -7,6 +7,7 @@ import { Menu } from "@base-ui/react/menu"
 import { LogOut, Menu as MenuIcon, UserRoundCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/user-menu"
+import { WorkspaceSwitcher } from "@/components/workspace-switcher"
 import { authClient } from "@/lib/auth-client"
 
 type SessionUser = {
@@ -60,7 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-svh flex-col">
         <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6">
-            <div className="flex min-w-0 items-center gap-6">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-6">
               <Link
                 href="/dashboard"
                 className="flex shrink-0 items-center gap-2"
@@ -68,10 +69,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
                   CR
                 </span>
-                <span className="text-sm font-semibold tracking-tight">
+                <span className="hidden text-sm font-semibold tracking-tight sm:block">
                   CashRegistrar
                 </span>
               </Link>
+              {user && <WorkspaceSwitcher />}
               <nav className="hidden items-center gap-1 md:flex">
                 {NAV.map((item) => (
                   <Link
@@ -128,30 +130,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
         <main className="flex-1">{children}</main>
         {impersonatedBy && (
-          <footer className="border-t bg-muted/40">
-            <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
+          <footer className="sticky bottom-0 z-40 border-t bg-muted/40 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
                   <UserRoundCog className="size-4.5 text-primary" />
                 </span>
                 <div className="min-w-0 leading-tight">
-                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
                     Viewing as
                   </p>
-                  <p className="truncate text-sm font-semibold text-foreground">
+                  <p className="truncate text-sm font-bold text-foreground">
                     {user?.name || user?.email}
                   </p>
                 </div>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={stopImpersonating}
-              >
-                <LogOut className="size-3.5" />
-                Exit impersonation
-              </Button>
+              <div className="flex items-center gap-4">
+                <p className="hidden text-xs text-muted-foreground lg:block">
+                  Actions you take will be recorded as this user.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={stopImpersonating}
+                >
+                  <LogOut className="size-3.5" />
+                  Exit impersonation
+                </Button>
+              </div>
             </div>
           </footer>
         )}
