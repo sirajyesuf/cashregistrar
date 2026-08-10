@@ -297,9 +297,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
         queryClient.invalidateQueries({ queryKey: ["invoices"] })
         queryClient.invalidateQueries({ queryKey: ["invoice"] })
         queryClient.invalidateQueries({ queryKey: ["dashboard"] })
-        router.push(
-          invoiceId ? `/invoices/${invoiceId}` : `/invoices/${body.invoice.id}`
-        )
+        router.push(invoiceId ? `/invoices/${invoiceId}` : "/invoices")
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to save invoice")
         setPending(false)
