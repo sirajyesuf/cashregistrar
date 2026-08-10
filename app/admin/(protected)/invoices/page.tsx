@@ -41,7 +41,14 @@ type AdminBusiness = {
   _count: { invoices: number; branches: number }
 }
 
-const STATUSES = ["", "REGISTERED", "CANCELLED", "FAILED", "UNREGISTERED"]
+const STATUSES = [
+  "",
+  "REGISTERED",
+  "CANCELLED",
+  "FAILED",
+  "UNREGISTERED",
+  "PROCESSING",
+]
 const PAGE_SIZE = 10
 
 export default function AdminInvoicesPage() {
@@ -180,6 +187,7 @@ export default function AdminInvoicesPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      nativeButton={false}
                       render={<Link href={`/admin/invoices/${inv.id}`} />}
                     >
                       View

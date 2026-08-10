@@ -5,5 +5,7 @@ export function StatusBadge({ status }: { status: string | null }) {
     return <Badge variant="success">Registered</Badge>
   if (status === "CANCELLED") return <Badge variant="outline">Cancelled</Badge>
   if (status === "FAILED") return <Badge variant="destructive">Failed</Badge>
+  if (status === "PROCESSING")
+    return <Badge variant="outline">Processing</Badge>
   return <Badge variant="outline">Unregistered</Badge>
 }

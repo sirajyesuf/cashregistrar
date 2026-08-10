@@ -21,8 +21,17 @@ export async function GET(request: Request) {
 
   const where = {
     ...(businessId ? { businessId } : {}),
-    ...(status === "REGISTERED" || status === "CANCELLED" || status === "FAILED"
-      ? { registrationStatus: status as "REGISTERED" | "CANCELLED" | "FAILED" }
+    ...(status === "REGISTERED" ||
+    status === "CANCELLED" ||
+    status === "FAILED" ||
+    status === "PROCESSING"
+      ? {
+          registrationStatus: status as
+            | "REGISTERED"
+            | "CANCELLED"
+            | "FAILED"
+            | "PROCESSING",
+        }
       : status === "UNREGISTERED"
         ? { registrationStatus: null }
         : {}),
