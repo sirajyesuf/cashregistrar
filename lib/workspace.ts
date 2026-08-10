@@ -1,11 +1,20 @@
 import type { Role } from "@prisma/client"
 import { prisma } from "@/lib/db"
 
-// System-wide EIMS counters are not per-workspace. The Counter model requires
-// businessId/branchId (no FK constraints), so store them under sentinel keys.
+// EIMS counters are per-business: each business registers under its own source
+// system (TIN + SYSTEM_NUMBER), so the EIMS document sequence is business-scoped.
+// The Counter model requires businessId/branchId (no FK constraints), so the
+// branch slot uses a sentinel key.
+export const EIMS_BRANCH_KEY = "__eims__"
+
+export function eimsCounterKey(businessId: string) {
+  return { businessId, branchId: EIMS_BRANCH_KEY } as const
+}
+
+/** @deprecated EIMS counters are now per-business; use eimsCounterKey(). */
 export const SYSTEM_COUNTER = {
   businessId: "__system__",
-  branchId: "__eims__",
+  branchId: EIMS_BRANCH_KEY,
 } as const
 
 export type WorkspaceSelection = { businessId: string; branchId: string }

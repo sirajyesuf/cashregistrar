@@ -37,9 +37,16 @@ export default function AddUserPage() {
       role: "OWNER" as "ADMIN" | "OWNER",
       business: {
         name: "",
+        address: "",
+      },
+      morCredential: {
         tin: "",
         vatNumber: "",
-        address: "",
+        clientId: "",
+        clientSecret: "",
+        apiKey: "",
+        systemNumber: "",
+        systemType: "POS",
       },
       branch: {
         name: "Main Branch",
@@ -295,44 +302,6 @@ export default function AddUserPage() {
                   }}
                 </form.Field>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <form.Field name="business.tin">
-                    {(field) => (
-                      <Field>
-                        <FieldLabel htmlFor={field.name}>TIN</FieldLabel>
-                        <Input
-                          id={field.name}
-                          name={field.name}
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(event) =>
-                            field.handleChange(event.target.value)
-                          }
-                          autoComplete="off"
-                        />
-                      </Field>
-                    )}
-                  </form.Field>
-
-                  <form.Field name="business.vatNumber">
-                    {(field) => (
-                      <Field>
-                        <FieldLabel htmlFor={field.name}>VAT number</FieldLabel>
-                        <Input
-                          id={field.name}
-                          name={field.name}
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(event) =>
-                            field.handleChange(event.target.value)
-                          }
-                          autoComplete="off"
-                        />
-                      </Field>
-                    )}
-                  </form.Field>
-                </div>
-
                 <form.Field name="business.address">
                   {(field) => (
                     <Field>
@@ -350,6 +319,189 @@ export default function AddUserPage() {
                     </Field>
                   )}
                 </form.Field>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <Store className="size-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">MOR credentials</h3>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <form.Field name="morCredential.tin">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched && !field.state.meta.isValid
+                      return (
+                        <Field data-invalid={isInvalid}>
+                          <FieldLabel htmlFor={field.name}>TIN</FieldLabel>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(event) =>
+                              field.handleChange(event.target.value)
+                            }
+                            autoComplete="off"
+                            aria-invalid={isInvalid}
+                          />
+                          {isInvalid && (
+                            <FieldError errors={field.state.meta.errors} />
+                          )}
+                        </Field>
+                      )
+                    }}
+                  </form.Field>
+
+                  <form.Field name="morCredential.vatNumber">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor={field.name}>VAT number</FieldLabel>
+                        <Input
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(event) =>
+                            field.handleChange(event.target.value)
+                          }
+                          autoComplete="off"
+                        />
+                      </Field>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="morCredential.systemNumber">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched && !field.state.meta.isValid
+                      return (
+                        <Field data-invalid={isInvalid}>
+                          <FieldLabel htmlFor={field.name}>
+                            System number
+                          </FieldLabel>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(event) =>
+                              field.handleChange(event.target.value)
+                            }
+                            autoComplete="off"
+                            aria-invalid={isInvalid}
+                          />
+                          {isInvalid && (
+                            <FieldError errors={field.state.meta.errors} />
+                          )}
+                        </Field>
+                      )
+                    }}
+                  </form.Field>
+
+                  <form.Field name="morCredential.systemType">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor={field.name}>System type</FieldLabel>
+                        <select
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(event) =>
+                            field.handleChange(event.target.value)
+                          }
+                          className="h-9 rounded-lg border border-input bg-background px-3 font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+                        >
+                          <option value="ERP">ERP</option>
+                          <option value="POS">POS</option>
+                          <option value="MANUAL">MANUAL</option>
+                        </select>
+                      </Field>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="morCredential.clientId">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched && !field.state.meta.isValid
+                      return (
+                        <Field data-invalid={isInvalid}>
+                          <FieldLabel htmlFor={field.name}>Client ID</FieldLabel>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(event) =>
+                              field.handleChange(event.target.value)
+                            }
+                            autoComplete="off"
+                            aria-invalid={isInvalid}
+                          />
+                          {isInvalid && (
+                            <FieldError errors={field.state.meta.errors} />
+                          )}
+                        </Field>
+                      )
+                    }}
+                  </form.Field>
+
+                  <form.Field name="morCredential.clientSecret">
+                    {(field) => {
+                      const isInvalid =
+                      field.state.meta.isTouched && !field.state.meta.isValid
+                      return (
+                        <Field data-invalid={isInvalid}>
+                          <FieldLabel htmlFor={field.name}>
+                            Client secret
+                          </FieldLabel>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            type="password"
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(event) =>
+                              field.handleChange(event.target.value)
+                            }
+                            autoComplete="new-password"
+                            aria-invalid={isInvalid}
+                          />
+                          {isInvalid && (
+                            <FieldError errors={field.state.meta.errors} />
+                          )}
+                        </Field>
+                      )
+                    }}
+                  </form.Field>
+
+                  <form.Field name="morCredential.apiKey">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched && !field.state.meta.isValid
+                      return (
+                        <Field data-invalid={isInvalid}>
+                          <FieldLabel htmlFor={field.name}>API key</FieldLabel>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            type="password"
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(event) =>
+                              field.handleChange(event.target.value)
+                            }
+                            autoComplete="new-password"
+                            aria-invalid={isInvalid}
+                          />
+                          {isInvalid && (
+                            <FieldError errors={field.state.meta.errors} />
+                          )}
+                        </Field>
+                      )
+                    }}
+                  </form.Field>
+                </div>
 
                 <div className="flex items-center gap-2 pt-1">
                   <Store className="size-4 text-muted-foreground" />

@@ -45,8 +45,6 @@ model Business {
   id        String   @id @default(cuid())
   ownerId   String
   name      String
-  tin       String?
-  vatNumber String?
   address   String?
   currency  String   @default("ETB")
   active    Boolean  @default(true)
@@ -60,8 +58,27 @@ model Business {
   products Product[]
   preferences UserPreference[]
   invitations Invitation[]
+  morCredential MorCredential?
+  sellerProfile SellerProfile?
 
   @@index([ownerId])
+}
+
+model MorCredential {
+  id           String   @id @default(cuid())
+  businessId   String   @unique
+  tin          String
+  vatNumber    String
+  clientId     String
+  clientSecret String
+  apiKey       String
+  systemNumber String
+  systemType   String   @default("POS")
+  updatedAt    DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
 }
 
 model Branch {
@@ -182,6 +199,7 @@ model Verification {
 
 model EimsToken {
   id           String   @id @default(cuid())
+  businessId   String   @unique
   accessToken  String   @db.Text
   refreshToken String?  @db.Text
   expiresAt    DateTime
@@ -327,6 +345,7 @@ model Receipt {
 model EimsOperation {
   id             String              @id @default(cuid())
   conversationId String              @unique
+  businessId     String
   type           EimsOperationType
   status         EimsOperationStatus @default(PROCESSING)
   rawResponse    Json?
@@ -335,6 +354,8 @@ model EimsOperation {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
   items          EimsOperationItem[]
+
+  @@index([businessId])
 }
 
 model EimsOperationItem {
@@ -357,6 +378,7 @@ model EimsOperationItem {
 
 model SellerProfile {
   id           String   @id @default(cuid())
+  businessId   String   @unique
   businessName String
   street       String
   city         String
@@ -371,6 +393,10 @@ model SellerProfile {
   houseNumber  String?
   locality     String?
   updatedAt    DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
 }
 
 model Product {

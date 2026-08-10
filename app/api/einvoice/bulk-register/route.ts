@@ -11,7 +11,11 @@ import {
   isSequenceError,
   parseExpectedCounter,
 } from "@/lib/einvoice/eims-error"
-import { getWorkspace, SYSTEM_COUNTER, workspaceInvoiceScope } from "@/lib/workspace"
+import {
+  eimsCounterKey,
+  getWorkspace,
+  workspaceInvoiceScope,
+} from "@/lib/workspace"
 import {
   getCallbackHeaders,
   parseBulkOperationResponse,
@@ -104,28 +108,32 @@ export async function POST(request: Request) {
 
   const byId = new Map(invoices.map((invoice) => [invoice.id, invoice]))
   const orderedInvoices = invoiceIds.map((id) => byId.get(id)!)
-  const seller = await prisma.sellerProfile.findFirst()
+  const businessId = workspace.businessId
+  const seller = await prisma.sellerProfile.findUnique({
+    where: { businessId },
+  })
   const previous = await prisma.invoice.findFirst({
-    where: { irn: { not: null }, registrationStatus: "REGISTERED" },
+    where: { irn: { not: null }, registrationStatus: "REGISTERED", businessId },
     orderBy: { registeredAt: "desc" },
     select: { irn: true },
   })
-  const counterKey = { ...SYSTEM_COUNTER, name: "eims" }
+  const counterKey = { ...eimsCounterKey(businessId), name: "eims" }
 
   // Builds the bulk payload for a given counter start and submits it. Extracted
   // so the self-heal path can re-run the same request with the corrected
   // document numbers.
   const attemptBulk = async (startCounter: number) => {
+    const cfg = await getConfig(businessId)
     const payload = orderedInvoices.map((invoice, index) =>
       buildRegisterPayload({
         invoice,
         seller,
         invoiceCounter: startCounter + index,
         previousIrn: index === 0 ? (previous?.irn ?? null) : null,
+        cfg,
       })
     )
-    const cfg = getConfig()
-    return callEims("/v1/bulkRegister", payload, {
+    return callEims("/v1/bulkRegister", payload, businessId, {
       TIN: cfg.tin,
       SYSTEM_NUMBER: cfg.systemNumber,
       ...getCallbackHeaders(),
@@ -193,6 +201,7 @@ export async function POST(request: Request) {
     const operation = await prisma.eimsOperation.create({
       data: {
         conversationId: operationResponse.conversationId,
+        businessId,
         type: "REGISTER",
         items: {
           create: orderedInvoices.map((invoice, index) => ({

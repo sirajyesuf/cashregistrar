@@ -13,7 +13,7 @@ import {
   parseEimsError,
   parseExpectedCounter,
 } from "@/lib/einvoice/eims-error"
-import { canAccessInvoice, getWorkspace, SYSTEM_COUNTER } from "@/lib/workspace"
+import { canAccessInvoice, eimsCounterKey, getWorkspace } from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -41,6 +41,7 @@ export const runtime = "nodejs"
  */
 async function attemptRegister(
   cfg: EimsConfig,
+  businessId: string,
   invoice: Invoice & { lines: InvoiceLine[] },
   seller: SellerProfile | null,
   counterValue: number,
@@ -51,8 +52,9 @@ async function attemptRegister(
     seller,
     invoiceCounter: counterValue,
     previousIrn,
+    cfg,
   })
-  return callEims("/v1/register", payload, {
+  return callEims("/v1/register", payload, businessId, {
     TIN: cfg.tin,
     SYSTEM_NUMBER: cfg.systemNumber,
   })
@@ -137,8 +139,11 @@ export async function POST(request: Request) {
     )
   }
 
-  const seller = await prisma.sellerProfile.findFirst()
-  const counterKey = { ...SYSTEM_COUNTER, name: "eims" }
+  const businessId = workspace.businessId
+  const seller = await prisma.sellerProfile.findUnique({
+    where: { businessId },
+  })
+  const counterKey = { ...eimsCounterKey(businessId), name: "eims" }
   const counter = await prisma.counter.upsert({
     where: { businessId_branchId_name: counterKey },
     create: { ...counterKey, value: 1 },
@@ -149,15 +154,17 @@ export async function POST(request: Request) {
       irn: { not: null },
       registrationStatus: "REGISTERED",
       id: { not: invoice.id },
+      businessId,
     },
     orderBy: { createdAt: "desc" },
     select: { irn: true },
   })
   const previousIrn = previous?.irn ?? null
 
-  const cfg = getConfig()
+  const cfg = await getConfig(businessId)
   let result = await attemptRegister(
     cfg,
+    businessId,
     invoice,
     seller,
     counter.value,
@@ -175,6 +182,7 @@ export async function POST(request: Request) {
       })
       result = await attemptRegister(
         cfg,
+        businessId,
         invoice,
         seller,
         expected,

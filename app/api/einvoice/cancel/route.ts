@@ -94,7 +94,8 @@ export async function POST(request: Request) {
       : "1"
   const remark = typeof body.remark === "string" ? body.remark.trim() : ""
 
-  const cfg = getConfig()
+  const businessId = invoice.businessId
+  const cfg = await getConfig(businessId)
   const payload = {
     Irn: invoice.irn,
     ReasonCode: reasonCode,
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await callEims("/v1/cancel", payload, {
+    const result = await callEims("/v1/cancel", payload, businessId, {
       TIN: cfg.tin,
       SYSTEM_NUMBER: cfg.systemNumber,
     })

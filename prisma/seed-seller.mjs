@@ -37,19 +37,30 @@ if (!seller.businessName) {
   process.exit(1)
 }
 
-try {
-  const existing = await prisma.sellerProfile.findFirst()
-  const profile = existing
-    ? await prisma.sellerProfile.update({
-        where: { id: existing.id },
-        data: seller,
-      })
-    : await prisma.sellerProfile.create({ data: seller })
-  console.log(
-    existing
-      ? `Updated seller profile (${profile.id})`
-      : `Created seller profile (${profile.id})`
+const businessId = process.argv[2]?.trim()
+if (!businessId) {
+  console.error(
+    "Usage: node prisma/seed-seller.mjs <businessId>"
   )
+  process.exit(1)
+}
+
+const business = await prisma.business.findUnique({
+  where: { id: businessId },
+  select: { id: true },
+})
+if (!business) {
+  console.error(`Business not found: ${businessId}`)
+  process.exit(1)
+}
+
+try {
+  const profile = await prisma.sellerProfile.upsert({
+    where: { businessId },
+    create: { businessId, ...seller },
+    update: seller,
+  })
+  console.log(`Upserted seller profile for business ${businessId} (${profile.id})`)
 } finally {
   await prisma.$disconnect()
 }

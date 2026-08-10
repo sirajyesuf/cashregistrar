@@ -10,7 +10,11 @@ import {
   isSequenceError,
   parseExpectedCounter,
 } from "@/lib/einvoice/eims-error"
-import { canAccessInvoice, getWorkspace, SYSTEM_COUNTER } from "@/lib/workspace"
+import {
+  canAccessInvoice,
+  eimsCounterKey,
+  getWorkspace,
+} from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -28,14 +32,16 @@ export const runtime = "nodejs"
  */
 async function attemptReceipt(
   cfg: EimsConfig,
+  businessId: string,
   invoice: Invoice,
   counterValue: number
 ): Promise<{ result: EimsCallResult; receiptNumber: string }> {
   const payload = buildSalesReceiptPayload({
     invoice,
     receiptCounter: counterValue,
+    cfg,
   })
-  const result = await callEims("/v1/receipt/sales", payload, {
+  const result = await callEims("/v1/receipt/sales", payload, businessId, {
     TIN: cfg.tin,
     SYSTEM_NUMBER: cfg.systemNumber,
   })
@@ -114,16 +120,18 @@ export async function POST(request: Request) {
     })
   }
 
-  const counterKey = { ...SYSTEM_COUNTER, name: "eims_receipt" }
+  const businessId = invoice.businessId
+  const counterKey = { ...eimsCounterKey(businessId), name: "eims_receipt" }
   const counter = await prisma.counter.upsert({
     where: { businessId_branchId_name: counterKey },
     create: { ...counterKey, value: 1 },
     update: {},
   })
 
-  const cfg = getConfig()
+  const cfg = await getConfig(businessId)
   let { result, receiptNumber } = await attemptReceipt(
     cfg,
+    businessId,
     invoice,
     counter.value
   )
@@ -139,6 +147,7 @@ export async function POST(request: Request) {
       })
       ;({ result, receiptNumber } = await attemptReceipt(
         cfg,
+        businessId,
         invoice,
         expected
       ))

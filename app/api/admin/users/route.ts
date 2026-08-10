@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const { name, password, role, business, branch } = parsed.data
+  const { name, password, role, business, morCredential, branch } = parsed.data
   const email = parsed.data.email.toLowerCase()
 
   try {
@@ -83,10 +83,14 @@ export async function POST(request: Request) {
       const createdBusiness = await tx.business.create({
         data: {
           name: business.name,
-          tin: business.tin || null,
-          vatNumber: business.vatNumber || null,
           address: business.address || null,
           ownerId: result.user.id,
+        },
+      })
+      await tx.morCredential.create({
+        data: {
+          businessId: createdBusiness.id,
+          ...morCredential,
         },
       })
       const createdBranch = await tx.branch.create({

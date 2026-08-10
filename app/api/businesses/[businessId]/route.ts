@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { getSessionUser } from "@/lib/auth/user"
 import { getBusinessAccess, canManageBusiness } from "@/lib/business"
+import { morCredentialUpdateSchema } from "@/lib/business-schema"
 import { prisma } from "@/lib/db"
 
 export const runtime = "nodejs"
@@ -10,8 +11,6 @@ type Context = { params: Promise<{ businessId: string }> }
 
 const updateBusinessSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
-  tin: z.string().trim().max(40).nullable().optional(),
-  vatNumber: z.string().trim().max(40).nullable().optional(),
   address: z.string().trim().max(240).nullable().optional(),
   currency: z.string().trim().length(3).toUpperCase().optional(),
   active: z.boolean().optional(),
@@ -30,12 +29,18 @@ export async function GET(_request: Request, { params }: Context) {
     select: {
       id: true,
       name: true,
-      tin: true,
-      vatNumber: true,
       address: true,
       currency: true,
       active: true,
       createdAt: true,
+      morCredential: {
+        select: {
+          tin: true,
+          vatNumber: true,
+          systemNumber: true,
+          systemType: true,
+        },
+      },
       branches: {
         where:
           access.role === "OWNER"
@@ -46,7 +51,21 @@ export async function GET(_request: Request, { params }: Context) {
     },
   })
 
-  return NextResponse.json({ business, role: access.role, branchId: access.branchId })
+  if (!business) {
+    return NextResponse.json({ error: "Business not found" }, { status: 404 })
+  }
+
+  const { morCredential, ...rest } = business
+  return NextResponse.json({
+    business: {
+      ...rest,
+      morCredential: morCredential
+        ? { ...morCredential, clientId: "", clientSecret: "", apiKey: "" }
+        : null,
+    },
+    role: access.role,
+    branchId: access.branchId,
+  })
 }
 
 export async function PATCH(request: Request, { params }: Context) {
@@ -66,7 +85,9 @@ export async function PATCH(request: Request, { params }: Context) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const parsed = updateBusinessSchema.safeParse(body)
+  const parsed = updateBusinessSchema
+    .extend({ morCredential: morCredentialUpdateSchema.optional() })
+    .safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
@@ -74,6 +95,23 @@ export async function PATCH(request: Request, { params }: Context) {
     )
   }
 
-  const business = await prisma.business.update({ where: { id: businessId }, data: parsed.data })
+  const { morCredential, ...businessData } = parsed.data
+  const business = await prisma.$transaction(async (tx) => {
+    const updated = await tx.business.update({
+      where: { id: businessId },
+      data: businessData,
+    })
+    if (morCredential) {
+      await tx.morCredential.upsert({
+        where: { businessId },
+        create: {
+          businessId,
+          ...(morCredential as Required<typeof morCredential>),
+        },
+        update: morCredential,
+      })
+    }
+    return updated
+  })
   return NextResponse.json({ business })
 }

@@ -88,6 +88,7 @@ export async function POST(request: Request) {
       id: true,
       number: true,
       irn: true,
+      businessId: true,
       registrationStatus: true,
       receipt: { select: { status: true } },
     },
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
 
   const byId = new Map(invoices.map((invoice) => [invoice.id, invoice]))
   const orderedInvoices = invoiceIds.map((id) => byId.get(id)!)
+  const businessId = orderedInvoices[0]?.businessId ?? ""
   const reasonCode =
     typeof body.reasonCode === "string" && body.reasonCode.trim()
       ? body.reasonCode.trim()
@@ -119,7 +121,7 @@ export async function POST(request: Request) {
   const remark = typeof body.remark === "string" ? body.remark.trim() : ""
 
   try {
-    const cfg = getConfig()
+    const cfg = await getConfig(businessId)
     const result = await callEims(
       "/v1/bulkCancel",
       orderedInvoices.map((invoice) => ({
@@ -127,6 +129,7 @@ export async function POST(request: Request) {
         ReasonCode: reasonCode,
         Remark: remark,
       })),
+      businessId,
       {
         TIN: cfg.tin,
         SYSTEM_NUMBER: cfg.systemNumber,
@@ -184,6 +187,7 @@ export async function POST(request: Request) {
       const op = await tx.eimsOperation.create({
         data: {
           conversationId: `cancel-${Date.now()}-${randomUUID()}`,
+          businessId,
           type: "CANCEL",
           status: "PROCESSING",
           rawResponse: asJson(result.data),

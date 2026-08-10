@@ -1,6 +1,6 @@
 import type { Invoice } from "@prisma/client"
 
-import { getConfig } from "./config"
+import type { EimsConfig } from "./config"
 
 export type SalesReceiptPayload = {
   ReceiptNumber: string
@@ -61,8 +61,9 @@ function toReceiptDate(date: Date): string {
 export function buildSalesReceiptPayload(params: {
   invoice: Invoice
   receiptCounter: number
+  cfg: EimsConfig
 }): SalesReceiptPayload {
-  const cfg = getConfig()
+  const cfg = params.cfg
   const counter = params.receiptCounter
   const total = Number(params.invoice.grandTotal)
 

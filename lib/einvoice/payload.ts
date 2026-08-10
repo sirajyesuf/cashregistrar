@@ -1,6 +1,6 @@
 import type { Invoice, InvoiceLine, SellerProfile } from "@prisma/client"
 
-import { getConfig } from "./config"
+import type { EimsConfig } from "./config"
 import { taxCodeForRate } from "./tax"
 
 export type RegisterPayload = {
@@ -101,9 +101,9 @@ export function buildRegisterPayload(params: {
   seller: SellerProfile | null
   invoiceCounter: number
   previousIrn: string | null
+  cfg: EimsConfig
 }): RegisterPayload {
-  const { invoice, seller, invoiceCounter, previousIrn } = params
-  const cfg = getConfig()
+  const { invoice, seller, invoiceCounter, previousIrn, cfg } = params
   const rate = Number(invoice.taxRate)
   const withholdRate = Number(invoice.incomeWithholdRate ?? 2)
 

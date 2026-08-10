@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth/user"
+import { getWorkspace } from "@/lib/workspace"
 import { prisma } from "@/lib/db"
 
 export const runtime = "nodejs"
@@ -45,14 +46,24 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
+  const workspace = await getWorkspace(user.id)
+  if (!workspace) {
+    return NextResponse.json({ error: "No active workspace" }, { status: 409 })
+  }
 
-  const profile = await prisma.sellerProfile.findFirst()
+  const profile = await prisma.sellerProfile.findUnique({
+    where: { businessId: workspace.businessId },
+  })
+  const credential = await prisma.morCredential.findUnique({
+    where: { businessId: workspace.businessId },
+    select: { tin: true, systemNumber: true, systemType: true },
+  })
   return NextResponse.json({
     profile: profile ? profileToResponse(profile) : null,
     source: {
-      tin: process.env.EINVOICE_TIN ?? "",
-      systemNumber: process.env.EINVOICE_SYSTEM_NUMBER ?? "",
-      systemType: process.env.EINVOICE_SYSTEM_TYPE ?? "",
+      tin: credential?.tin ?? "",
+      systemNumber: credential?.systemNumber ?? "",
+      systemType: credential?.systemType ?? "",
     },
   })
 }
@@ -61,6 +72,10 @@ export async function PUT(request: Request) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  }
+  const workspace = await getWorkspace(user.id)
+  if (!workspace) {
+    return NextResponse.json({ error: "No active workspace" }, { status: 409 })
   }
 
   let body: Record<string, unknown>
@@ -93,13 +108,11 @@ export async function PUT(request: Request) {
     )
   }
 
-  const existing = await prisma.sellerProfile.findFirst()
-  const profile = existing
-    ? await prisma.sellerProfile.update({
-        where: { id: existing.id },
-        data,
-      })
-    : await prisma.sellerProfile.create({ data })
+  const profile = await prisma.sellerProfile.upsert({
+    where: { businessId: workspace.businessId },
+    create: { businessId: workspace.businessId, ...data },
+    update: data,
+  })
 
   return NextResponse.json({ profile: profileToResponse(profile) })
 }

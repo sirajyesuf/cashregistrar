@@ -10,28 +10,24 @@ export async function GET() {
     return NextResponse.json({ error: guard.error }, { status: guard.status! })
   }
 
-  const token = await prisma.eimsToken.findUnique({
-    where: { id: "singleton" },
-    select: { expiresAt: true, updatedAt: true },
-  })
-
-  const counters = await prisma.counter.findMany({
+  const businesses = await prisma.business.findMany({
     orderBy: { name: "asc" },
-    select: { name: true, value: true },
+    select: {
+      id: true,
+      name: true,
+      morCredential: { select: { tin: true, systemNumber: true } },
+      _count: { select: { branches: true } },
+    },
   })
 
   return NextResponse.json({
-    token: {
-      exists: Boolean(token),
-      expiresAt: token?.expiresAt ?? null,
-      updatedAt: token?.updatedAt ?? null,
-      valid: token ? token.expiresAt.getTime() > Date.now() : false,
-    },
-    counters,
+    businesses: businesses.map(({ morCredential, ...business }) => ({
+      ...business,
+      configured: Boolean(morCredential),
+      tin: morCredential?.tin ?? null,
+      systemNumber: morCredential?.systemNumber ?? null,
+    })),
     config: {
-      tin: process.env.EINVOICE_TIN ?? "",
-      systemNumber: process.env.EINVOICE_SYSTEM_NUMBER ?? "",
-      systemType: process.env.EINVOICE_SYSTEM_TYPE ?? "",
       baseUrl: process.env.EINVOICE_BASE_URL ?? "https://core.mor.gov.et",
     },
   })

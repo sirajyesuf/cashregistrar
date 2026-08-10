@@ -7,7 +7,7 @@ import {
   isSequenceError,
   parseExpectedCounter,
 } from "@/lib/einvoice/eims-error"
-import { SYSTEM_COUNTER } from "@/lib/workspace"
+import { eimsCounterKey } from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -51,9 +51,10 @@ function expectedSequenceCounter(result: Record<string, unknown>): number | null
  */
 async function realignCounter(
   tx: Prisma.TransactionClient,
+  businessId: string,
   expected: number
 ): Promise<void> {
-  const counterKey = { ...SYSTEM_COUNTER, name: "eims" }
+  const counterKey = { ...eimsCounterKey(businessId), name: "eims" }
   const counter = await tx.counter.findUnique({
     where: { businessId_branchId_name: counterKey },
   })
@@ -170,7 +171,7 @@ export async function POST(request: Request) {
         if (operation.type === "REGISTER") {
           const expected = expectedSequenceCounter(result)
           if (expected !== null) {
-            await realignCounter(tx, expected)
+            await realignCounter(tx, operation.businessId, expected)
           }
         }
       }

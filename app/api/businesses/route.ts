@@ -83,10 +83,14 @@ export async function POST(request: Request) {
       const createdBusiness = await tx.business.create({
         data: {
           name: parsed.data.name,
-          tin: parsed.data.tin || null,
-          vatNumber: parsed.data.vatNumber || null,
           address: parsed.data.address || null,
           ownerId: user.id,
+        },
+      })
+      await tx.morCredential.create({
+        data: {
+          businessId: createdBusiness.id,
+          ...parsed.data.morCredential,
         },
       })
       const branch = await tx.branch.create({

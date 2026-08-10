@@ -1,3 +1,5 @@
+import { prisma } from "@/lib/db"
+
 const DEFAULT_BASE_URL = "https://core.mor.gov.et"
 
 export type EimsConfig = {
@@ -10,38 +12,34 @@ export type EimsConfig = {
   systemType: string
 }
 
-export function getConfig(): EimsConfig {
-  const value = (name: string) => process.env[name]?.trim()
-
-  const required = {
-    EINVOICE_CLIENT_ID: value("EINVOICE_CLIENT_ID"),
-    EINVOICE_CLIENT_SECRET: value("EINVOICE_CLIENT_SECRET"),
-    EINVOICE_API_KEY: value("EINVOICE_API_KEY"),
-    EINVOICE_TIN: value("EINVOICE_TIN"),
-    EINVOICE_SYSTEM_NUMBER: value("EINVOICE_SYSTEM_NUMBER"),
-    EINVOICE_SYSTEM_TYPE: value("EINVOICE_SYSTEM_TYPE"),
-  }
-
-  const missing = Object.entries(required)
-    .filter(([, v]) => !v)
-    .map(([k]) => k)
-  if (missing.length > 0) {
+/**
+ * Loads the EIMS configuration for a business from its MorCredential row.
+ * There is no global/env fallback: every business must have its own MOR
+ * credentials configured before EIMS operations can run.
+ */
+export async function getConfig(businessId: string): Promise<EimsConfig> {
+  const credential = await prisma.morCredential.findUnique({
+    where: { businessId },
+  })
+  if (!credential) {
     throw new Error(
-      `Missing required EINVOICE env vars: ${missing.join(", ")}. ` +
-        "See the EIMS integration doc for where to get them."
+      "Missing MOR credentials for this business. " +
+        "Configure system number, API key, client ID and client secret " +
+        "under the business's MOR credentials before using EIMS."
     )
   }
 
+  const baseUrl = (
+    process.env.EINVOICE_BASE_URL ?? DEFAULT_BASE_URL
+  ).replace(/\/+$/, "")
+
   return {
-    baseUrl: (value("EINVOICE_BASE_URL") ?? DEFAULT_BASE_URL).replace(
-      /\/+$/,
-      ""
-    ),
-    clientId: required.EINVOICE_CLIENT_ID!,
-    clientSecret: required.EINVOICE_CLIENT_SECRET!,
-    apiKey: required.EINVOICE_API_KEY!,
-    tin: required.EINVOICE_TIN!,
-    systemNumber: required.EINVOICE_SYSTEM_NUMBER!,
-    systemType: required.EINVOICE_SYSTEM_TYPE!,
+    baseUrl,
+    clientId: credential.clientId,
+    clientSecret: credential.clientSecret,
+    apiKey: credential.apiKey,
+    tin: credential.tin,
+    systemNumber: credential.systemNumber,
+    systemType: credential.systemType,
   }
 }

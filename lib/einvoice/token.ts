@@ -3,7 +3,6 @@ import { getConfig } from "./config"
 import { loadKeys } from "./keys"
 import { signAndWrap } from "./sign"
 
-const TOKEN_ID = "singleton"
 const DEFAULT_EXPIRY_SECONDS = 60 * 60
 const SAFETY_MARGIN_MS = 60 * 1000
 
@@ -44,22 +43,25 @@ function parseTokenResponse(text: string): TokenInfo | null {
   return { accessToken, refreshToken: rawRefresh, expiresAt }
 }
 
-async function persistToken(token: TokenInfo): Promise<TokenInfo> {
+async function persistToken(
+  businessId: string,
+  token: TokenInfo
+): Promise<TokenInfo> {
   const record = {
     accessToken: token.accessToken,
     refreshToken: token.refreshToken,
     expiresAt: token.expiresAt,
   }
   await prisma.eimsToken.upsert({
-    where: { id: TOKEN_ID },
-    create: { id: TOKEN_ID, ...record },
+    where: { businessId },
+    create: { businessId, ...record },
     update: record,
   })
   return token
 }
 
-async function login(): Promise<TokenInfo> {
-  const cfg = getConfig()
+async function login(businessId: string): Promise<TokenInfo> {
+  const cfg = await getConfig(businessId)
   const { privateKey, certificate } = loadKeys()
   const body = signAndWrap(privateKey, certificate, {
     clientId: cfg.clientId,
@@ -80,13 +82,15 @@ async function login(): Promise<TokenInfo> {
   if (!token) {
     throw new Error(`EIMS login returned no accessToken: ${truncate(text)}`)
   }
-  return persistToken(token)
+  return persistToken(businessId, token)
 }
 
-async function refresh(): Promise<TokenInfo | null> {
-  const cfg = getConfig()
+async function refresh(businessId: string): Promise<TokenInfo | null> {
+  const cfg = await getConfig(businessId)
   const { privateKey, certificate } = loadKeys()
-  const stored = await prisma.eimsToken.findUnique({ where: { id: TOKEN_ID } })
+  const stored = await prisma.eimsToken.findUnique({
+    where: { businessId },
+  })
   if (!stored?.refreshToken) return null
 
   const body = signAndWrap(privateKey, certificate, {
@@ -100,29 +104,31 @@ async function refresh(): Promise<TokenInfo | null> {
   if (!res.ok) return null
   const token = parseTokenResponse(await res.text())
   if (!token) return null
-  return persistToken(token)
+  return persistToken(businessId, token)
 }
 
-export async function getValidToken(): Promise<string> {
-  const stored = await prisma.eimsToken.findUnique({ where: { id: TOKEN_ID } })
+export async function getValidToken(businessId: string): Promise<string> {
+  const stored = await prisma.eimsToken.findUnique({
+    where: { businessId },
+  })
   if (stored && stored.expiresAt.getTime() > Date.now() + SAFETY_MARGIN_MS) {
     return stored.accessToken
   }
-  const refreshed = await refresh()
+  const refreshed = await refresh(businessId)
   if (refreshed) return refreshed.accessToken
-  const token = await login()
+  const token = await login(businessId)
   return token.accessToken
 }
 
-export async function forceLogin(): Promise<TokenInfo> {
-  await prisma.eimsToken.deleteMany({ where: { id: TOKEN_ID } })
-  return login()
+export async function forceLogin(businessId: string): Promise<TokenInfo> {
+  await prisma.eimsToken.deleteMany({ where: { businessId } })
+  return login(businessId)
 }
 
-export async function forceRefresh(): Promise<TokenInfo> {
-  const refreshed = await refresh()
+export async function forceRefresh(businessId: string): Promise<TokenInfo> {
+  const refreshed = await refresh(businessId)
   if (refreshed) return refreshed
-  return login()
+  return login(businessId)
 }
 
 export function maskToken(token: string): string {

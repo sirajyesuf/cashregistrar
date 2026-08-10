@@ -5,7 +5,8 @@ import { forceLogin, forceRefresh, getValidToken } from "./token"
 
 export async function eimsRouteHandler(
   path: string,
-  request: Request
+  request: Request,
+  businessId: string
 ): Promise<Response> {
   let payload: unknown
   try {
@@ -14,7 +15,7 @@ export async function eimsRouteHandler(
     return Response.json({ error: "Invalid JSON body" }, { status: 400 })
   }
   try {
-    const { status, data } = await callEims(path, payload)
+    const { status, data } = await callEims(path, payload, businessId)
     return Response.json(data, { status })
   } catch (err) {
     const message = err instanceof Error ? err.message : "EIMS request failed"
@@ -32,19 +33,20 @@ export type EimsCallResult = {
 export async function callEims(
   path: string,
   payload: unknown,
+  businessId: string,
   extraHeaders: Record<string, string> = {},
   retried = false
 ): Promise<EimsCallResult> {
-  const cfg = getConfig()
+  const cfg = await getConfig(businessId)
   const { privateKey, certificate } = loadKeys()
 
   let accessToken: string
   try {
-    accessToken = await getValidToken()
+    accessToken = await getValidToken(businessId)
   } catch (err) {
     if (!retried) {
-      await forceRefresh()
-      return callEims(path, payload, extraHeaders, true)
+      await forceRefresh(businessId)
+      return callEims(path, payload, businessId, extraHeaders, true)
     }
     throw err
   }
@@ -69,8 +71,8 @@ export async function callEims(
   }
 
   if (res.status === 401 && !retried) {
-    await forceLogin()
-    return callEims(path, payload, extraHeaders, true)
+    await forceLogin(businessId)
+    return callEims(path, payload, businessId, extraHeaders, true)
   }
 
   return {
