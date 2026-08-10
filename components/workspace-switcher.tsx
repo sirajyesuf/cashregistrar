@@ -11,6 +11,7 @@ import {
   Plus,
   Settings,
   Store,
+  Users,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -202,6 +203,20 @@ export function WorkspaceSwitcher() {
 
             <DropdownMenuSeparator />
             <div className="space-y-0.5">
+              {isOwner && currentBusiness && (
+                <DropdownMenuLinkItem
+                  render={
+                    <Link
+                      href={`/businesses/${currentBusiness.id}/members`}
+                    />
+                  }
+                  onClick={() => setOpen(false)}
+                  className="gap-2.5 px-2.5 py-2"
+                >
+                  <Users className="size-4 text-muted-foreground" />
+                  Manage team
+                </DropdownMenuLinkItem>
+              )}
               {isOwner && currentBusiness && (
                 <DropdownMenuLinkItem
                   render={

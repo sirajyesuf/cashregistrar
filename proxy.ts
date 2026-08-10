@@ -5,7 +5,6 @@ import { auth } from "@/lib/auth"
 const AUTH_ROUTES = ["/login"]
 const PROTECTED_ROUTES = ["/dashboard", "/invoices", "/settings"]
 const ADMIN_LOGIN = "/admin/login"
-const SIGN_UP_API = "/api/auth/sign-up/email"
 
 function matches(pathname: string, prefixes: string[]): boolean {
   return prefixes.some(
@@ -15,16 +14,6 @@ function matches(pathname: string, prefixes: string[]): boolean {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-
-  // Registration is admin-only: users are created from the admin area, so the
-  // public sign-up endpoint is disabled. (The admin flow creates users via the
-  // internal auth API, which does not pass through the proxy.)
-  if (pathname === SIGN_UP_API) {
-    return NextResponse.json(
-      { error: "Registration is disabled. Users are created by an admin." },
-      { status: 403 }
-    )
-  }
 
   let authenticated = false
   let role: string | undefined

@@ -10,6 +10,8 @@ import { authClient } from "@/lib/auth-client"
 
 export function AuthForm() {
   const router = useRouter()
+  const [mode, setMode] = useState<"signin" | "signup">("signin")
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -20,15 +22,27 @@ export function AuthForm() {
     setError(null)
     setPending(true)
     try {
-      const result = await authClient.signIn.email({ email, password })
+      const result =
+        mode === "signin"
+          ? await authClient.signIn.email({ email, password })
+          : await authClient.signUp.email({
+              email,
+              password,
+              name: name.trim() || email,
+            })
       if (result.error || !result.data) {
-        throw new Error(result.error?.message ?? "Sign in failed")
+        throw new Error(result.error?.message ?? "Authentication failed")
       }
       router.push("/dashboard")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign in failed")
+      setError(err instanceof Error ? err.message : "Authentication failed")
       setPending(false)
     }
+  }
+
+  const switchMode = (next: "signin" | "signup") => {
+    setMode(next)
+    setError(null)
   }
 
   return (
@@ -37,8 +51,21 @@ export function AuthForm() {
         <ThemeSwitcher />
       </div>
       <div className="w-full max-w-sm">
-        <h1 className="mb-8 text-center text-2xl font-bold">Sign In</h1>
+        <h1 className="mb-8 text-center text-2xl font-bold">
+          {mode === "signin" ? "Sign In" : "Create Account"}
+        </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === "signup" && (
+            <div>
+              <Label htmlFor="name">Full name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+              />
+            </div>
+          )}
           <div>
             <Label htmlFor="email">Email</Label>
             <Input
@@ -46,6 +73,7 @@ export function AuthForm() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
             />
           </div>
@@ -56,16 +84,31 @@ export function AuthForm() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete={mode === "signin" ? "current-password" : "new-password"}
+              minLength={5}
               required
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "Signing in…" : "Sign In"}
+            {pending
+              ? mode === "signin"
+                ? "Signing in…"
+                : "Creating account…"
+              : mode === "signin"
+                ? "Sign In"
+                : "Create Account"}
           </Button>
         </form>
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          Need an account? Ask an administrator.
+          {mode === "signin" ? "New here?" : "Already have an account?"}{" "}
+          <button
+            type="button"
+            className="font-medium text-primary hover:underline"
+            onClick={() => switchMode(mode === "signin" ? "signup" : "signin")}
+          >
+            {mode === "signin" ? "Create an account" : "Sign in instead"}
+          </button>
         </p>
       </div>
     </div>
