@@ -1,16 +1,55 @@
 import { NextResponse } from "next/server"
+import { Prisma } from "@prisma/client"
+import { randomUUID } from "node:crypto"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { callEims } from "@/lib/einvoice/client"
 import { getConfig } from "@/lib/einvoice/config"
-import {
-  getCallbackHeaders,
-  parseBulkOperationResponse,
-} from "@/lib/einvoice/operation"
 import { hasIssuedReceipt } from "@/lib/invoice"
 import { extractErrorMessage } from "@/lib/einvoice/eims-error"
 
 export const runtime = "nodejs"
+
+/**
+ * EIMS bulk cancellation is synchronous: the response body is an array of
+ * per-IRN results (no conversationId, no callback). A result is a success when
+ * its lowercase `status` is "C" (cancelled); otherwise it carries an uppercase
+ * `Status` (e.g. "Processing_Error") with a human-readable `msg`.
+ */
+
+function text(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null
+}
+
+function cancelResultEntries(data: unknown): Record<string, unknown>[] {
+  if (Array.isArray(data)) {
+    return data.filter(
+      (entry): entry is Record<string, unknown> =>
+        Boolean(entry) && typeof entry === "object" && !Array.isArray(entry)
+    )
+  }
+  const root =
+    data && typeof data === "object"
+      ? (data as Record<string, unknown>)
+      : null
+  const body = root?.body
+  if (Array.isArray(body)) {
+    return body.filter(
+      (entry): entry is Record<string, unknown> =>
+        Boolean(entry) && typeof entry === "object" && !Array.isArray(entry)
+    )
+  }
+  return []
+}
+
+function cancelResultSuccess(entry: Record<string, unknown>): boolean {
+  const status = text(entry.status)?.toUpperCase()
+  return status === "C" || status === "CANCELLED"
+}
+
+function asJson(value: unknown): Prisma.InputJsonValue {
+  return value as Prisma.InputJsonValue
+}
 
 export async function POST(request: Request) {
   const user = await getSessionUser()
@@ -91,10 +130,8 @@ export async function POST(request: Request) {
       {
         TIN: cfg.tin,
         SYSTEM_NUMBER: cfg.systemNumber,
-        ...getCallbackHeaders(),
       }
     )
-    const operationResponse = parseBulkOperationResponse(result.data)
     if (!result.ok) {
       const message = extractErrorMessage(result.data)
       return NextResponse.json(
@@ -107,36 +144,97 @@ export async function POST(request: Request) {
         { status: result.status }
       )
     }
-    if (!operationResponse) {
+
+    const entries = cancelResultEntries(result.data)
+
+    // EIMS returns a NEW IRN for each cancelled document, so a success cannot
+    // be matched to our submission by IRN. Results come back in submission
+    // order: match each entry positionally, using the entry IRN only as a
+    // secondary check against the submitted invoice.
+    const byIrn = new Map(
+      orderedInvoices.map((invoice) => [invoice.irn, invoice])
+    )
+    const outcomes = entries.map((entry, index) => {
+      const irn = text(entry.Irn) ?? text(entry.irn)
+      const positional = orderedInvoices[index]
+      const irnMatch = irn ? byIrn.get(irn) : undefined
+      const invoice = irnMatch ?? positional
+      return {
+        entry,
+        irn,
+        invoice,
+        success: Boolean(invoice) && cancelResultSuccess(entry),
+      }
+    })
+
+    if (outcomes.length === 0) {
       return NextResponse.json(
         {
-          error: "EIMS response did not include a conversationId",
+          error: "EIMS returned no matching cancellation results",
           detail: result.data,
         },
         { status: 502 }
       )
     }
-    const operation = await prisma.eimsOperation.create({
-      data: {
-        conversationId: operationResponse.conversationId,
-        type: "CANCEL",
-        items: {
-          create: orderedInvoices.map((invoice) => ({
-            invoiceId: invoice.id,
-            irn: invoice.irn!,
-          })),
+
+    const succeeded = outcomes.filter((o) => o.success).length
+    const failed = outcomes.length - succeeded
+
+    const operation = await prisma.$transaction(async (tx) => {
+      const op = await tx.eimsOperation.create({
+        data: {
+          conversationId: `cancel-${Date.now()}-${randomUUID()}`,
+          type: "CANCEL",
+          status: "PROCESSING",
+          rawResponse: asJson(result.data),
+          items: {
+            create: orderedInvoices.map((invoice) => {
+              const outcome = outcomes.find(
+                (o) => o.invoice?.id === invoice.id
+              )
+              return {
+                invoiceId: invoice.id,
+                irn: invoice.irn!,
+                status: outcome?.success ? "SUCCEEDED" : "FAILED",
+                error: outcome && !outcome.success ? asJson(outcome.entry) : Prisma.DbNull,
+                rawResult: outcome ? asJson(outcome.entry) : Prisma.DbNull,
+              }
+            }),
+          },
         },
-      },
+      })
+      for (const outcome of outcomes) {
+        if (!outcome.invoice) continue
+        await tx.invoice.update({
+          where: { id: outcome.invoice.id },
+          data: outcome.success
+            ? {
+                registrationStatus: "CANCELLED",
+                registrationError: Prisma.DbNull,
+              }
+            : { registrationError: asJson(outcome.entry) },
+        })
+      }
+      const status =
+        succeeded > 0 && failed > 0
+          ? "PARTIAL"
+          : succeeded > 0
+            ? "COMPLETED"
+            : "FAILED"
+      await tx.eimsOperation.update({
+        where: { id: op.id },
+        data: { status, completedAt: new Date() },
+      })
+      return op
     })
-    return NextResponse.json(
-      {
-        ok: true,
-        operationId: operation.id,
-        conversationId: operation.conversationId,
-        count: orderedInvoices.length,
-      },
-      { status: 202 }
-    )
+
+    return NextResponse.json({
+      ok: true,
+      operationId: operation.id,
+      count: outcomes.length,
+      succeeded,
+      failed,
+    })
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Bulk cancellation failed"

@@ -101,7 +101,10 @@ export function BulkActions({
         statusCode?: number
         retryAfter?: string | null
         conversationId?: string
+        operationId?: string
         count?: number
+        succeeded?: number
+        failed?: number
         detail?: unknown
       }
       if (!response.ok || !body.ok) {
@@ -115,14 +118,22 @@ export function BulkActions({
         )
       }
 
-      toast.add({
-        type: "success",
-        title:
-          mode === "register"
-            ? "Registration submitted"
-            : "Cancellation submitted",
-        description: `${body.count ?? target.length} invoice${(body.count ?? target.length) === 1 ? "" : "s"} sent to EIMS. Results will appear when processing finishes.`,
-      })
+      if (mode === "cancel") {
+        const total = body.count ?? target.length
+        const succeeded = body.succeeded ?? 0
+        const failed = body.failed ?? 0
+        toast.add({
+          type: "success",
+          title: "Cancellation complete",
+          description: `${succeeded} of ${total} invoice${total === 1 ? "" : "s"} cancelled${failed > 0 ? `, ${failed} failed` : ""}.`,
+        })
+      } else {
+        toast.add({
+          type: "success",
+          title: "Registration submitted",
+          description: `${body.count ?? target.length} invoice${(body.count ?? target.length) === 1 ? "" : "s"} sent to EIMS. Results will appear when processing finishes.`,
+        })
+      }
       setMode(null)
       setErrorResponse(null)
       setRemark("")

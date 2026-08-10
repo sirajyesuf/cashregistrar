@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server"
+import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { callEims } from "@/lib/einvoice/client"
 import { getConfig } from "@/lib/einvoice/config"
 import { buildRegisterPayload } from "@/lib/einvoice/payload"
 import { validateLineTotals } from "@/lib/einvoice/validate"
-import { extractErrorMessage } from "@/lib/einvoice/eims-error"
+import {
+  extractErrorMessage,
+  isSequenceError,
+  parseExpectedCounter,
+} from "@/lib/einvoice/eims-error"
 import { getWorkspace, SYSTEM_COUNTER, workspaceInvoiceScope } from "@/lib/workspace"
 import {
   getCallbackHeaders,
@@ -105,8 +110,31 @@ export async function POST(request: Request) {
     orderBy: { registeredAt: "desc" },
     select: { irn: true },
   })
-  const startCounter = await prisma.$transaction(async (tx) => {
-    const counterKey = { ...SYSTEM_COUNTER, name: "eims" }
+  const counterKey = { ...SYSTEM_COUNTER, name: "eims" }
+
+  // Builds the bulk payload for a given counter start and submits it. Extracted
+  // so the self-heal path can re-run the same request with the corrected
+  // document numbers.
+  const attemptBulk = async (startCounter: number) => {
+    const payload = orderedInvoices.map((invoice, index) =>
+      buildRegisterPayload({
+        invoice,
+        seller,
+        invoiceCounter: startCounter + index,
+        previousIrn: index === 0 ? (previous?.irn ?? null) : null,
+      })
+    )
+    const cfg = getConfig()
+    return callEims("/v1/bulkRegister", payload, {
+      TIN: cfg.tin,
+      SYSTEM_NUMBER: cfg.systemNumber,
+      ...getCallbackHeaders(),
+    })
+  }
+
+  // Reserve the document-number range atomically so concurrent bulk submissions
+  // never reuse numbers. Returns the first number of the batch.
+  const reserveRange = async (tx: Prisma.TransactionClient) => {
     const counter = await tx.counter.upsert({
       where: { businessId_branchId_name: counterKey },
       create: { ...counterKey, value: 1 },
@@ -117,23 +145,28 @@ export async function POST(request: Request) {
       data: { value: { increment: orderedInvoices.length } },
     })
     return counter.value
-  })
-  const payload = orderedInvoices.map((invoice, index) =>
-    buildRegisterPayload({
-      invoice,
-      seller,
-      invoiceCounter: startCounter + index,
-      previousIrn: index === 0 ? (previous?.irn ?? null) : null,
-    })
-  )
+  }
+
+  let startCounter = await prisma.$transaction(reserveRange)
+  let result = await attemptBulk(startCounter)
+
+  // Self-heal: realign the counter to EIMS's expected next number and retry
+  // once (mirrors single registration). On the retry we consume the same range
+  // again, so the counter must end at expected + batch length.
+  if (!result.ok) {
+    const message = extractErrorMessage(result.data)
+    const expected = parseExpectedCounter(message)
+    if (isSequenceError(message) && expected !== null) {
+      await prisma.counter.update({
+        where: { businessId_branchId_name: counterKey },
+        data: { value: expected + orderedInvoices.length },
+      })
+      startCounter = expected
+      result = await attemptBulk(expected)
+    }
+  }
 
   try {
-    const cfg = getConfig()
-    const result = await callEims("/v1/bulkRegister", payload, {
-      TIN: cfg.tin,
-      SYSTEM_NUMBER: cfg.systemNumber,
-      ...getCallbackHeaders(),
-    })
     const operationResponse = parseBulkOperationResponse(result.data)
     if (!result.ok) {
       const message = extractErrorMessage(result.data)

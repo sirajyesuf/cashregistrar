@@ -2,6 +2,12 @@ import { NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { callbackResults } from "@/lib/einvoice/operation"
+import {
+  extractErrorMessage,
+  isSequenceError,
+  parseExpectedCounter,
+} from "@/lib/einvoice/eims-error"
+import { SYSTEM_COUNTER } from "@/lib/workspace"
 
 export const runtime = "nodejs"
 
@@ -29,6 +35,37 @@ function resultError(result: Record<string, unknown>): Prisma.InputJsonValue {
   return result as Prisma.InputJsonValue
 }
 
+/**
+ * Returns the next number EIMS expects when the result carries a
+ * document/counter sequence error (7001/7015), otherwise null.
+ */
+function expectedSequenceCounter(result: Record<string, unknown>): number | null {
+  const message = extractErrorMessage(result)
+  return isSequenceError(message) ? parseExpectedCounter(message) : null
+}
+
+/**
+ * Realigns the "eims" counter to EIMS's expected next number. Only moves the
+ * counter FORWARD: a stale callback for an old batch must never clobber a
+ * newer operation that already advanced past it.
+ */
+async function realignCounter(
+  tx: Prisma.TransactionClient,
+  expected: number
+): Promise<void> {
+  const counterKey = { ...SYSTEM_COUNTER, name: "eims" }
+  const counter = await tx.counter.findUnique({
+    where: { businessId_branchId_name: counterKey },
+  })
+  if (!counter || expected > counter.value) {
+    await tx.counter.upsert({
+      where: { businessId_branchId_name: counterKey },
+      create: { ...counterKey, value: expected },
+      update: { value: expected },
+    })
+  }
+}
+
 export async function POST(request: Request) {
   let body: unknown
   try {
@@ -43,6 +80,12 @@ export async function POST(request: Request) {
       root?.ConversationId ??
       root?.conversionId ??
       root?.ConversionId
+  ) ?? text(
+    Array.isArray(body)
+      ? body
+          .map((entry) => objectValue(entry)?.["conversionId"])
+          .find((value) => typeof value === "string" && value.trim())
+      : undefined
   )
   if (!conversationId) {
     return NextResponse.json(
@@ -124,6 +167,12 @@ export async function POST(request: Request) {
             registrationError: resultError(result),
           },
         })
+        if (operation.type === "REGISTER") {
+          const expected = expectedSequenceCounter(result)
+          if (expected !== null) {
+            await realignCounter(tx, expected)
+          }
+        }
       }
       processed += 1
     }

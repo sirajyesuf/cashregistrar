@@ -6,11 +6,27 @@
  */
 
 /** Flattens an EIMS error body into a readable message string. */
+function flattenErrorMessage(item: unknown): string {
+  if (typeof item === "string") return item
+  if (!item || typeof item !== "object") return ""
+  const o = item as {
+    portion?: unknown
+    errorMessage?: unknown
+    message?: unknown
+  }
+  if (Array.isArray(o.errorMessage)) {
+    return o.errorMessage.filter((m) => typeof m === "string").join("; ")
+  }
+  if (typeof o.message === "string") return o.message
+  return ""
+}
+
 export function extractErrorMessage(data: unknown): string {
   if (data && typeof data === "object") {
     const d = data as {
       message?: unknown
       details?: { errorMessage?: unknown }[]
+      ruleError?: unknown
       body?: unknown
     }
     if (Array.isArray(d.details)) {
@@ -20,25 +36,17 @@ export function extractErrorMessage(data: unknown): string {
         .join("; ")
       if (msg) return msg
     }
+    // EIMS bulk callback entries carry the errors under "ruleError"
+    // (e.g. { docNo, status: "ERROR", ruleError: [{ portion, errorMessage }] }).
+    if (Array.isArray(d.ruleError)) {
+      const msgs = d.ruleError
+        .map((item) => flattenErrorMessage(item))
+        .filter(Boolean)
+      if (msgs.length > 0) return msgs.join(" | ")
+    }
     if (Array.isArray(d.body)) {
       const msgs = d.body
-        .map((item) => {
-          if (item && typeof item === "object") {
-            const o = item as {
-              portion?: unknown
-              errorMessage?: unknown
-              message?: unknown
-            }
-            if (Array.isArray(o.errorMessage)) {
-              return o.errorMessage
-                .filter((m) => typeof m === "string")
-                .join("; ")
-            }
-            if (typeof o.message === "string") return o.message
-          }
-          if (typeof item === "string") return item
-          return ""
-        })
+        .map((item) => flattenErrorMessage(item))
         .filter(Boolean)
       if (msgs.length > 0) return msgs.join(" | ")
       if (typeof d.body[0] === "object") return JSON.stringify(d.body[0])
