@@ -57,6 +57,11 @@ export default function InvoiceDetailPage() {
       const body = (await res.json()) as { invoice: ApiInvoice }
       return invoiceFromApi(body.invoice)
     },
+    refetchInterval: (query) =>
+      (query.state.data as { registrationStatus?: string | null } | undefined)
+        ?.registrationStatus === "PROCESSING"
+        ? 5000
+        : false,
   })
 
   const { data: seller = DEFAULT_SELLER } = useQuery({
@@ -73,7 +78,9 @@ export default function InvoiceDetailPage() {
   const errorMessage =
     error && error.message !== "NOT_FOUND" ? error.message : null
 
-  const cannotRegister = invoice?.registrationStatus === "REGISTERED"
+  const cannotRegister =
+    invoice?.registrationStatus === "REGISTERED" ||
+    invoice?.registrationStatus === "PROCESSING"
   const receiptIssued = hasIssuedReceipt(invoice ?? null)
 
   return (
@@ -114,6 +121,8 @@ export default function InvoiceDetailPage() {
               <span className="text-sm font-semibold">EIMS Registration</span>
               {invoice.registrationStatus === "REGISTERED" ? (
                 <Badge variant="success">Registered</Badge>
+              ) : invoice.registrationStatus === "PROCESSING" ? (
+                <Badge variant="outline">Processing</Badge>
               ) : invoice.registrationStatus === "CANCELLED" ? (
                 <Badge variant="outline">Cancelled</Badge>
               ) : invoice.registrationStatus === "FAILED" ? (
