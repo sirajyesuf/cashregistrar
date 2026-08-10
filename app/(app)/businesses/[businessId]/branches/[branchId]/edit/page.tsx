@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
+import { useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, Store } from "lucide-react"
 import {
   Field,
@@ -32,6 +33,7 @@ function EditBranchForm({
   initial: BranchDetails
 }) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
 
   const form = useForm({
@@ -62,6 +64,7 @@ function EditBranchForm({
             body.error ?? `Failed to update branch (${res.status})`
           )
         }
+        await queryClient.invalidateQueries({ queryKey: ["businesses"] })
         toast.add({
           title: "Branch updated",
           description: `${value.name.trim()} was saved.`,

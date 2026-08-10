@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
+import { useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, Building2 } from "lucide-react"
 import {
   Field,
@@ -31,6 +32,7 @@ function EditBusinessForm({
   initial: BusinessDetails
 }) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
 
   const form = useForm({
@@ -60,6 +62,7 @@ function EditBusinessForm({
             body.error ?? `Failed to update business (${res.status})`
           )
         }
+        await queryClient.invalidateQueries({ queryKey: ["businesses"] })
         toast.add({
           title: "Business updated",
           description: `${value.name.trim()} was saved.`,
