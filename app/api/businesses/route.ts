@@ -85,6 +85,11 @@ export async function POST(request: Request) {
           name: parsed.data.name,
           address: parsed.data.address || null,
           ownerId: user.id,
+          city: parsed.data.city ?? "",
+          email: parsed.data.email ?? null,
+          phone: parsed.data.phone ?? null,
+          region: parsed.data.region ?? null,
+          wereda: parsed.data.wereda ?? null,
         },
       })
       await tx.morCredential.create({

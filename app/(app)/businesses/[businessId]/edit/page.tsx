@@ -23,7 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { businessEditSchema } from "@/lib/business-schema"
-import { TEST_MOR_CREDENTIALS } from "@/lib/test-mor"
+import {
+  TEST_BUSINESS_NAME,
+  TEST_MOR_CREDENTIALS,
+  TEST_SELLER_FIELDS,
+} from "@/lib/test-mor"
 
 type MorCredentialDetails = {
   tin: string
@@ -39,6 +43,11 @@ type BusinessDetails = {
   id: string
   name: string
   address: string | null
+  city: string
+  email: string | null
+  phone: string | null
+  region: string | null
+  wereda: string | null
   morCredential: MorCredentialDetails | null
 }
 
@@ -127,6 +136,11 @@ function EditBusinessForm({
     defaultValues: {
       name: initial.name,
       address: initial.address ?? "",
+      city: initial.city ?? "",
+      email: initial.email ?? "",
+      phone: initial.phone ?? "",
+      region: initial.region ?? "",
+      wereda: initial.wereda ?? "",
       morCredential: {
         tin: initial.morCredential?.tin ?? "",
         vatNumber: initial.morCredential?.vatNumber ?? "",
@@ -150,6 +164,11 @@ function EditBusinessForm({
           body: JSON.stringify({
             name: value.name,
             address: value.address,
+            city: value.city,
+            email: value.email,
+            phone: value.phone,
+            region: value.region,
+            wereda: value.wereda,
             morCredential: value.morCredential,
           }),
         })
@@ -191,6 +210,29 @@ function EditBusinessForm({
         }}
       >
         <div className="space-y-5 px-5 py-5 sm:px-6">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                form.setFieldValue("name", TEST_BUSINESS_NAME)
+                form.setFieldValue("morCredential", {
+                  ...TEST_MOR_CREDENTIALS,
+                })
+                form.setFieldValue("city", TEST_SELLER_FIELDS.city)
+                form.setFieldValue("email", TEST_SELLER_FIELDS.email)
+                form.setFieldValue("phone", TEST_SELLER_FIELDS.phone)
+                form.setFieldValue("region", TEST_SELLER_FIELDS.region)
+                form.setFieldValue("wereda", TEST_SELLER_FIELDS.wereda)
+              }}
+            >
+              Test business
+            </Button>
+          </div>
+
           <div className="flex items-center gap-2">
             <Building2 className="size-4 text-muted-foreground" />
             <h2 className="text-sm font-semibold">Business details</h2>
@@ -240,22 +282,114 @@ function EditBusinessForm({
 
           <div className="flex items-center gap-2 pt-1">
             <KeyRound className="size-4 text-muted-foreground" />
-            <h2 className="text-sm font-semibold">MOR credentials</h2>
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              className="ml-auto"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                form.setFieldValue("morCredential", {
-                  ...TEST_MOR_CREDENTIALS,
-                })
+            <h2 className="text-sm font-semibold">Seller details</h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <form.Field name="city">
+              {(field) => (
+                <Field>
+                  <FieldLabel htmlFor={field.name}>City</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) =>
+                      field.handleChange(event.target.value)
+                    }
+                    autoComplete="address-level2"
+                  />
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Field name="region">
+              {(field) => (
+                <Field>
+                  <FieldLabel htmlFor={field.name}>Region</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) =>
+                      field.handleChange(event.target.value)
+                    }
+                    placeholder="e.g. 13"
+                  />
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Field name="wereda">
+              {(field) => (
+                <Field>
+                  <FieldLabel htmlFor={field.name}>Wereda</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) =>
+                      field.handleChange(event.target.value)
+                    }
+                    placeholder="Wereda / district"
+                  />
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Field name="phone">
+              {(field) => (
+                <Field>
+                  <FieldLabel htmlFor={field.name}>Phone</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) =>
+                      field.handleChange(event.target.value)
+                    }
+                    placeholder="e.g. +251900000000"
+                  />
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Field name="email">
+              {(field) => {
+                const isInvalid =
+                  field.state.meta.isTouched && !field.state.meta.isValid
+                return (
+                  <Field data-invalid={isInvalid} className="sm:col-span-2">
+                    <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      type="email"
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      autoComplete="email"
+                      placeholder="contact@example.com"
+                      aria-invalid={isInvalid}
+                    />
+                    {isInvalid && (
+                      <FieldError errors={field.state.meta.errors} />
+                    )}
+                  </Field>
+                )
               }}
-            >
-              Test MOR
-            </Button>
+            </form.Field>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <KeyRound className="size-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">MOR credentials</h2>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -14,6 +14,11 @@ const updateBusinessSchema = z.object({
   address: z.string().trim().max(240).nullable().optional(),
   currency: z.string().trim().length(3).toUpperCase().optional(),
   active: z.boolean().optional(),
+  city: z.string().trim().max(120).optional(),
+  email: z.string().trim().email("Enter a valid email address").max(160).nullable().optional(),
+  phone: z.string().trim().max(40).nullable().optional(),
+  region: z.string().trim().max(10).nullable().optional(),
+  wereda: z.string().trim().max(120).nullable().optional(),
 })
 
 export async function GET(_request: Request, { params }: Context) {
@@ -32,6 +37,11 @@ export async function GET(_request: Request, { params }: Context) {
       address: true,
       currency: true,
       active: true,
+      city: true,
+      email: true,
+      phone: true,
+      region: true,
+      wereda: true,
       createdAt: true,
       morCredential: {
         select: {

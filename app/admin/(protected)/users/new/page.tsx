@@ -22,7 +22,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { adminUserSchema } from "@/lib/admin-user-schema"
-import { TEST_MOR_CREDENTIALS } from "@/lib/test-mor"
+import {
+  TEST_BUSINESS_NAME,
+  TEST_MOR_CREDENTIALS,
+  TEST_SELLER_FIELDS,
+} from "@/lib/test-mor"
 
 export default function AddUserPage() {
   const router = useRouter()
@@ -39,6 +43,11 @@ export default function AddUserPage() {
       business: {
         name: "",
         address: "",
+        city: "",
+        email: "",
+        phone: "",
+        region: "",
+        wereda: "",
       },
       morCredential: {
         tin: "",
@@ -123,6 +132,44 @@ export default function AddUserPage() {
           }}
         >
           <div className="space-y-5 px-5 py-5 sm:px-6">
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  form.setFieldValue("business.name", TEST_BUSINESS_NAME)
+                  form.setFieldValue("morCredential", {
+                    ...TEST_MOR_CREDENTIALS,
+                  })
+                  form.setFieldValue(
+                    "business.city",
+                    TEST_SELLER_FIELDS.city
+                  )
+                  form.setFieldValue(
+                    "business.email",
+                    TEST_SELLER_FIELDS.email
+                  )
+                  form.setFieldValue(
+                    "business.phone",
+                    TEST_SELLER_FIELDS.phone
+                  )
+                  form.setFieldValue(
+                    "business.region",
+                    TEST_SELLER_FIELDS.region
+                  )
+                  form.setFieldValue(
+                    "business.wereda",
+                    TEST_SELLER_FIELDS.wereda
+                  )
+                }}
+              >
+                Test business
+              </Button>
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <form.Field name="name">
                 {(field) => {
@@ -323,22 +370,114 @@ export default function AddUserPage() {
 
                 <div className="flex items-center gap-2 pt-1">
                   <Store className="size-4 text-muted-foreground" />
-                  <h3 className="text-sm font-semibold">MOR credentials</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    className="ml-auto"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      form.setFieldValue("morCredential", {
-                        ...TEST_MOR_CREDENTIALS,
-                      })
+                  <h3 className="text-sm font-semibold">Seller details</h3>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <form.Field name="business.city">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor={field.name}>City</FieldLabel>
+                        <Input
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(event) =>
+                            field.handleChange(event.target.value)
+                          }
+                          autoComplete="address-level2"
+                        />
+                      </Field>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="business.region">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor={field.name}>Region</FieldLabel>
+                        <Input
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(event) =>
+                            field.handleChange(event.target.value)
+                          }
+                          placeholder="e.g. 13"
+                        />
+                      </Field>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="business.wereda">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor={field.name}>Wereda</FieldLabel>
+                        <Input
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(event) =>
+                            field.handleChange(event.target.value)
+                          }
+                          placeholder="Wereda / district"
+                        />
+                      </Field>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="business.phone">
+                    {(field) => (
+                      <Field>
+                        <FieldLabel htmlFor={field.name}>Phone</FieldLabel>
+                        <Input
+                          id={field.name}
+                          name={field.name}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(event) =>
+                            field.handleChange(event.target.value)
+                          }
+                          placeholder="e.g. +251900000000"
+                        />
+                      </Field>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="business.email">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched && !field.state.meta.isValid
+                      return (
+                        <Field data-invalid={isInvalid} className="sm:col-span-2">
+                          <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                          <Input
+                            id={field.name}
+                            name={field.name}
+                            type="email"
+                            value={field.state.value}
+                            onBlur={field.handleBlur}
+                            onChange={(event) =>
+                              field.handleChange(event.target.value)
+                            }
+                            autoComplete="email"
+                            placeholder="contact@example.com"
+                            aria-invalid={isInvalid}
+                          />
+                          {isInvalid && (
+                            <FieldError errors={field.state.meta.errors} />
+                          )}
+                        </Field>
+                      )
                     }}
-                  >
-                    Test MOR
-                  </Button>
+                  </form.Field>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <Store className="size-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">MOR credentials</h3>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
