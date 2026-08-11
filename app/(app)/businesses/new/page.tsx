@@ -20,6 +20,7 @@ import {
   createBusinessFormSchema,
   type CreateBusinessFormValues,
 } from "@/lib/business-schema"
+import { TEST_MOR_CREDENTIALS } from "@/lib/test-mor"
 
 export default function AddBusinessPage() {
   const router = useRouter()
@@ -175,6 +176,21 @@ export default function AddBusinessPage() {
             <div className="flex items-center gap-2 pt-1">
               <Store className="size-4 text-muted-foreground" />
               <h2 className="text-sm font-semibold">MOR credentials</h2>
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="ml-auto"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  form.setFieldValue("morCredential", {
+                    ...TEST_MOR_CREDENTIALS,
+                  })
+                }}
+              >
+                Test MOR
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
