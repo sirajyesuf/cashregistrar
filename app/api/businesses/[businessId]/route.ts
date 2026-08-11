@@ -39,6 +39,9 @@ export async function GET(_request: Request, { params }: Context) {
           vatNumber: true,
           systemNumber: true,
           systemType: true,
+          clientId: true,
+          clientSecret: true,
+          apiKey: true,
         },
       },
       branches: {
@@ -56,11 +59,17 @@ export async function GET(_request: Request, { params }: Context) {
   }
 
   const { morCredential, ...rest } = business
+  const revealSecrets = access.role === "OWNER"
   return NextResponse.json({
     business: {
       ...rest,
       morCredential: morCredential
-        ? { ...morCredential, clientId: "", clientSecret: "", apiKey: "" }
+        ? {
+            ...morCredential,
+            clientId: revealSecrets ? morCredential.clientId : "",
+            clientSecret: revealSecrets ? morCredential.clientSecret : "",
+            apiKey: revealSecrets ? morCredential.apiKey : "",
+          }
         : null,
     },
     role: access.role,

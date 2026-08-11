@@ -2,7 +2,7 @@ import { z } from "zod"
 
 export const morCredentialSchema = z.object({
   tin: z.string().trim().min(1, "TIN is required").max(40),
-  vatNumber: z.string().trim().min(1, "VAT number is required").max(40),
+  vatNumber: z.string().trim().max(40),
   clientId: z.string().trim().min(1, "Client ID is required").max(200),
   clientSecret: z
     .string()

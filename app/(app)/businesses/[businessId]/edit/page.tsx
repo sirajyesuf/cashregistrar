@@ -5,7 +5,8 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, Building2, KeyRound } from "lucide-react"
+import { ArrowLeft, Building2, Check, Copy, KeyRound } from "lucide-react"
+import { copyText } from "@/lib/copy"
 import {
   Field,
   FieldError,
@@ -14,6 +15,13 @@ import {
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { businessEditSchema } from "@/lib/business-schema"
 
 type MorCredentialDetails = {
@@ -21,6 +29,9 @@ type MorCredentialDetails = {
   vatNumber: string
   systemNumber: string
   systemType: string
+  clientId: string
+  clientSecret: string
+  apiKey: string
 }
 
 type BusinessDetails = {
@@ -28,6 +39,76 @@ type BusinessDetails = {
   name: string
   address: string | null
   morCredential: MorCredentialDetails | null
+}
+
+type CredentialFieldProps = {
+  label: string
+  name: string
+  value: string
+  placeholder?: string
+  autoComplete?: string
+  isInvalid: boolean
+  errors: unknown[]
+  onBlur: () => void
+  onChange: (value: string) => void
+}
+
+function CredentialField({
+  label,
+  name,
+  value,
+  placeholder,
+  autoComplete,
+  isInvalid,
+  errors,
+  onBlur,
+  onChange,
+}: CredentialFieldProps) {
+  const [copied, setCopied] = useState(false)
+
+  const copy = async () => {
+    try {
+      await copyText(value)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // clipboard unavailable; ignore
+    }
+  }
+
+  return (
+    <Field data-invalid={isInvalid} className="sm:col-span-2">
+      <FieldLabel htmlFor={name}>{label}</FieldLabel>
+      <div className="relative">
+        <Input
+          id={name}
+          name={name}
+          value={value}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          onBlur={onBlur}
+          onChange={(event) => onChange(event.target.value)}
+          className="pr-9"
+          aria-invalid={isInvalid}
+        />
+        <button
+          type="button"
+          onClick={copy}
+          disabled={!value}
+          aria-label={`Copy ${label}`}
+          title="Copy to clipboard"
+          className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+        >
+          {copied ? (
+            <Check className="size-4 text-emerald-500" />
+          ) : (
+            <Copy className="size-4" />
+          )}
+        </button>
+      </div>
+      {isInvalid && <FieldError errors={errors} />}
+    </Field>
+  )
 }
 
 function EditBusinessForm({
@@ -48,9 +129,9 @@ function EditBusinessForm({
       morCredential: {
         tin: initial.morCredential?.tin ?? "",
         vatNumber: initial.morCredential?.vatNumber ?? "",
-        clientId: "",
-        clientSecret: "",
-        apiKey: "",
+        clientId: initial.morCredential?.clientId ?? "",
+        clientSecret: initial.morCredential?.clientSecret ?? "",
+        apiKey: initial.morCredential?.apiKey ?? "",
         systemNumber: initial.morCredential?.systemNumber ?? "",
         systemType: initial.morCredential?.systemType ?? "POS",
       },
@@ -236,20 +317,22 @@ function EditBusinessForm({
               {(field) => (
                 <Field>
                   <FieldLabel htmlFor={field.name}>System type</FieldLabel>
-                  <select
-                    id={field.name}
+                  <Select
                     name={field.name}
                     value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(event) =>
-                      field.handleChange(event.target.value)
+                    onValueChange={(value) =>
+                      field.handleChange(value ?? "POS")
                     }
-                    className="h-9 rounded-lg border border-input bg-background px-3 font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
                   >
-                    <option value="ERP">ERP</option>
-                    <option value="POS">POS</option>
-                    <option value="MANUAL">MANUAL</option>
-                  </select>
+                    <SelectTrigger id={field.name}>
+                      <SelectValue placeholder="Select system type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ERP">ERP</SelectItem>
+                      <SelectItem value="POS">POS</SelectItem>
+                      <SelectItem value="MANUAL">MANUAL</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </Field>
               )}
             </form.Field>
@@ -259,26 +342,17 @@ function EditBusinessForm({
                 const isInvalid =
                   field.state.meta.isTouched && !field.state.meta.isValid
                 return (
-                  <Field data-invalid={isInvalid}>
-                    <FieldLabel htmlFor={field.name}>Client ID</FieldLabel>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
-                      }
-                      autoComplete="off"
-                      placeholder={
-                        initial.morCredential ? "••••••••" : ""
-                      }
-                      aria-invalid={isInvalid}
-                    />
-                    {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
-                    )}
-                  </Field>
+                  <CredentialField
+                    label="Client ID"
+                    name={field.name}
+                    value={field.state.value}
+                    placeholder={initial.morCredential ? "••••••••" : ""}
+                    autoComplete="off"
+                    isInvalid={isInvalid}
+                    errors={field.state.meta.errors}
+                    onBlur={field.handleBlur}
+                    onChange={field.handleChange}
+                  />
                 )
               }}
             </form.Field>
@@ -288,25 +362,17 @@ function EditBusinessForm({
                 const isInvalid =
                   field.state.meta.isTouched && !field.state.meta.isValid
                 return (
-                  <Field data-invalid={isInvalid}>
-                    <FieldLabel htmlFor={field.name}>Client secret</FieldLabel>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      type="password"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
-                      }
-                      autoComplete="new-password"
-                      placeholder={initial.morCredential ? "••••••••" : ""}
-                      aria-invalid={isInvalid}
-                    />
-                    {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
-                    )}
-                  </Field>
+                  <CredentialField
+                    label="Client secret"
+                    name={field.name}
+                    value={field.state.value}
+                    placeholder={initial.morCredential ? "••••••••" : ""}
+                    autoComplete="new-password"
+                    isInvalid={isInvalid}
+                    errors={field.state.meta.errors}
+                    onBlur={field.handleBlur}
+                    onChange={field.handleChange}
+                  />
                 )
               }}
             </form.Field>
@@ -316,25 +382,17 @@ function EditBusinessForm({
                 const isInvalid =
                   field.state.meta.isTouched && !field.state.meta.isValid
                 return (
-                  <Field data-invalid={isInvalid}>
-                    <FieldLabel htmlFor={field.name}>API key</FieldLabel>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      type="password"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
-                      }
-                      autoComplete="new-password"
-                      placeholder={initial.morCredential ? "••••••••" : ""}
-                      aria-invalid={isInvalid}
-                    />
-                    {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
-                    )}
-                  </Field>
+                  <CredentialField
+                    label="API key"
+                    name={field.name}
+                    value={field.state.value}
+                    placeholder={initial.morCredential ? "••••••••" : ""}
+                    autoComplete="new-password"
+                    isInvalid={isInvalid}
+                    errors={field.state.meta.errors}
+                    onBlur={field.handleBlur}
+                    onChange={field.handleChange}
+                  />
                 )
               }}
             </form.Field>
