@@ -86,7 +86,6 @@ export async function POST(request: Request) {
           address: business.address || null,
           ownerId: result.user.id,
           email: email,
-          vatNumber: morCredential.vatNumber || null,
         },
       })
       await tx.morCredential.create({

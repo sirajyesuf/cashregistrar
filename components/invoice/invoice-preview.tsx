@@ -69,12 +69,16 @@ export function InvoicePreview({ data, seller }: Props) {
           </div>
           <div className="text-sm text-gray-600 sm:text-right">
             <p className="font-medium">{seller.businessName || "—"}</p>
-            <p>{seller.street}</p>
+            {seller.street && <p>{seller.street}</p>}
             <p>
               {seller.city}
               {seller.city && seller.country ? ", " : ""}
               {seller.country}
             </p>
+            {seller.tin && <p>TIN: {seller.tin}</p>}
+            {seller.vatNumber && <p>VAT: {seller.vatNumber}</p>}
+            {seller.phone && <p>{seller.phone}</p>}
+            {seller.email && <p>{seller.email}</p>}
           </div>
         </div>
 

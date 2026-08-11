@@ -52,7 +52,6 @@ model Business {
   city      String   @default("")
   country   String   @default("")
   legalName String?
-  vatNumber String?
   email     String?
   phone     String?
   region    String?
@@ -288,6 +287,19 @@ model Invoice {
   buyerKebele      String?
   buyerWereda      String?
   buyerHouseNumber String?
+
+  sellerCity         String?
+  sellerCountry      String?
+  sellerEmail        String?
+  sellerHouseNumber  String?
+  sellerLegalName    String?
+  sellerLocality     String?
+  sellerPhone        String?
+  sellerRegion       String?
+  sellerSubCity      String?
+  sellerTin          String?
+  sellerVatNumber    String?
+  sellerWereda       String?
 
   paymentMode String @default("CASH")
   paymentTerm String @default("IMMIDIATE")

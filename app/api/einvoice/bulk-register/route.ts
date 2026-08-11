@@ -4,7 +4,7 @@ import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { callEims } from "@/lib/einvoice/client"
 import { getConfig } from "@/lib/einvoice/config"
-import { buildRegisterPayload } from "@/lib/einvoice/payload"
+import { buildRegisterPayload, buildSellerDetailsFromInvoice } from "@/lib/einvoice/payload"
 import { validateLineTotals } from "@/lib/einvoice/validate"
 import {
   extractErrorMessage,
@@ -109,9 +109,7 @@ export async function POST(request: Request) {
   const byId = new Map(invoices.map((invoice) => [invoice.id, invoice]))
   const orderedInvoices = invoiceIds.map((id) => byId.get(id)!)
   const businessId = workspace.businessId
-  const seller = await prisma.business.findUnique({
-    where: { id: businessId },
-  })
+  const cfg = await getConfig(businessId)
   const previous = await prisma.invoice.findFirst({
     where: { irn: { not: null }, registrationStatus: "REGISTERED", businessId },
     orderBy: { registeredAt: "desc" },
@@ -123,11 +121,10 @@ export async function POST(request: Request) {
   // so the self-heal path can re-run the same request with the corrected
   // document numbers.
   const attemptBulk = async (startCounter: number) => {
-    const cfg = await getConfig(businessId)
     const payload = orderedInvoices.map((invoice, index) =>
       buildRegisterPayload({
         invoice,
-        seller,
+        sellerDetails: buildSellerDetailsFromInvoice(invoice, cfg),
         invoiceCounter: startCounter + index,
         previousIrn: index === 0 ? (previous?.irn ?? null) : null,
         cfg,

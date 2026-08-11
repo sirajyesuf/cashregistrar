@@ -85,7 +85,6 @@ export async function POST(request: Request) {
           name: parsed.data.name,
           address: parsed.data.address || null,
           ownerId: user.id,
-          vatNumber: parsed.data.morCredential.vatNumber || null,
         },
       })
       await tx.morCredential.create({

@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { invoiceInputSchema } from "@/lib/invoice-schema"
+import { sellerSnapshotFromBusiness } from "@/lib/einvoice/payload"
 import {
   getWorkspace,
   getWorkspaceAccess,
@@ -165,12 +166,21 @@ export async function POST(request: Request) {
   })
   const number = `INV-${String(counter.value).padStart(4, "0")}`
 
+  const [business, credential] = await Promise.all([
+    prisma.business.findUnique({ where: { id: workspace.businessId } }),
+    prisma.morCredential.findUnique({
+      where: { businessId: workspace.businessId },
+    }),
+  ])
+  const sellerSnapshot = sellerSnapshotFromBusiness(business, credential)
+
   const invoice = await prisma.invoice.create({
     data: {
       number,
       date,
       businessId: workspace.businessId,
       branchId: workspace.branchId,
+      ...sellerSnapshot,
       buyerLegalName: buyer.legalName,
       taxRate: new Prisma.Decimal(taxRate),
       subtotal: centsToDecimal(subtotalCents),

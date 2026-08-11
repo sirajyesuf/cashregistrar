@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server"
-import type { Business, Invoice, InvoiceLine } from "@prisma/client"
+import type { Invoice, InvoiceLine } from "@prisma/client"
 import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { callEims, type EimsCallResult } from "@/lib/einvoice/client"
 import { getConfig, type EimsConfig } from "@/lib/einvoice/config"
-import { buildRegisterPayload } from "@/lib/einvoice/payload"
+import {
+  buildRegisterPayload,
+  buildSellerDetailsFromInvoice,
+} from "@/lib/einvoice/payload"
 import { validateLineTotals } from "@/lib/einvoice/validate"
 import {
   extractErrorMessage,
@@ -43,13 +46,12 @@ async function attemptRegister(
   cfg: EimsConfig,
   businessId: string,
   invoice: Invoice & { lines: InvoiceLine[] },
-  seller: Business | null,
   counterValue: number,
   previousIrn: string | null
 ): Promise<EimsCallResult> {
   const payload = buildRegisterPayload({
     invoice,
-    seller,
+    sellerDetails: buildSellerDetailsFromInvoice(invoice, cfg),
     invoiceCounter: counterValue,
     previousIrn,
     cfg,
@@ -140,9 +142,7 @@ export async function POST(request: Request) {
   }
 
   const businessId = workspace.businessId
-  const seller = await prisma.business.findUnique({
-    where: { id: businessId },
-  })
+  const cfg = await getConfig(businessId)
   const counterKey = { ...eimsCounterKey(businessId), name: "eims" }
   const counter = await prisma.counter.upsert({
     where: { businessId_branchId_name: counterKey },
@@ -161,12 +161,10 @@ export async function POST(request: Request) {
   })
   const previousIrn = previous?.irn ?? null
 
-  const cfg = await getConfig(businessId)
   let result = await attemptRegister(
     cfg,
     businessId,
     invoice,
-    seller,
     counter.value,
     previousIrn
   )
@@ -184,7 +182,6 @@ export async function POST(request: Request) {
         cfg,
         businessId,
         invoice,
-        seller,
         expected,
         previousIrn
       )

@@ -8,6 +8,7 @@ export type EimsConfig = {
   clientSecret: string
   apiKey: string
   tin: string
+  vatNumber: string
   systemNumber: string
   systemType: string
 }
@@ -39,6 +40,7 @@ export async function getConfig(businessId: string): Promise<EimsConfig> {
     clientSecret: credential.clientSecret,
     apiKey: credential.apiKey,
     tin: credential.tin,
+    vatNumber: credential.vatNumber,
     systemNumber: credential.systemNumber,
     systemType: credential.systemType,
   }

@@ -18,7 +18,6 @@ const seller = {
     "EINVOICE_SELLER_LEGAL_NAME",
     "Empire Technological solution"
   ),
-  vatNumber: value("EINVOICE_SELLER_VAT_NUMBER", "43256663343256663322"),
   email: value("EINVOICE_SELLER_EMAIL", "seretse@empire.et"),
   phone: value("EINVOICE_SELLER_PHONE", "+251976524241"),
   region: value("EINVOICE_SELLER_REGION", "1"),

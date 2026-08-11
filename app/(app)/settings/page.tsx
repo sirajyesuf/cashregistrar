@@ -14,8 +14,6 @@ type ProfileForm = {
   city: string
   country: string
   legalName: string
-  tin: string
-  vatNumber: string
   email: string
   phone: string
   region: string
@@ -31,8 +29,6 @@ const EMPTY_PROFILE: ProfileForm = {
   city: "",
   country: "",
   legalName: "",
-  tin: "",
-  vatNumber: "",
   email: "",
   phone: "",
   region: "",
@@ -44,12 +40,14 @@ const EMPTY_PROFILE: ProfileForm = {
 
 type SourceInfo = {
   tin: string
+  vatNumber: string
   systemNumber: string
   systemType: string
 }
 
 const EMPTY_SOURCE: SourceInfo = {
   tin: "",
+  vatNumber: "",
   systemNumber: "",
   systemType: "",
 }
@@ -192,29 +190,21 @@ export default function SettingsPage() {
                 <span>
                   Taxpayer TIN: <strong>{source.tin || "—"}</strong>
                 </span>
+                <span>
+                  VAT number: <strong>{source.vatNumber || "—"}</strong>
+                </span>
               </span>
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="legalName">Legal Name</Label>
-                  <Input
-                    id="legalName"
-                    value={profile.legalName}
-                    onChange={(e) => update("legalName", e.target.value)}
-                    placeholder="Registered legal name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="vatNumber">VAT Number</Label>
-                  <Input
-                    id="vatNumber"
-                    value={profile.vatNumber}
-                    onChange={(e) => update("vatNumber", e.target.value)}
-                    placeholder="VAT registration number"
-                  />
-                </div>
+              <div>
+                <Label htmlFor="legalName">Legal Name</Label>
+                <Input
+                  id="legalName"
+                  value={profile.legalName}
+                  onChange={(e) => update("legalName", e.target.value)}
+                  placeholder="Registered legal name"
+                />
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>

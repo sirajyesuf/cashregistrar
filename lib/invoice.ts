@@ -114,6 +114,7 @@ export type PreviewInvoice = {
   lineItems: PreviewLineItem[]
   transactionType?: TransactionType
   buyer?: Partial<BuyerDetails>
+  seller: SellerInfo
   irn?: string | null
   registrationStatus?: RegistrationStatus | null
   receipt?: {
@@ -196,6 +197,18 @@ type ApiInvoice = {
     eimsStatus: string | null
     status: string | null
   } | null
+  sellerCity?: string | null
+  sellerCountry?: string | null
+  sellerEmail?: string | null
+  sellerHouseNumber?: string | null
+  sellerLegalName?: string | null
+  sellerLocality?: string | null
+  sellerPhone?: string | null
+  sellerRegion?: string | null
+  sellerSubCity?: string | null
+  sellerTin?: string | null
+  sellerVatNumber?: string | null
+  sellerWereda?: string | null
 }
 
 export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
@@ -224,6 +237,22 @@ export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
           tin: invoice.buyerTin ?? undefined,
         }
       : undefined,
+    seller: {
+      businessName: invoice.sellerLegalName ?? "",
+      street: "",
+      city: invoice.sellerCity ?? "",
+      country: invoice.sellerCountry ?? "",
+      legalName: invoice.sellerLegalName ?? undefined,
+      tin: invoice.sellerTin ?? undefined,
+      vatNumber: invoice.sellerVatNumber ?? undefined,
+      email: invoice.sellerEmail ?? undefined,
+      phone: invoice.sellerPhone ?? undefined,
+      region: invoice.sellerRegion ?? undefined,
+      subCity: invoice.sellerSubCity ?? undefined,
+      wereda: invoice.sellerWereda ?? undefined,
+      houseNumber: invoice.sellerHouseNumber ?? undefined,
+      locality: invoice.sellerLocality ?? undefined,
+    },
     irn: invoice.irn ?? null,
     registrationStatus: invoice.registrationStatus as
       RegistrationStatus | null | undefined,

@@ -14,7 +14,6 @@ import { CancelButton } from "@/components/invoice/cancel-button"
 import { ReceiptButton } from "@/components/invoice/receipt-button"
 import { HashField } from "@/components/invoice/hash-field"
 import { formatCents, hasIssuedReceipt, invoiceFromApi } from "@/lib/invoice"
-import type { SellerInfo } from "@/lib/invoice"
 
 type ApiInvoice = {
   id: string
@@ -31,13 +30,18 @@ type ApiInvoice = {
     unitPrice: string
     total: string
   }[]
-}
-
-const DEFAULT_SELLER: SellerInfo = {
-  businessName: "",
-  street: "",
-  city: "",
-  country: "",
+  sellerCity?: string | null
+  sellerCountry?: string | null
+  sellerEmail?: string | null
+  sellerHouseNumber?: string | null
+  sellerLegalName?: string | null
+  sellerLocality?: string | null
+  sellerPhone?: string | null
+  sellerRegion?: string | null
+  sellerSubCity?: string | null
+  sellerTin?: string | null
+  sellerVatNumber?: string | null
+  sellerWereda?: string | null
 }
 
 export default function InvoiceDetailPage() {
@@ -62,16 +66,6 @@ export default function InvoiceDetailPage() {
         ?.registrationStatus === "PROCESSING"
         ? 5000
         : false,
-  })
-
-  const { data: seller = DEFAULT_SELLER } = useQuery({
-    queryKey: ["seller-profile"],
-    queryFn: async () => {
-      const res = await fetch("/api/settings/seller")
-      if (!res.ok) return DEFAULT_SELLER
-      const body = (await res.json()) as { profile: SellerInfo }
-      return body.profile
-    },
   })
 
   const notFound = error?.message === "NOT_FOUND"
@@ -225,7 +219,7 @@ export default function InvoiceDetailPage() {
             )}
           </div>
 
-          <InvoicePreview data={invoice} seller={seller} />
+          <InvoicePreview data={invoice} seller={invoice.seller} />
         </div>
       )}
     </div>

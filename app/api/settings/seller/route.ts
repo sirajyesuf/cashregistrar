@@ -15,7 +15,6 @@ function profileFromBusiness(business: {
   city: string
   country: string
   legalName: string | null
-  vatNumber: string | null
   email: string | null
   phone: string | null
   region: string | null
@@ -30,7 +29,6 @@ function profileFromBusiness(business: {
     city: business.city,
     country: business.country,
     legalName: business.legalName ?? "",
-    vatNumber: business.vatNumber ?? "",
     email: business.email ?? "",
     phone: business.phone ?? "",
     region: business.region ?? "",
@@ -59,12 +57,13 @@ export async function GET() {
   }
   const credential = await prisma.morCredential.findUnique({
     where: { businessId: workspace.businessId },
-    select: { tin: true, systemNumber: true, systemType: true },
+    select: { tin: true, vatNumber: true, systemNumber: true, systemType: true },
   })
   return NextResponse.json({
     profile: profileFromBusiness(business),
     source: {
       tin: credential?.tin ?? "",
+      vatNumber: credential?.vatNumber ?? "",
       systemNumber: credential?.systemNumber ?? "",
       systemType: credential?.systemType ?? "",
     },
@@ -93,7 +92,6 @@ export async function PUT(request: Request) {
     city: str(body.city),
     country: str(body.country),
     legalName: str(body.legalName),
-    vatNumber: str(body.vatNumber),
     email: str(body.email),
     phone: str(body.phone),
     region: str(body.region),

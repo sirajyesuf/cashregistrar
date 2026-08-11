@@ -1,4 +1,4 @@
-import type { Business, Invoice, InvoiceLine } from "@prisma/client"
+import type { Business, Invoice, InvoiceLine, MorCredential } from "@prisma/client"
 
 import type { EimsConfig } from "./config"
 import { taxCodeForRate } from "./tax"
@@ -96,14 +96,78 @@ function orEmpty(value: string | null | undefined): string {
   return value ?? ""
 }
 
+/**
+ * Builds the invoice's seller* snapshot columns directly from the business and
+ * its MOR credential (nullable). It never throws: used when creating/editing an
+ * invoice, which must work even before EIMS credentials are configured.
+ */
+export function sellerSnapshotFromBusiness(
+  business: Pick<Business, "name" | "city" | "country" | "email" | "houseNumber" | "legalName" | "locality" | "phone" | "region" | "subCity" | "wereda"> | null,
+  credential?: Pick<MorCredential, "tin" | "vatNumber"> | null
+) {
+  return {
+    sellerCity: business?.city || null,
+    sellerCountry: business?.country || null,
+    sellerEmail: business?.email || null,
+    sellerHouseNumber: business?.houseNumber ?? null,
+    sellerLegalName: business?.legalName || business?.name || null,
+    sellerLocality: business?.locality ?? null,
+    sellerPhone: business?.phone || null,
+    sellerRegion: business?.region || null,
+    sellerSubCity: business?.subCity ?? null,
+    sellerTin: credential?.tin || null,
+    sellerVatNumber: credential?.vatNumber || null,
+    sellerWereda: business?.wereda || null,
+  }
+}
+
+/**
+ * Builds the EIMS SellerDetails block from the invoice's own seller snapshot.
+ * The invoice is the source of truth: whatever was snapshotted at creation (or
+ * locked at registration) is exactly what gets sent, so the stored document
+ * always matches EIMS. Tin/VatNumber fall back to the live MOR config only when
+ * the invoice has no snapshot.
+ */
+export function buildSellerDetailsFromInvoice(
+  invoice: Pick<
+    Invoice,
+    | "sellerCity"
+    | "sellerEmail"
+    | "sellerHouseNumber"
+    | "sellerLegalName"
+    | "sellerLocality"
+    | "sellerPhone"
+    | "sellerRegion"
+    | "sellerSubCity"
+    | "sellerTin"
+    | "sellerVatNumber"
+    | "sellerWereda"
+  >,
+  cfg: EimsConfig
+): RegisterPayload["SellerDetails"] {
+  return {
+    City: orEmpty(invoice.sellerCity),
+    Email: orEmpty(invoice.sellerEmail),
+    HouseNumber: invoice.sellerHouseNumber ?? null,
+    LegalName: orEmpty(invoice.sellerLegalName),
+    Locality: invoice.sellerLocality ?? null,
+    Phone: orEmpty(invoice.sellerPhone),
+    Region: orEmpty(invoice.sellerRegion),
+    SubCity: invoice.sellerSubCity ?? null,
+    Tin: invoice.sellerTin ?? cfg.tin,
+    VatNumber: orEmpty(invoice.sellerVatNumber ?? cfg.vatNumber),
+    Wereda: orEmpty(invoice.sellerWereda),
+  }
+}
+
 export function buildRegisterPayload(params: {
   invoice: Invoice & { lines: InvoiceLine[] }
-  seller: Business | null
+  sellerDetails: RegisterPayload["SellerDetails"]
   invoiceCounter: number
   previousIrn: string | null
   cfg: EimsConfig
 }): RegisterPayload {
-  const { invoice, seller, invoiceCounter, previousIrn, cfg } = params
+  const { invoice, sellerDetails, invoiceCounter, previousIrn, cfg } = params
   const rate = Number(invoice.taxRate)
   const withholdRate = Number(invoice.incomeWithholdRate ?? 2)
 
@@ -179,19 +243,7 @@ export function buildRegisterPayload(params: {
       PreviousIrn: previousIrn ?? "",
       RelatedDocument: null,
     },
-    SellerDetails: {
-      City: orEmpty(seller?.city),
-      Email: orEmpty(seller?.email),
-      HouseNumber: seller?.houseNumber ?? null,
-      LegalName: orEmpty(seller?.legalName ?? seller?.name),
-      Locality: seller?.locality ?? null,
-      Phone: orEmpty(seller?.phone),
-      Region: orEmpty(seller?.region),
-      SubCity: seller?.subCity ?? null,
-      Tin: cfg.tin,
-      VatNumber: orEmpty(seller?.vatNumber),
-      Wereda: orEmpty(seller?.wereda),
-    },
+    SellerDetails: sellerDetails,
     SourceSystem: {
       CashierName: invoice.cashierName,
       InvoiceCounter: invoiceCounter,

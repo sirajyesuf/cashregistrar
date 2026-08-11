@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { invoiceInputSchema, type BuyerDetails } from "@/lib/invoice-schema"
+import { sellerSnapshotFromBusiness } from "@/lib/einvoice/payload"
 import { canAccessInvoice, getWorkspace } from "@/lib/workspace"
 
 export const runtime = "nodejs"
@@ -118,12 +119,19 @@ export async function PUT(
   const taxAmountCents = Math.round((subtotalCents * data.taxRate) / 100)
   const grandTotalCents = subtotalCents + taxAmountCents
 
+  const [business, credential] = await Promise.all([
+    prisma.business.findUnique({ where: { id: existing.businessId } }),
+    prisma.morCredential.findUnique({ where: { businessId: existing.businessId } }),
+  ])
+  const sellerSnapshot = sellerSnapshotFromBusiness(business, credential)
+
   const invoice = await prisma.$transaction(async (tx) => {
     await tx.invoiceLine.deleteMany({ where: { invoiceId: id } })
     return tx.invoice.update({
       where: { id },
       data: {
         date: data.date,
+        ...sellerSnapshot,
         buyerLegalName: data.buyer.legalName,
         taxRate: new Prisma.Decimal(data.taxRate),
         subtotal: centsToDecimal(subtotalCents),
