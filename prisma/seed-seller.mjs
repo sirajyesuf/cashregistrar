@@ -11,10 +11,6 @@ function value(name, fallback) {
 }
 
 const seller = {
-  businessName: value(
-    "EINVOICE_SELLER_BUSINESS_NAME",
-    "Empire Technological solution"
-  ),
   street: value("EINVOICE_SELLER_STREET", ""),
   city: value("EINVOICE_SELLER_CITY", "101"),
   country: value("EINVOICE_SELLER_COUNTRY", "ET"),
@@ -32,17 +28,15 @@ const seller = {
   locality: value("EINVOICE_SELLER_LOCALITY", "Bole"),
 }
 
-if (!seller.businessName) {
-  console.error("EINVOICE_SELLER_BUSINESS_NAME is required")
-  process.exit(1)
+async function firstBusinessId() {
+  const first = await prisma.business.findFirst({ select: { id: true } })
+  return first?.id ?? null
 }
 
-const businessId = process.argv[2]?.trim()
+const businessId = process.argv[2]?.trim() ?? (await firstBusinessId())
 if (!businessId) {
-  console.error(
-    "Usage: node prisma/seed-seller.mjs <businessId>"
-  )
-  process.exit(1)
+  console.log("No business found; skipping seller fields seed.")
+  process.exit(0)
 }
 
 const business = await prisma.business.findUnique({
@@ -55,12 +49,11 @@ if (!business) {
 }
 
 try {
-  const profile = await prisma.sellerProfile.upsert({
-    where: { businessId },
-    create: { businessId, ...seller },
-    update: seller,
+  const updated = await prisma.business.update({
+    where: { id: businessId },
+    data: seller,
   })
-  console.log(`Upserted seller profile for business ${businessId} (${profile.id})`)
+  console.log(`Updated seller fields for business ${businessId} (${updated.name})`)
 } finally {
   await prisma.$disconnect()
 }

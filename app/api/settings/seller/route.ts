@@ -9,8 +9,8 @@ function str(value: unknown): string {
   return typeof value === "string" ? value.trim() : ""
 }
 
-function profileToResponse(profile: {
-  businessName: string
+function profileFromBusiness(business: {
+  name: string
   street: string
   city: string
   country: string
@@ -25,19 +25,19 @@ function profileToResponse(profile: {
   locality: string | null
 }) {
   return {
-    businessName: profile.businessName,
-    street: profile.street,
-    city: profile.city,
-    country: profile.country,
-    legalName: profile.legalName ?? "",
-    vatNumber: profile.vatNumber ?? "",
-    email: profile.email ?? "",
-    phone: profile.phone ?? "",
-    region: profile.region ?? "",
-    subCity: profile.subCity ?? "",
-    wereda: profile.wereda ?? "",
-    houseNumber: profile.houseNumber ?? "",
-    locality: profile.locality ?? "",
+    businessName: business.name,
+    street: business.street,
+    city: business.city,
+    country: business.country,
+    legalName: business.legalName ?? "",
+    vatNumber: business.vatNumber ?? "",
+    email: business.email ?? "",
+    phone: business.phone ?? "",
+    region: business.region ?? "",
+    subCity: business.subCity ?? "",
+    wereda: business.wereda ?? "",
+    houseNumber: business.houseNumber ?? "",
+    locality: business.locality ?? "",
   }
 }
 
@@ -51,15 +51,18 @@ export async function GET() {
     return NextResponse.json({ error: "No active workspace" }, { status: 409 })
   }
 
-  const profile = await prisma.sellerProfile.findUnique({
-    where: { businessId: workspace.businessId },
+  const business = await prisma.business.findUnique({
+    where: { id: workspace.businessId },
   })
+  if (!business) {
+    return NextResponse.json({ error: "Business not found" }, { status: 404 })
+  }
   const credential = await prisma.morCredential.findUnique({
     where: { businessId: workspace.businessId },
     select: { tin: true, systemNumber: true, systemType: true },
   })
   return NextResponse.json({
-    profile: profile ? profileToResponse(profile) : null,
+    profile: profileFromBusiness(business),
     source: {
       tin: credential?.tin ?? "",
       systemNumber: credential?.systemNumber ?? "",
@@ -86,7 +89,6 @@ export async function PUT(request: Request) {
   }
 
   const data = {
-    businessName: str(body.businessName),
     street: str(body.street),
     city: str(body.city),
     country: str(body.country),
@@ -101,18 +103,17 @@ export async function PUT(request: Request) {
     locality: str(body.locality),
   }
 
-  if (!data.businessName) {
+  if (!str(body.businessName)) {
     return NextResponse.json(
       { error: "Business name is required" },
       { status: 400 }
     )
   }
 
-  const profile = await prisma.sellerProfile.upsert({
-    where: { businessId: workspace.businessId },
-    create: { businessId: workspace.businessId, ...data },
-    update: data,
+  const business = await prisma.business.update({
+    where: { id: workspace.businessId },
+    data: { name: str(body.businessName), ...data },
   })
 
-  return NextResponse.json({ profile: profileToResponse(profile) })
+  return NextResponse.json({ profile: profileFromBusiness(business) })
 }

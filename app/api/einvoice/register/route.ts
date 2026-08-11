@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import type { Invoice, InvoiceLine, SellerProfile } from "@prisma/client"
+import type { Business, Invoice, InvoiceLine } from "@prisma/client"
 import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
@@ -43,7 +43,7 @@ async function attemptRegister(
   cfg: EimsConfig,
   businessId: string,
   invoice: Invoice & { lines: InvoiceLine[] },
-  seller: SellerProfile | null,
+  seller: Business | null,
   counterValue: number,
   previousIrn: string | null
 ): Promise<EimsCallResult> {
@@ -140,8 +140,8 @@ export async function POST(request: Request) {
   }
 
   const businessId = workspace.businessId
-  const seller = await prisma.sellerProfile.findUnique({
-    where: { businessId },
+  const seller = await prisma.business.findUnique({
+    where: { id: businessId },
   })
   const counterKey = { ...eimsCounterKey(businessId), name: "eims" }
   const counter = await prisma.counter.upsert({

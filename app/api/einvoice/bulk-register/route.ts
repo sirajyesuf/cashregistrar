@@ -109,8 +109,8 @@ export async function POST(request: Request) {
   const byId = new Map(invoices.map((invoice) => [invoice.id, invoice]))
   const orderedInvoices = invoiceIds.map((id) => byId.get(id)!)
   const businessId = workspace.businessId
-  const seller = await prisma.sellerProfile.findUnique({
-    where: { businessId },
+  const seller = await prisma.business.findUnique({
+    where: { id: businessId },
   })
   const previous = await prisma.invoice.findFirst({
     where: { irn: { not: null }, registrationStatus: "REGISTERED", businessId },

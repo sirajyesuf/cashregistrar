@@ -1,4 +1,4 @@
-import type { Invoice, InvoiceLine, SellerProfile } from "@prisma/client"
+import type { Business, Invoice, InvoiceLine } from "@prisma/client"
 
 import type { EimsConfig } from "./config"
 import { taxCodeForRate } from "./tax"
@@ -98,7 +98,7 @@ function orEmpty(value: string | null | undefined): string {
 
 export function buildRegisterPayload(params: {
   invoice: Invoice & { lines: InvoiceLine[] }
-  seller: SellerProfile | null
+  seller: Business | null
   invoiceCounter: number
   previousIrn: string | null
   cfg: EimsConfig
@@ -183,7 +183,7 @@ export function buildRegisterPayload(params: {
       City: orEmpty(seller?.city),
       Email: orEmpty(seller?.email),
       HouseNumber: seller?.houseNumber ?? null,
-      LegalName: orEmpty(seller?.legalName ?? seller?.businessName),
+      LegalName: orEmpty(seller?.legalName ?? seller?.name),
       Locality: seller?.locality ?? null,
       Phone: orEmpty(seller?.phone),
       Region: orEmpty(seller?.region),
