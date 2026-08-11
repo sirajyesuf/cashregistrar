@@ -8,9 +8,8 @@ import { Label } from "@/components/ui/label"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { authClient } from "@/lib/auth-client"
 
-export function AuthForm() {
+export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   const router = useRouter()
-  const [mode, setMode] = useState<"signin" | "signup">("signin")
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -38,11 +37,6 @@ export function AuthForm() {
       setError(err instanceof Error ? err.message : "Authentication failed")
       setPending(false)
     }
-  }
-
-  const switchMode = (next: "signin" | "signup") => {
-    setMode(next)
-    setError(null)
   }
 
   return (
@@ -102,13 +96,12 @@ export function AuthForm() {
         </form>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           {mode === "signin" ? "New here?" : "Already have an account?"}{" "}
-          <button
-            type="button"
+          <a
+            href={mode === "signin" ? "/register" : "/login"}
             className="font-medium text-primary hover:underline"
-            onClick={() => switchMode(mode === "signin" ? "signup" : "signin")}
           >
             {mode === "signin" ? "Create an account" : "Sign in instead"}
-          </button>
+          </a>
         </p>
       </div>
     </div>

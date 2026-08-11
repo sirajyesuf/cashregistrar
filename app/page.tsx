@@ -185,10 +185,15 @@ export default async function LandingPage() {
               </p>
               {!isAuthenticated && (
                 <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-                  <Link href="/login">
+                  <Link href="/register">
                     <Button size="lg">
-                      Sign in
+                      Create account
                       <ArrowRight className="size-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button size="lg" variant="outline">
+                      Sign in
                     </Button>
                   </Link>
                 </div>
