@@ -45,6 +45,12 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         <ThemeSwitcher />
       </div>
       <div className="w-full max-w-sm">
+        <div className="mb-6 flex flex-col items-center gap-3">
+          <span className="flex size-12 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">
+            CR
+          </span>
+          <span className="text-lg font-semibold tracking-tight">CashRegistrar</span>
+        </div>
         <h1 className="mb-8 text-center text-2xl font-bold">
           {mode === "signin" ? "Sign In" : "Create Account"}
         </h1>
