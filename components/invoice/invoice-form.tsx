@@ -508,7 +508,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <form.Field name="buyer.region">
                       {(field) => (
-                        <TextField field={field} label="Region" placeholder="e.g. 13" />
+                        <TextField field={field} label="Region" placeholder="e.g. 1" />
                       )}
                     </form.Field>
                     <form.Field name="buyer.city">

@@ -405,7 +405,7 @@ export default function AddUserPage() {
                           onChange={(event) =>
                             field.handleChange(event.target.value)
                           }
-                          placeholder="e.g. 13"
+                          placeholder="e.g. 1"
                         />
                       </Field>
                     )}

@@ -240,7 +240,7 @@ export default function SettingsPage() {
                     id="region"
                     value={profile.region}
                     onChange={(e) => update("region", e.target.value)}
-                    placeholder="e.g. 13"
+                    placeholder="e.g. 1"
                   />
                 </Field>
                 <Field>

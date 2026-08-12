@@ -1,9 +1,9 @@
 export const REGIONS: Record<string, string> = {
+  "1": "Addis Ababa",
   "2": "Oromia",
   "3": "Tigray",
   "4": "Afar",
   "11": "Amhara",
-  "13": "Addis Ababa",
   "14": "Sidama",
 }
 
