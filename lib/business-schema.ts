@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { REGION_CODES } from "@/lib/regions"
+
 export const morCredentialSchema = z.object({
   tin: z.string().trim().min(1, "TIN is required").max(40),
   vatNumber: z.string().trim().max(40),
@@ -50,7 +52,7 @@ const sellerFields = {
       (value) => value === "" || ETHIOPIAN_PHONE_REGEX.test(value),
       "Enter a valid Ethiopian phone number (e.g. +2519XXXXXXXX)"
     ),
-  region: positiveIntegerField("Region", 10),
+  region: z.enum([...REGION_CODES, ""]),
   wereda: positiveIntegerField("Wereda", 120),
 }
 

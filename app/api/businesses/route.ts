@@ -88,7 +88,7 @@ export async function POST(request: Request) {
           city: parsed.data.city ?? "",
           email: parsed.data.email ?? null,
           phone: parsed.data.phone ?? null,
-          region: parsed.data.region ?? null,
+          region: parsed.data.region || null,
           wereda: parsed.data.wereda ?? null,
         },
       })

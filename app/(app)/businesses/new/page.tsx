@@ -27,6 +27,7 @@ import {
   createBusinessFormSchema,
   type CreateBusinessFormValues,
 } from "@/lib/business-schema"
+import { REGION_OPTIONS } from "@/lib/regions"
 import {
   TEST_BUSINESS_NAME,
   TEST_MOR_CREDENTIALS,
@@ -255,20 +256,29 @@ export default function AddBusinessPage() {
                   return (
                     <Field data-invalid={isInvalid}>
                       <FieldLabel htmlFor={field.name}>Region</FieldLabel>
-                      <Input
-                        id={field.name}
-                        name={field.name}
+                      <Select
                         value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(event) =>
-                          field.handleChange(event.target.value)
+                        onValueChange={(value) =>
+                          field.handleChange(value ?? "")
                         }
-                        placeholder="e.g. 13"
-                        type="number"
-                        min="1"
-                        step="1"
-                        aria-invalid={isInvalid}
-                      />
+                        items={REGION_OPTIONS}
+                      >
+                        <SelectTrigger
+                          id={field.name}
+                          name={field.name}
+                          onBlur={field.handleBlur}
+                          aria-invalid={isInvalid}
+                        >
+                          <SelectValue placeholder="Select region" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {REGION_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       {isInvalid && (
                         <FieldError errors={field.state.meta.errors} />
                       )}

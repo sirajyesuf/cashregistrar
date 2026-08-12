@@ -3,6 +3,7 @@ import { z } from "zod"
 import { getSessionUser } from "@/lib/auth/user"
 import { getBusinessAccess, canManageBusiness } from "@/lib/business"
 import { morCredentialUpdateSchema } from "@/lib/business-schema"
+import { REGION_CODES } from "@/lib/regions"
 import { prisma } from "@/lib/db"
 
 export const runtime = "nodejs"
@@ -28,7 +29,7 @@ const updateBusinessSchema = z.object({
   city: positiveInteger("City").max(120).optional(),
   email: z.string().trim().email("Enter a valid email address").max(160).nullable().optional(),
   phone: z.string().trim().max(40).nullable().optional(),
-  region: positiveInteger("Region").max(10).nullable().optional(),
+  region: z.enum([...REGION_CODES, ""]).nullable().optional(),
   wereda: positiveInteger("Wereda").max(120).nullable().optional(),
 })
 

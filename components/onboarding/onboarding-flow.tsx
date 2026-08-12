@@ -22,6 +22,7 @@ import {
   createBusinessFormSchema,
   type CreateBusinessFormValues,
 } from "@/lib/business-schema"
+import { REGION_OPTIONS } from "@/lib/regions"
 import { cn } from "@/lib/utils"
 
 type StringField = DeepKeysOfType<CreateBusinessFormValues, string>
@@ -109,7 +110,7 @@ function FieldSelect({
 }: {
   field: FieldRender
   label: string
-  options: string[]
+  options: ReadonlyArray<string | { value: string; label: string }>
   placeholder: string
 }) {
   return (
@@ -118,16 +119,25 @@ function FieldSelect({
       <Select
         value={field.state.value}
         onValueChange={(value) => field.handleChange(value ?? "")}
+        items={options.map((option) =>
+          typeof option === "string"
+            ? { value: option, label: option }
+            : { value: option.value, label: option.label }
+        )}
       >
         <SelectTrigger id={field.name}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option}
-            </SelectItem>
-          ))}
+          {options.map((option) => {
+            const value = typeof option === "string" ? option : option.value
+            const label = typeof option === "string" ? option : option.label
+            return (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            )
+          })}
         </SelectContent>
       </Select>
     </Field>
@@ -382,13 +392,11 @@ export function OnboardingFlow() {
                 </form.Field>
                 <form.Field name="region">
                   {(field) => (
-                    <FieldInput
+                    <FieldSelect
                       field={field}
                       label="Region"
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="e.g. 13"
+                      placeholder="Select region"
+                      options={REGION_OPTIONS}
                     />
                   )}
                 </form.Field>

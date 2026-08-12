@@ -14,6 +14,6 @@ export const TEST_SELLER_FIELDS = {
   city: "101",
   email: "seretse@empire.et",
   phone: "+251976524241",
-  region: "1",
+  region: "13",
   wereda: "13",
 }
