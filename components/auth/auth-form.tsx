@@ -32,7 +32,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       if (result.error || !result.data) {
         throw new Error(result.error?.message ?? "Authentication failed")
       }
-      router.push("/dashboard")
+      router.push(mode === "signup" ? "/onboarding" : "/dashboard")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed")
       setPending(false)
