@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Loader2, Printer } from "lucide-react"
+import { Printer } from "lucide-react"
 import { useReactToPrint } from "react-to-print"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import type { PreviewInvoice, SellerInfo } from "@/lib/invoice"
 import { formatCents } from "@/lib/invoice"
 
@@ -50,9 +51,9 @@ export function InvoicePreview({ data, seller }: Props) {
       <div className="mb-6 flex justify-end gap-3 print:hidden">
         <Button onClick={() => handlePrint()} disabled={isPrinting}>
           {isPrinting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Spinner data-icon="inline-start" />
           ) : (
-            <Printer className="mr-2 h-4 w-4" />
+            <Printer data-icon="inline-start" />
           )}
           {isPrinting ? "Preparing…" : "Print / Save PDF"}
         </Button>
@@ -150,7 +151,7 @@ export function InvoicePreview({ data, seller }: Props) {
           </table>
         </div>
 
-        <div className="invoice-totals mt-4 ml-auto w-full max-w-64 space-y-1.5 text-sm">
+        <div className="invoice-totals mt-4 ml-auto flex w-full max-w-64 flex-col gap-1.5 text-sm">
           <div className="flex justify-between text-gray-600">
             <span>Subtotal</span>
             <span className="tabular-nums">

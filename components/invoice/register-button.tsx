@@ -2,7 +2,18 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Send, XCircle } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 
 type RegisterError = {
   error?: string
@@ -56,7 +67,6 @@ export function RegisterButton({
 
   const handleRegister = () => {
     if (pending) return
-    if (!window.confirm("Register this invoice with EIMS?")) return
     mutation.mutate()
   }
 
@@ -67,30 +77,46 @@ export function RegisterButton({
 
   return (
     <span className="inline-flex flex-col items-end gap-1">
-      <Button
-        variant="outline"
-        size={size}
-        onClick={handleRegister}
-        disabled={disabled || pending}
-        className={className}
-      >
-        {pending ? (
-          <span className="inline-flex items-center gap-1">
-            <Send className="size-3.5 animate-pulse" />
-            Registering…
-          </span>
-        ) : error ? (
-          <span className="inline-flex items-center gap-1 text-destructive">
-            <XCircle className="size-3.5" />
-            Retry
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1">
-            <Send className="size-3.5" />
-            Register
-          </span>
-        )}
-      </Button>
+      <AlertDialog>
+        <AlertDialogTrigger
+          render={
+            <Button
+              variant="outline"
+              size={size}
+              disabled={disabled || pending}
+              className={className}
+            />
+          }
+        >
+          {pending ? (
+            <Spinner data-icon="inline-start" />
+          ) : error ? (
+            <>
+              <XCircle data-icon="inline-start" className="text-destructive" />
+              <span className="text-destructive">Retry</span>
+            </>
+          ) : (
+            <>
+              <Send data-icon="inline-start" />
+              Register
+            </>
+          )}
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Register this invoice?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Register this invoice with EIMS?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not now</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleRegister} disabled={pending}>
+              {pending ? "Registering…" : "Register invoice"}
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {error && (
         <span className="flex max-w-xs flex-col items-end gap-0.5 text-right text-xs text-destructive">
           <span className="inline-flex items-center gap-1">
@@ -98,7 +124,7 @@ export function RegisterButton({
             <span className="font-medium">{headline}</span>
           </span>
           {error.issues && error.issues.length > 0 && (
-            <ul className="space-y-0.5">
+            <ul className="flex flex-col gap-0.5">
               {error.issues.map((issue, i) => (
                 <li key={i}>
                   {issue.portion && (

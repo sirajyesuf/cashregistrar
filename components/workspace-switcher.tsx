@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useWorkspace } from "@/components/workspace-provider"
 import { cn } from "@/lib/utils"
 
@@ -88,11 +89,11 @@ export function WorkspaceSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-72 p-1 max-[380px]:w-[calc(100vw-2rem)]">
         {!businesses ? (
-          <div className="px-2.5 py-6 text-center text-sm text-muted-foreground">
-            Loading…
+          <div className="px-2.5 py-6 text-center">
+            <Skeleton className="mx-auto h-10 w-40" />
           </div>
         ) : businesses.length === 0 ? (
-          <div className="space-y-3 px-2.5 py-5 text-center">
+          <div className="flex flex-col gap-3 px-2.5 py-5 text-center">
             <Store className="mx-auto size-6 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
               You don&apos;t belong to any business yet.
@@ -202,7 +203,7 @@ export function WorkspaceSwitcher() {
             </div>
 
             <DropdownMenuSeparator />
-            <div className="space-y-0.5">
+            <div className="flex flex-col gap-0.5">
               {isOwner && currentBusiness && (
                 <DropdownMenuLinkItem
                   render={

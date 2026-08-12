@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type SystemData = {
   businesses: {
@@ -52,10 +53,10 @@ export default function AdminSystemPage() {
   }, [])
 
   if (error) return <p className="text-sm text-destructive">{error}</p>
-  if (!data) return <p className="text-sm text-muted-foreground">Loading…</p>
+  if (!data) return <Skeleton className="h-24 w-full" />
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">System</h1>
         <p className="mt-1 text-sm text-muted-foreground">

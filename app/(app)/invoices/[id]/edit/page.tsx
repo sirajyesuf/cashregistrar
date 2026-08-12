@@ -9,6 +9,7 @@ import {
   type InvoiceFormInitial,
 } from "@/components/invoice/invoice-form"
 import { centsToMoney, moneyToCents } from "@/lib/invoice"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type ApiLine = {
   id: string
@@ -122,7 +123,7 @@ export default function EditInvoicePage() {
       )}
 
       {!errorMessage && !notFound && isLoading && (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <Skeleton className="h-24 w-full" />
       )}
 
       {invoice && locked && (

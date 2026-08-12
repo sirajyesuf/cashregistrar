@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Banknote, Percent, Receipt, Users } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -12,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { formatCents } from "@/lib/invoice"
+import { cn } from "@/lib/utils"
 import { StatusBadge } from "./status-badge"
 
 type OverviewData = {
@@ -49,17 +52,19 @@ function StatCard({
   icon: typeof Users
 }) {
   return (
-    <div className="rounded-xl border bg-card p-4 sm:p-5">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <span className="flex size-8 items-center justify-center rounded-lg border bg-muted/50">
-          <Icon className="size-4" />
-        </span>
-      </div>
-      <p className="mt-2 truncate text-2xl font-semibold tabular-nums">
-        {value}
-      </p>
-    </div>
+    <Card>
+      <CardContent className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <span className="flex size-8 items-center justify-center rounded-lg border bg-muted/50">
+            <Icon className="size-4" />
+          </span>
+        </div>
+        <p className="truncate text-2xl font-semibold tabular-nums">
+          {value}
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -79,10 +84,22 @@ export default function AdminOverviewPage() {
   }, [])
 
   if (error) return <p className="text-sm text-destructive">{error}</p>
-  if (!data) return <p className="text-sm text-muted-foreground">Loading…</p>
+  if (!data) {
+    return (
+      <div className="flex flex-col gap-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-28" />
+          ))}
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -112,12 +129,12 @@ export default function AdminOverviewPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border bg-card p-5">
           <h2 className="font-semibold">Invoice status</h2>
-          <div className="mt-3 space-y-2 text-sm">
+          <div className="mt-3 flex flex-col gap-2 text-sm">
             {[
               [
                 "Registered",
                 data.stats.statusCounts.REGISTERED,
-                "bg-emerald-500",
+                "bg-success",
               ],
               [
                 "Cancelled",
@@ -136,7 +153,7 @@ export default function AdminOverviewPage() {
                 className="flex items-center justify-between"
               >
                 <span className="inline-flex items-center gap-2 text-muted-foreground">
-                  <span className={`size-2 rounded-full ${dot as string}`} />
+                  <span className={cn("size-2 rounded-full", dot)} />
                   {label}
                 </span>
                 <span className="font-medium tabular-nums">
@@ -149,7 +166,7 @@ export default function AdminOverviewPage() {
 
         <div className="rounded-xl border bg-card p-5">
           <h2 className="font-semibold">Receipts</h2>
-          <div className="mt-3 space-y-2 text-sm">
+          <div className="mt-3 flex flex-col gap-2 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Issued</span>
               <span className="font-medium tabular-nums">

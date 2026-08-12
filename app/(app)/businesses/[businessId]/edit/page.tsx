@@ -16,6 +16,12 @@ import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -23,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { businessEditSchema } from "@/lib/business-schema"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   TEST_BUSINESS_NAME,
   TEST_MOR_CREDENTIALS,
@@ -89,8 +96,8 @@ function CredentialField({
   return (
     <Field data-invalid={isInvalid} className="sm:col-span-2">
       <FieldLabel htmlFor={name}>{label}</FieldLabel>
-      <div className="relative">
-        <Input
+      <InputGroup>
+        <InputGroupInput
           id={name}
           name={name}
           value={value}
@@ -98,24 +105,21 @@ function CredentialField({
           autoComplete={autoComplete}
           onBlur={onBlur}
           onChange={(event) => onChange(event.target.value)}
-          className="pr-9"
           aria-invalid={isInvalid}
         />
-        <button
-          type="button"
-          onClick={copy}
-          disabled={!value}
-          aria-label={`Copy ${label}`}
-          title="Copy to clipboard"
-          className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-        >
-          {copied ? (
-            <Check className="size-4 text-emerald-500" />
-          ) : (
-            <Copy className="size-4" />
-          )}
-        </button>
-      </div>
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            type="button"
+            size="icon-sm"
+            onClick={copy}
+            disabled={!value}
+            aria-label={`Copy ${label}`}
+            title="Copy to clipboard"
+          >
+            {copied ? <Check className="text-success" /> : <Copy />}
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
       {isInvalid && <FieldError errors={errors} />}
     </Field>
   )
@@ -209,7 +213,7 @@ function EditBusinessForm({
           form.handleSubmit().catch(() => {})
         }}
       >
-        <div className="space-y-5 px-5 py-5 sm:px-6">
+        <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
           <div className="flex justify-end">
             <Button
               type="button"
@@ -630,7 +634,7 @@ export default function EditBusinessPage() {
   }, [businessId])
 
   if (!loaded) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>
+    return <Skeleton className="h-24 w-full" />
   }
 
   if (!business || role !== "OWNER") {

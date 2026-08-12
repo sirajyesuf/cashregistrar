@@ -16,6 +16,7 @@ import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { branchCreateSchema } from "@/lib/business-schema"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type BranchDetails = {
   id: string
@@ -93,7 +94,7 @@ function EditBranchForm({
           form.handleSubmit().catch(() => {})
         }}
       >
-        <div className="space-y-5 px-5 py-5 sm:px-6">
+        <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
           <form.Field name="name">
             {(field) => {
               const isInvalid =
@@ -194,7 +195,7 @@ export default function EditBranchPage() {
   }, [businessId, branchId])
 
   if (!loaded) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>
+    return <Skeleton className="h-24 w-full" />
   }
 
   const canEdit = role === "OWNER" || role === "MANAGER"

@@ -1,11 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Building2, Check, Copy, TriangleAlert, User } from "lucide-react"
+import { Building2, Check, ChevronDown, Copy, TriangleAlert, User } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -127,45 +130,43 @@ function FailurePanel({
   }
 
   return (
-    <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4">
-      <div className="flex items-start gap-3">
-        <TriangleAlert className="mt-0.5 size-5 shrink-0 text-destructive" />
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-semibold text-destructive">{title}</h2>
-            {statusCode !== undefined && statusCode !== null && (
-              <Badge variant="destructive">EIMS {statusCode}</Badge>
-            )}
-            {badge && <Badge variant="outline">{badge}</Badge>}
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              className="ml-auto"
-              onClick={handleCopy}
-            >
-              {copied ? <Check className="text-emerald-600" /> : <Copy />}
-              {copied ? "Copied" : "Copy"}
-            </Button>
-          </div>
-          <p className="text-sm text-foreground">{message}</p>
-          {issues && issues.length > 0 && (
-            <ul className="space-y-1 text-sm">
-              {issues.map((issue, i) => (
-                <li key={i} className="flex gap-2">
-                  {issue.portion && (
-                    <span className="shrink-0 font-medium text-muted-foreground">
-                      {issue.portion}:
-                    </span>
-                  )}
-                  <span>{issue.messages.join("; ")}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
+    <Alert variant="destructive">
+      <TriangleAlert />
+      <AlertTitle className="flex flex-wrap items-center gap-2">
+        {title}
+        {statusCode !== undefined && statusCode !== null && (
+          <Badge variant="destructive">EIMS {statusCode}</Badge>
+        )}
+        {badge && <Badge variant="outline">{badge}</Badge>}
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          className="ml-auto"
+          onClick={handleCopy}
+        >
+          {copied ? <Check className="text-success" /> : <Copy />}
+          {copied ? "Copied" : "Copy"}
+        </Button>
+      </AlertTitle>
+      <AlertDescription>
+        <p>{message}</p>
+        {issues && issues.length > 0 && (
+          <ul className="mt-2 flex flex-col gap-1">
+            {issues.map((issue, i) => (
+              <li key={i} className="flex gap-2">
+                {issue.portion && (
+                  <span className="shrink-0 font-medium text-muted-foreground">
+                    {issue.portion}:
+                  </span>
+                )}
+                <span>{issue.messages.join("; ")}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </AlertDescription>
+    </Alert>
   )
 }
 
@@ -199,7 +200,7 @@ export default function AdminInvoiceViewPage({
   }, [params])
 
   return (
-    <div className="space-y-4">
+        <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
@@ -217,7 +218,11 @@ export default function AdminInvoiceViewPage({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       {!error && !invoice && (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+    <div className="flex flex-col gap-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
       )}
 
       {invoice && (
@@ -249,7 +254,7 @@ export default function AdminInvoiceViewPage({
       )}
 
       {invoice && (
-        <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+        <form className="flex flex-col gap-6" onSubmit={(e) => e.preventDefault()}>
           <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
             <div className="flex-1">
               <Field label="Date" value={invoice.date} />
@@ -259,16 +264,18 @@ export default function AdminInvoiceViewPage({
             </div>
           </div>
 
-          <details className="rounded-lg border" open>
-            <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
+          <Collapsible defaultOpen className="group rounded-lg border">
+            <CollapsibleTrigger className="flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm font-medium select-none">
               {invoice.transactionType === "B2B" ? (
                 <Building2 className="size-4" />
               ) : (
                 <User className="size-4" />
               )}
               Buyer Details
-            </summary>
-            <div className="space-y-4 border-t p-4">
+              <ChevronDown className="ml-auto size-4 text-muted-foreground transition-transform group-data-[open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="flex flex-col gap-4 border-t p-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field
                   label="Legal Name"
@@ -308,7 +315,8 @@ export default function AdminInvoiceViewPage({
                 <Field label="Kebele" value={invoice.buyerKebele ?? "—"} />
               </div>
             </div>
-          </details>
+            </CollapsibleContent>
+          </Collapsible>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             <Field label="Cashier Name" value={invoice.cashierName} />
@@ -360,7 +368,7 @@ export default function AdminInvoiceViewPage({
             </Table>
           </div>
 
-          <div className="ml-auto w-64 space-y-1.5 border-t pt-3 text-sm">
+          <div className="ml-auto flex w-64 flex-col gap-1.5 border-t pt-3 text-sm">
             <div className="flex justify-between">
               <span>Subtotal</span>
               <span className="tabular-nums">

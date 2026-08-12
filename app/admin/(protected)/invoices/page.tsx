@@ -20,7 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group"
 import { formatCents, moneyToCents } from "@/lib/invoice"
 import { StatusBadge } from "../status-badge"
 
@@ -88,7 +92,7 @@ export default function AdminInvoicesPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
-    <div className="space-y-4">
+        <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -117,30 +121,28 @@ export default function AdminInvoicesPage() {
           </SelectContent>
         </Select>
 
-        {STATUSES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => {
-              setStatus(s)
-              setPage(1)
-            }}
-            className={cn(
-              "rounded-full border px-3 py-1 text-sm font-medium transition-colors",
-              status === s
-                ? "border-primary bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {s === "" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
-          </button>
-        ))}
+        <ToggleGroup
+          value={status ? [status] : []}
+          onValueChange={(values) => {
+            setStatus(values[0] ?? "")
+            setPage(1)
+          }}
+        >
+          {STATUSES.map((s) => (
+            <ToggleGroupItem key={s} value={s} variant="outline" size="sm">
+              {s === "" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </div>
 
       {error && <p className="text-sm text-destructive">{error.message}</p>}
 
       {!error && !invoices && (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+    <div className="flex flex-col gap-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
       )}
 
       {invoices && (

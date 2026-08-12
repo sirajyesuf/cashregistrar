@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { authClient } from "@/lib/auth-client"
 
@@ -54,41 +54,45 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         <h1 className="mb-8 text-center text-2xl font-bold">
           {mode === "signin" ? "Sign In" : "Create Account"}
         </h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "signup" && (
-            <div>
-              <Label htmlFor="name">Full name</Label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <FieldGroup>
+            {mode === "signup" && (
+              <Field>
+                <FieldLabel htmlFor="name">Full name</FieldLabel>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                />
+              </Field>
+            )}
+            <Field>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
               <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="name"
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
               />
-            </div>
-          )}
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              minLength={5}
-              required
-            />
-          </div>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="password">Password</FieldLabel>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={
+                  mode === "signin" ? "current-password" : "new-password"
+                }
+                minLength={5}
+                required
+              />
+            </Field>
+          </FieldGroup>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending

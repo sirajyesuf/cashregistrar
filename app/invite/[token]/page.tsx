@@ -4,13 +4,24 @@ import { useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { Building2, CheckCircle2, Clock, Eye, EyeOff, Store } from "lucide-react"
+import { Building2, CheckCircle2, Clock, Eye, EyeOff, Store, TriangleAlert } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
 import { ThemeSwitcher } from "@/components/theme-switcher"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type InviteInfo = {
   email: string
@@ -152,8 +163,8 @@ function InvitePageContent({ token }: { token: string }) {
   if (isPending) {
     return (
       <div className="flex min-h-svh items-center justify-center p-6">
-        <div className="w-full max-w-md space-y-3">
-          <div className="h-32 animate-pulse rounded-xl border bg-muted/50" />
+        <div className="flex w-full max-w-md flex-col gap-3">
+          <Skeleton className="h-32 w-full" />
         </div>
       </div>
     )
@@ -208,7 +219,7 @@ function InvitePageContent({ token }: { token: string }) {
             {invite!.invitedByName ?? "Someone"} invited you to join their team.
           </p>
 
-          <dl className="mt-5 space-y-2 text-sm">
+          <dl className="mt-5 flex flex-col gap-2 text-sm">
             <div className="flex items-center justify-between gap-4">
               <dt className="text-muted-foreground">Role</dt>
               <dd className="font-medium">
@@ -232,67 +243,68 @@ function InvitePageContent({ token }: { token: string }) {
 
           <div className="mt-6">
             {loadingAuth ? (
-              <div className="flex h-10 items-center justify-center text-sm text-muted-foreground">
-                Loading…
+              <div className="flex h-10 items-center justify-center">
+                <Skeleton className="h-8 w-full" />
               </div>
             ) : needsAccount ? (
               <>
-                <form onSubmit={handleAuthSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="invite-email">Email</Label>
-                    <Input
-                      id="invite-email"
-                      type="email"
-                      value={invite!.email}
-                      readOnly
-                      tabIndex={-1}
-                    />
-                  </div>
-                  {mode === "signup" && (
-                    <div className="space-y-2">
-                      <Label htmlFor="invite-name">Full name</Label>
-                      <Input
-                        id="invite-name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        autoComplete="name"
-                        placeholder="Your full name"
-                      />
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    <Label htmlFor="invite-password">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="invite-password"
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        autoComplete={
-                          mode === "signin" ? "current-password" : "new-password"
-                        }
-                        className="pr-11"
-                        minLength={5}
-                        required
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setShowPassword((visible) => !visible)}
-                        aria-label={
-                          showPassword ? "Hide password" : "Show password"
-                        }
-                        className="absolute top-1/2 right-1 -translate-y-1/2"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="size-4" />
-                        ) : (
-                          <Eye className="size-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
+                <form onSubmit={handleAuthSubmit} className="flex flex-col gap-4">
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="invite-email">Email</FieldLabel>
+                      <InputGroup>
+                        <InputGroupInput
+                          id="invite-email"
+                          type="email"
+                          value={invite!.email}
+                          readOnly
+                          tabIndex={-1}
+                        />
+                      </InputGroup>
+                    </Field>
+                    {mode === "signup" && (
+                      <Field>
+                        <FieldLabel htmlFor="invite-name">Full name</FieldLabel>
+                        <InputGroup>
+                          <InputGroupInput
+                            id="invite-name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            autoComplete="name"
+                            placeholder="Your full name"
+                          />
+                        </InputGroup>
+                      </Field>
+                    )}
+                    <Field>
+                      <FieldLabel htmlFor="invite-password">Password</FieldLabel>
+                      <InputGroup>
+                        <InputGroupInput
+                          id="invite-password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          autoComplete={
+                            mode === "signin" ? "current-password" : "new-password"
+                          }
+                          minLength={5}
+                          required
+                        />
+                        <InputGroupAddon align="inline-end">
+                          <InputGroupButton
+                            type="button"
+                            size="icon-sm"
+                            onClick={() => setShowPassword((visible) => !visible)}
+                            aria-label={
+                              showPassword ? "Hide password" : "Show password"
+                            }
+                          >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                          </InputGroupButton>
+                        </InputGroupAddon>
+                      </InputGroup>
+                    </Field>
+                  </FieldGroup>
 
                   {error && <p className="text-sm text-destructive">{error}</p>}
 
@@ -306,16 +318,17 @@ function InvitePageContent({ token }: { token: string }) {
                 </form>
                 <p className="mt-4 text-center text-sm text-muted-foreground">
                   {mode === "signin" ? "New here?" : "Already have an account?"}{" "}
-                  <button
+                  <Button
                     type="button"
-                    className="font-medium text-primary hover:underline"
+                    variant="link"
+                    className="text-sm"
                     onClick={() => {
                       setMode(mode === "signin" ? "signup" : "signin")
                       setError(null)
                     }}
                   >
                     {mode === "signin" ? "Create an account" : "Sign in instead"}
-                  </button>
+                  </Button>
                 </p>
               </>
             ) : emailMatches ? (
@@ -326,23 +339,24 @@ function InvitePageContent({ token }: { token: string }) {
                   disabled={pending}
                   onClick={handleAccept}
                 >
-                  <CheckCircle2 className="size-4" />
+                  <CheckCircle2 data-icon="inline-start" />
                   {pending ? "Joining…" : "Accept invitation"}
                 </Button>
               </>
             ) : (
               <>
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-400">
-                  <p className="font-medium">Signed in as a different account</p>
-                  <p className="mt-1">
+                <Alert className="mb-4">
+                  <TriangleAlert />
+                  <AlertTitle>Signed in as a different account</AlertTitle>
+                  <AlertDescription>
                     You&apos;re signed in as {user?.email}, but this invitation is
                     for {invite!.email}. Sign in with the invited account to
                     accept.
-                  </p>
-                </div>
+                  </AlertDescription>
+                </Alert>
                 <Button
                   variant="outline"
-                  className="mt-4 w-full"
+                  className="w-full"
                   onClick={async () => {
                     await authClient.signOut()
                     setError(null)

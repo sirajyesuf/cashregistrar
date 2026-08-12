@@ -11,9 +11,13 @@ import {
   ReceiptText,
   Trash2,
 } from "lucide-react"
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/components/ui/empty"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -221,13 +225,6 @@ export default function InvoicesPage() {
   }
 
   const handleDelete = (invoice: InvoiceRow) => {
-    if (
-      !window.confirm(
-        `Delete invoice ${invoice.number}? This cannot be undone.`
-      )
-    ) {
-      return
-    }
     setDeletingId(invoice.id)
     deleteMutation.mutate(invoice.id)
   }
@@ -240,13 +237,6 @@ export default function InvoicesPage() {
         : false
     })
     if (ids.length === 0) return
-    if (
-      !window.confirm(
-        `Delete ${ids.length} selected invoice${ids.length > 1 ? "s" : ""}? This cannot be undone.`
-      )
-    ) {
-      return
-    }
     bulkDeleteMutation.mutate(ids)
   }
 
@@ -257,7 +247,7 @@ export default function InvoicesPage() {
         <div className="flex flex-wrap gap-2">
           <Link href="/invoices/new">
             <Button>
-              <Plus className="mr-1 h-4 w-4" />
+              <Plus data-icon="inline-start" />
               New Invoice
             </Button>
           </Link>
@@ -290,25 +280,36 @@ export default function InvoicesPage() {
       )}
 
       {!workspace ? (
-        <div className="rounded-lg border border-dashed p-10 text-center">
-          <p className="text-sm text-muted-foreground">
-            No business selected. Create or select a business to view invoices.
-          </p>
-          <Link href="/businesses/new" className="mt-4 inline-block">
-            <Button>Create business</Button>
-          </Link>
-        </div>
+        <Empty className="rounded-xl border border-dashed p-10">
+          <EmptyContent>
+            <EmptyTitle>No business selected</EmptyTitle>
+            <EmptyDescription>
+              Create or select a business to view invoices.
+            </EmptyDescription>
+            <Link href="/businesses/new">
+              <Button>Create business</Button>
+            </Link>
+          </EmptyContent>
+        </Empty>
       ) : errorMessage ? (
         <p className="mb-4 text-sm text-destructive">{errorMessage}</p>
       ) : invoices === null ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : invoices.length === 0 ? (
-        <div className="rounded-lg border p-10 text-center">
-          <p className="text-muted-foreground">No invoices yet.</p>
-          <Link href="/invoices/new" className="mt-4 inline-block">
-            <Button>Create your first invoice</Button>
-          </Link>
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-64 w-full" />
         </div>
+      ) : invoices.length === 0 ? (
+        <Empty className="rounded-xl border border-dashed p-10">
+          <EmptyContent>
+            <EmptyTitle>No invoices yet</EmptyTitle>
+            <EmptyDescription>
+              Create your first invoice to get started.
+            </EmptyDescription>
+            <Link href="/invoices/new">
+              <Button>Create your first invoice</Button>
+            </Link>
+          </EmptyContent>
+        </Empty>
       ) : null}
 
       {invoices && invoices.length > 0 && (
@@ -415,7 +416,7 @@ export default function InvoicesPage() {
                             size="sm"
                             disabled={cannotEdit(invoice)}
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil data-icon="inline-start" className="size-3.5" />
                             Edit
                           </Button>
                         </Link>
@@ -424,18 +425,45 @@ export default function InvoicesPage() {
                             View
                           </Button>
                         </Link>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(invoice)}
-                          disabled={
-                            deletingId === invoice.id || cannotDelete(invoice)
-                          }
-                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          {deletingId === invoice.id ? "Deleting…" : "Delete"}
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger
+                            render={
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={
+                                  deletingId === invoice.id ||
+                                  cannotDelete(invoice)
+                                }
+                              />
+                            }
+                          >
+                            <Trash2 data-icon="inline-start" className="size-3.5" />
+                            {deletingId === invoice.id ? "Deleting…" : "Delete"}
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete invoice {invoice.number}?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep invoice</AlertDialogCancel>
+                              <AlertDialogCancel
+                                variant="destructive"
+                                onClick={() => handleDelete(invoice)}
+                                disabled={deletingId === invoice.id}
+                              >
+                                {deletingId === invoice.id
+                                  ? "Deleting…"
+                                  : "Delete invoice"}
+                              </AlertDialogCancel>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -466,16 +494,18 @@ function InvoiceStat({
   icon: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl border bg-card p-5 text-card-foreground shadow-sm">
-      <div className="flex items-start justify-between">
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-          {icon}
-        </span>
-      </div>
-      <p className="mt-3 text-2xl font-semibold tracking-tight tabular-nums">
-        {value}
-      </p>
-    </div>
+    <Card>
+      <CardContent className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+            {icon}
+          </span>
+        </div>
+        <p className="text-2xl font-semibold tracking-tight tabular-nums">
+          {value}
+        </p>
+      </CardContent>
+    </Card>
   )
 }

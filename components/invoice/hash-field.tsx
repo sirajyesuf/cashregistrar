@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Check, Copy } from "lucide-react"
 import { copyText } from "@/lib/copy"
+import { Button } from "@/components/ui/button"
 
 type HashFieldProps = {
   label: string
@@ -36,18 +37,17 @@ export function HashField({ label, value }: HashFieldProps) {
         <span title={value} className="truncate">
           {short}
         </span>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
           onClick={copy}
           aria-label={`Copy ${label}`}
-          className="shrink-0 rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+          title="Copy to clipboard"
+          className="text-muted-foreground"
         >
-          {copied ? (
-            <Check className="size-3.5 text-emerald-500" />
-          ) : (
-            <Copy className="size-3.5" />
-          )}
-        </button>
+          {copied ? <Check className="text-success" /> : <Copy />}
+        </Button>
       </span>
     </div>
   )

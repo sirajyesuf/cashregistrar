@@ -24,8 +24,7 @@ export function ThemeSwitcher() {
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
     >
-      <Sun className="size-4 dark:hidden" />
-      <Moon className="hidden size-4 dark:block" />
+      {isDark ? <Moon /> : <Sun />}
     </Button>
   )
 }
