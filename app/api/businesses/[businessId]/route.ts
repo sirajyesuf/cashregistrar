@@ -9,16 +9,27 @@ export const runtime = "nodejs"
 
 type Context = { params: Promise<{ businessId: string }> }
 
+const POSITIVE_INT_REGEX = /^[1-9]\d*$/
+
+const positiveInteger = (label: string) =>
+  z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === "" || POSITIVE_INT_REGEX.test(value),
+      `${label} must be an integer greater than 0`
+    )
+
 const updateBusinessSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   address: z.string().trim().max(240).nullable().optional(),
   currency: z.string().trim().length(3).toUpperCase().optional(),
   active: z.boolean().optional(),
-  city: z.string().trim().max(120).optional(),
+  city: positiveInteger("City").max(120).optional(),
   email: z.string().trim().email("Enter a valid email address").max(160).nullable().optional(),
   phone: z.string().trim().max(40).nullable().optional(),
-  region: z.string().trim().max(10).nullable().optional(),
-  wereda: z.string().trim().max(120).nullable().optional(),
+  region: positiveInteger("Region").max(10).nullable().optional(),
+  wereda: positiveInteger("Wereda").max(120).nullable().optional(),
 })
 
 export async function GET(_request: Request, { params }: Context) {

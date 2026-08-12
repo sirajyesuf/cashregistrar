@@ -19,9 +19,21 @@ export const morCredentialSchema = z.object({
 })
 
 const EIMS_EMAIL_REGEX = /^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$/
+const ETHIOPIAN_PHONE_REGEX = /^(\+251|0)?[1-9]\d{8}$/
+const POSITIVE_INT_REGEX = /^[1-9]\d*$/
+
+const positiveIntegerField = (label: string, max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .refine(
+      (value) => value === "" || POSITIVE_INT_REGEX.test(value),
+      `${label} must be an integer greater than 0`
+    )
 
 const sellerFields = {
-  city: z.string().trim().max(120),
+  city: positiveIntegerField("City", 120),
   email: z
     .string()
     .trim()
@@ -30,9 +42,16 @@ const sellerFields = {
       (value) => value === "" || EIMS_EMAIL_REGEX.test(value),
       "Enter a valid email address"
     ),
-  phone: z.string().trim().max(40),
-  region: z.string().trim().max(10),
-  wereda: z.string().trim().max(120),
+  phone: z
+    .string()
+    .trim()
+    .max(20)
+    .refine(
+      (value) => value === "" || ETHIOPIAN_PHONE_REGEX.test(value),
+      "Enter a valid Ethiopian phone number (e.g. +2519XXXXXXXX)"
+    ),
+  region: positiveIntegerField("Region", 10),
+  wereda: positiveIntegerField("Wereda", 120),
 }
 
 export const businessCreateSchema = z.object({
