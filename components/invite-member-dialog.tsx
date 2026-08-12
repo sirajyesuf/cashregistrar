@@ -2,10 +2,26 @@
 
 import { useState } from "react"
 import { Mail } from "lucide-react"
-import { Dialog } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import {
   Select,
   SelectContent,
@@ -80,38 +96,37 @@ export function InviteMemberDialog({
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={close}>
-      <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/50" />
-        <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-card p-6 shadow-lg outline-none">
-          <Dialog.Title className="text-lg font-semibold">
-            Invite a member
-          </Dialog.Title>
-          <Dialog.Description className="mt-1 text-sm text-muted-foreground">
+    <Dialog open={open} onOpenChange={close}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Invite a member</DialogTitle>
+          <DialogDescription>
             Create a one-time link for someone to join this business.
-          </Dialog.Description>
+          </DialogDescription>
+        </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="invite-email">Email</Label>
-              <div className="relative">
-                <Mail className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="invite-email">Email</FieldLabel>
+              <InputGroup>
+                <InputGroupAddon>
+                  <Mail />
+                </InputGroupAddon>
+                <InputGroupInput
                   id="invite-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="pl-9"
                   autoFocus
                   required
                 />
-              </div>
-            </div>
-
+              </InputGroup>
+            </Field>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="invite-role">Role</Label>
+              <Field>
+                <FieldLabel htmlFor="invite-role">Role</FieldLabel>
                 <Select
                   value={role}
                   onValueChange={(value) =>
@@ -126,9 +141,9 @@ export function InviteMemberDialog({
                     <SelectItem value="CASHIER">Cashier</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="invite-branch">Branch</Label>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="invite-branch">Branch</FieldLabel>
                 <Select
                   value={branchId}
                   onValueChange={(value) => setBranchId(value)}
@@ -144,22 +159,25 @@ export function InviteMemberDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
             </div>
+          </FieldGroup>
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <div className="flex justify-end gap-2">
-              <Dialog.Close render={<Button variant="outline" />} disabled={pending}>
-                Cancel
-              </Dialog.Close>
-              <Button type="submit" disabled={pending}>
-                {pending ? "Creating…" : "Create invite link"}
-              </Button>
-            </div>
-          </form>
-        </Dialog.Popup>
-      </Dialog.Portal>
-    </Dialog.Root>
+          <DialogFooter>
+            <DialogClose
+              render={<Button variant="outline" />}
+              disabled={pending}
+            >
+              Cancel
+            </DialogClose>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Creating…" : "Create invite link"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

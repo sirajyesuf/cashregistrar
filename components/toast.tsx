@@ -11,16 +11,14 @@ type ToastVariant = "default" | "success" | "destructive"
 const variantClasses: Record<ToastVariant, string> = {
   default: "border-border bg-background text-foreground",
   success:
-    "border-emerald-600/40 bg-emerald-50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-950 dark:text-emerald-100",
+    "border-success/50 bg-success/10 text-foreground",
   destructive:
     "border-destructive/60 bg-destructive text-destructive-foreground",
 }
 
 function ToastIcon({ variant }: { variant: ToastVariant }) {
   if (variant === "success") {
-    return (
-      <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-    )
+    return <CheckCircle2 className="size-4 shrink-0 text-success" />
   }
   if (variant === "destructive") {
     return <XCircle className="size-4 shrink-0" />
@@ -58,7 +56,7 @@ function ToastViewport() {
           >
             <div className="flex items-start gap-3">
               <ToastIcon variant={variant} />
-              <div className="space-y-1">
+              <div className="flex flex-col gap-1">
                 <ToastPrimitive.Toast.Title className="text-sm font-semibold">
                   {item.title}
                 </ToastPrimitive.Toast.Title>

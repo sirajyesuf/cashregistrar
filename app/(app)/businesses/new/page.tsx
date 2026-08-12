@@ -13,6 +13,13 @@ import {
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useWorkspace } from "@/components/workspace-provider"
 import { useMutation } from "@tanstack/react-query"
 import { Store } from "lucide-react"
@@ -132,7 +139,7 @@ export default function AddBusinessPage() {
             form.handleSubmit().catch(() => {})
           }}
         >
-          <div className="space-y-5 px-5 py-5 sm:px-6">
+          <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
             <div className="flex justify-end">
               <Button
                 type="button"
@@ -394,20 +401,21 @@ export default function AddBusinessPage() {
                 {(field) => (
                   <Field>
                     <FieldLabel htmlFor={field.name}>System type</FieldLabel>
-                    <select
-                      id={field.name}
-                      name={field.name}
+                    <Select
                       value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
+                      onValueChange={(value) =>
+                        field.handleChange(value ?? "POS")
                       }
-                      className="h-9 rounded-lg border border-input bg-background px-3 font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
                     >
-                      <option value="ERP">ERP</option>
-                      <option value="POS">POS</option>
-                      <option value="MANUAL">MANUAL</option>
-                    </select>
+                      <SelectTrigger id={field.name}>
+                        <SelectValue placeholder="Select system type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ERP">ERP</SelectItem>
+                        <SelectItem value="POS">POS</SelectItem>
+                        <SelectItem value="MANUAL">MANUAL</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </Field>
                 )}
               </form.Field>

@@ -15,6 +15,12 @@ import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -107,7 +113,7 @@ export default function AddUserPage() {
   })
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Add user</h1>
@@ -131,7 +137,7 @@ export default function AddUserPage() {
             form.handleSubmit().catch(() => {})
           }}
         >
-          <div className="space-y-5 px-5 py-5 sm:px-6">
+          <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
             <div className="flex justify-end">
               <Button
                 type="button"
@@ -235,8 +241,8 @@ export default function AddUserPage() {
                     <FieldLabel htmlFor={field.name}>
                       Temporary password
                     </FieldLabel>
-                    <div className="relative">
-                      <Input
+                    <InputGroup>
+                      <InputGroupInput
                         id={field.name}
                         name={field.name}
                         type={showPassword ? "text" : "password"}
@@ -245,27 +251,22 @@ export default function AddUserPage() {
                         onChange={(event) =>
                           field.handleChange(event.target.value)
                         }
-                        className="pr-11"
                         autoComplete="new-password"
                         aria-invalid={isInvalid}
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setShowPassword((visible) => !visible)}
-                        aria-label={
-                          showPassword ? "Hide password" : "Show password"
-                        }
-                        className="absolute top-1/2 right-1 -translate-y-1/2"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="size-4" />
-                        ) : (
-                          <Eye className="size-4" />
-                        )}
-                      </Button>
-                    </div>
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupButton
+                          type="button"
+                          size="icon-sm"
+                          onClick={() => setShowPassword((visible) => !visible)}
+                          aria-label={
+                            showPassword ? "Hide password" : "Show password"
+                          }
+                        >
+                          {showPassword ? <EyeOff /> : <Eye />}
+                        </InputGroupButton>
+                      </InputGroupAddon>
+                    </InputGroup>
                     <FieldDescription>
                       At least 5 characters. Share it securely with the user.
                     </FieldDescription>
@@ -317,7 +318,7 @@ export default function AddUserPage() {
             </form.Field>
 
             <div className="border-t pt-5">
-              <div className="space-y-5">
+              <div className="flex flex-col gap-5">
                 <div className="flex items-center gap-2">
                   <Building2 className="size-4 text-muted-foreground" />
                   <h3 className="text-sm font-semibold">Business</h3>
@@ -557,20 +558,21 @@ export default function AddUserPage() {
                     {(field) => (
                       <Field>
                         <FieldLabel htmlFor={field.name}>System type</FieldLabel>
-                        <select
-                          id={field.name}
-                          name={field.name}
+                        <Select
                           value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(event) =>
-                            field.handleChange(event.target.value)
+                          onValueChange={(value) =>
+                            field.handleChange(value ?? "POS")
                           }
-                          className="h-9 rounded-lg border border-input bg-background px-3 font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
                         >
-                          <option value="ERP">ERP</option>
-                          <option value="POS">POS</option>
-                          <option value="MANUAL">MANUAL</option>
-                        </select>
+                          <SelectTrigger id={field.name}>
+                            <SelectValue placeholder="Select system type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ERP">ERP</SelectItem>
+                            <SelectItem value="POS">POS</SelectItem>
+                            <SelectItem value="MANUAL">MANUAL</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </Field>
                     )}
                   </form.Field>

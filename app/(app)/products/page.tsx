@@ -4,10 +4,13 @@ import { useState } from "react"
 import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Package, Pencil, Plus, Trash2 } from "lucide-react"
-import { Dialog } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Empty, EmptyContent, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -92,22 +95,23 @@ function ProductFormDialog({
   const message = localError ?? error
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/50" />
-        <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-card p-6 shadow-lg outline-none">
-          <Dialog.Title className="text-lg font-semibold">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
             {editing ? "Edit Product" : "Add Product"}
-          </Dialog.Title>
-          <Dialog.Description className="mt-1 text-sm text-muted-foreground">
+          </DialogTitle>
+          <DialogDescription>
             {editing
               ? "Update the name or selling price for this product."
               : "Create a product to use on your invoices."}
-          </Dialog.Description>
+          </DialogDescription>
+        </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="product-name">Name</Label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="product-name">Name</FieldLabel>
               <Input
                 id="product-name"
                 value={name}
@@ -115,19 +119,19 @@ function ProductFormDialog({
                 placeholder="e.g. Sugar 1kg"
                 autoFocus
               />
-            </div>
+            </Field>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="product-code">Item Code</Label>
+              <Field>
+                <FieldLabel htmlFor="product-code">Item Code</FieldLabel>
                 <Input
                   id="product-code"
                   value={itemCode}
                   onChange={(e) => setItemCode(e.target.value)}
                   placeholder="SKU (optional)"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="product-unit">Unit</Label>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="product-unit">Unit</FieldLabel>
                 <Select value={unit} onValueChange={(value) => setUnit(value ?? "PCS")}>
                   <SelectTrigger id="product-unit" aria-label="Unit">
                     <SelectValue placeholder="Select unit" />
@@ -140,10 +144,10 @@ function ProductFormDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="product-price">Selling Price (ETB)</Label>
+            <Field>
+              <FieldLabel htmlFor="product-price">Selling Price (ETB)</FieldLabel>
               <Input
                 id="product-price"
                 value={price}
@@ -151,22 +155,25 @@ function ProductFormDialog({
                 placeholder="0.00"
                 inputMode="decimal"
               />
-            </div>
+            </Field>
+          </FieldGroup>
 
-            {message && <p className="text-sm text-destructive">{message}</p>}
+          {message && <p className="text-sm text-destructive">{message}</p>}
 
-            <div className="flex justify-end gap-2">
-              <Dialog.Close render={<Button variant="outline" />} disabled={pending}>
-                Cancel
-              </Dialog.Close>
-              <Button type="submit" disabled={pending}>
-                {pending ? "Saving…" : editing ? "Save Changes" : "Add Product"}
-              </Button>
-            </div>
-          </form>
-        </Dialog.Popup>
-      </Dialog.Portal>
-    </Dialog.Root>
+          <DialogFooter>
+            <DialogClose
+              render={<Button variant="outline" />}
+              disabled={pending}
+            >
+              Cancel
+            </DialogClose>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Saving…" : editing ? "Save Changes" : "Add Product"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -256,9 +263,6 @@ export default function ProductsPage() {
   })
 
   const handleDelete = (product: Product) => {
-    if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) {
-      return
-    }
     deleteMutation.mutate(product.id)
   }
 
@@ -273,42 +277,52 @@ export default function ProductsPage() {
             setDialogOpen(true)
           }}
         >
-          <Plus className="mr-1 h-4 w-4" />
+          <Plus data-icon="inline-start" />
           Add Product
         </Button>
       </div>
 
       {!workspace ? (
-        <div className="rounded-lg border border-dashed p-10 text-center">
-          <p className="text-sm text-muted-foreground">
-            No business selected. Create or select a business to manage products.
-          </p>
-          <Link href="/businesses/new" className="mt-4 inline-block">
-            <Button>Create business</Button>
-          </Link>
-        </div>
+        <Empty className="rounded-xl border border-dashed p-10">
+          <EmptyContent>
+            <EmptyTitle>No business selected</EmptyTitle>
+            <EmptyDescription>
+              Create or select a business to manage products.
+            </EmptyDescription>
+            <Link href="/businesses/new">
+              <Button>Create business</Button>
+            </Link>
+          </EmptyContent>
+        </Empty>
       ) : isPending ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
       ) : loadError ? (
         <p className="text-sm text-destructive">{loadError}</p>
       ) : products.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-10 text-center">
-          <Package className="mx-auto mb-3 size-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            No products yet. Add your first product to get started.
-          </p>
-          <Button
-            className="mt-4"
-            onClick={() => {
-              setEditing(null)
-              setFormError(null)
-              setDialogOpen(true)
-            }}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Add Product
-          </Button>
-        </div>
+        <Empty className="rounded-xl border border-dashed p-10">
+          <EmptyMedia variant="icon">
+            <Package />
+          </EmptyMedia>
+          <EmptyContent>
+            <EmptyTitle>No products yet</EmptyTitle>
+            <EmptyDescription>
+              Add your first product to get started.
+            </EmptyDescription>
+            <Button
+              onClick={() => {
+                setEditing(null)
+                setFormError(null)
+                setDialogOpen(true)
+              }}
+            >
+              <Plus data-icon="inline-start" />
+              Add Product
+            </Button>
+          </EmptyContent>
+        </Empty>
       ) : (
         <div className="rounded-md border">
           <Table>
@@ -345,17 +359,38 @@ export default function ProductsPage() {
                           setDialogOpen(true)
                         }}
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="size-4" />
                         <span className="sr-only">Edit {product.name}</span>
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(product)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                        <span className="sr-only">Delete {product.name}</span>
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger
+                          render={
+                            <Button variant="ghost" size="sm" />
+                          }
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                          <span className="sr-only">Delete {product.name}</span>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Delete &quot;{product.name}&quot;?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Keep product</AlertDialogCancel>
+                            <AlertDialogCancel
+                              variant="destructive"
+                              onClick={() => handleDelete(product)}
+                            >
+                              Delete product
+                            </AlertDialogCancel>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>

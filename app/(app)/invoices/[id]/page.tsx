@@ -8,11 +8,14 @@ import { useQuery } from "@tanstack/react-query"
 import { Pencil, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { InvoicePreview } from "@/components/invoice/invoice-preview"
 import { RegisterButton } from "@/components/invoice/register-button"
 import { CancelButton } from "@/components/invoice/cancel-button"
 import { ReceiptButton } from "@/components/invoice/receipt-button"
 import { HashField } from "@/components/invoice/hash-field"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 import { formatCents, hasIssuedReceipt, invoiceFromApi } from "@/lib/invoice"
 
 type ApiInvoice = {
@@ -82,7 +85,7 @@ export default function InvoiceDetailPage() {
       <div className="mb-6 flex items-center justify-end print:hidden">
         <Link href={`/invoices/${id}/edit`}>
           <Button variant="outline">
-            <Pencil className="mr-2 h-4 w-4" />
+            <Pencil data-icon="inline-start" />
             Edit
           </Button>
         </Link>
@@ -95,128 +98,128 @@ export default function InvoiceDetailPage() {
       )}
 
       {!errorMessage && !notFound && isLoading && (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-64 w-full" />
+        </div>
       )}
 
       {invoice && (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           <div className="rounded-lg border bg-muted/30 print:hidden">
-            <button
-              type="button"
-              onClick={() => setPanelOpen((open) => !open)}
-              className="flex w-full items-center gap-3 p-4 text-left"
-              aria-expanded={panelOpen}
-            >
-              <ChevronDown
-                className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
-                  panelOpen ? "" : "-rotate-90"
-                }`}
-              />
-              <span className="text-sm font-semibold">EIMS Registration</span>
-              {invoice.registrationStatus === "REGISTERED" ? (
-                <Badge variant="success">Registered</Badge>
-              ) : invoice.registrationStatus === "PROCESSING" ? (
-                <Badge variant="outline">Processing</Badge>
-              ) : invoice.registrationStatus === "CANCELLED" ? (
-                <Badge variant="outline">Cancelled</Badge>
-              ) : invoice.registrationStatus === "FAILED" ? (
-                <Badge variant="destructive">Failed</Badge>
-              ) : (
-                <Badge variant="outline">Unregistered</Badge>
-              )}
-              {receiptIssued && <Badge variant="outline">Receipt issued</Badge>}
-            </button>
-
-            {panelOpen && (
-              <div className="space-y-3 border-t p-4">
-                {invoice.irn && (
-                  <HashField label="Invoice IRN" value={invoice.irn} />
+            <Collapsible open={panelOpen} onOpenChange={setPanelOpen} className="group">
+              <CollapsibleTrigger className="flex w-full items-center gap-3 p-4 text-left outline-none">
+                <ChevronDown
+                  className={cn(
+                    "size-4 shrink-0 text-muted-foreground transition-transform group-data-[open]:rotate-0 -rotate-90"
+                  )}
+                />
+                <span className="text-sm font-semibold">EIMS Registration</span>
+                {invoice.registrationStatus === "REGISTERED" ? (
+                  <Badge variant="success">Registered</Badge>
+                ) : invoice.registrationStatus === "PROCESSING" ? (
+                  <Badge variant="outline">Processing</Badge>
+                ) : invoice.registrationStatus === "CANCELLED" ? (
+                  <Badge variant="outline">Cancelled</Badge>
+                ) : invoice.registrationStatus === "FAILED" ? (
+                  <Badge variant="destructive">Failed</Badge>
+                ) : (
+                  <Badge variant="outline">Unregistered</Badge>
                 )}
+                {receiptIssued && <Badge variant="outline">Receipt issued</Badge>}
+              </CollapsibleTrigger>
 
-                {receiptIssued && (
-                  <div className="space-y-2">
-                    {invoice.receipt?.qr && (
-                      <div className="flex flex-col items-center gap-2 py-1">
-                        <div className="rounded-lg bg-white p-4">
-                          <Image
-                            src={`data:image/png;base64,${invoice.receipt.qr}`}
-                            alt="Receipt QR code"
-                            width={600}
-                            height={600}
-                            unoptimized
-                            className="size-64"
-                          />
+              <CollapsibleContent>
+                <div className="flex flex-col gap-3 border-t p-4">
+                  {invoice.irn && (
+                    <HashField label="Invoice IRN" value={invoice.irn} />
+                  )}
+
+                  {receiptIssued && (
+                    <div className="flex flex-col gap-2">
+                      {invoice.receipt?.qr && (
+                        <div className="flex flex-col items-center gap-2 py-1">
+                          <div className="rounded-lg bg-background p-4">
+                            <Image
+                              src={`data:image/png;base64,${invoice.receipt.qr}`}
+                              alt="Receipt QR code"
+                              width={600}
+                              height={600}
+                              unoptimized
+                              className="size-64"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Scan with the EIMS verification app to confirm the
+                            receipt.
+                          </p>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Scan with the EIMS verification app to confirm the
-                          receipt.
-                        </p>
+                      )}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          Receipt
+                        </span>
+                        <span className="text-sm font-medium">
+                          {invoice.receipt?.number ?? "—"}
+                        </span>
                       </div>
-                    )}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        Receipt
-                      </span>
-                      <span className="text-sm font-medium">
-                        {invoice.receipt?.number ?? "—"}
-                      </span>
+                      {invoice.receipt?.rrn && (
+                        <HashField
+                          label="Receipt RRN"
+                          value={invoice.receipt.rrn}
+                        />
+                      )}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          Status
+                        </span>
+                        <span className="text-sm font-medium">
+                          {invoice.receipt?.eimsStatus ?? "—"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          Amount
+                        </span>
+                        <span className="text-sm font-medium">
+                          {formatCents(invoice.grandTotalCents)}
+                        </span>
+                      </div>
                     </div>
-                    {invoice.receipt?.rrn && (
-                      <HashField
-                        label="Receipt RRN"
-                        value={invoice.receipt.rrn}
-                      />
-                    )}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        Status
-                      </span>
-                      <span className="text-sm font-medium">
-                        {invoice.receipt?.eimsStatus ?? "—"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        Amount
-                      </span>
-                      <span className="text-sm font-medium">
-                        {formatCents(invoice.grandTotalCents)}
-                      </span>
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <RegisterButton
-                    invoiceId={invoice.id}
-                    size="sm"
-                    disabled={cannotRegister}
-                  />
-                  {invoice.registrationStatus === "REGISTERED" &&
-                    !receiptIssued && (
-                      <CancelButton
-                        invoiceId={invoice.id}
-                        invoiceNumber={invoice.number}
-                        size="sm"
-                      />
-                    )}
-                  {invoice.registrationStatus === "REGISTERED" &&
-                    !receiptIssued && (
-                      <ReceiptButton
-                        invoiceId={invoice.id}
-                        invoiceNumber={invoice.number}
-                        size="sm"
-                      />
-                    )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <RegisterButton
+                      invoiceId={invoice.id}
+                      size="sm"
+                      disabled={cannotRegister}
+                    />
+                    {invoice.registrationStatus === "REGISTERED" &&
+                      !receiptIssued && (
+                        <CancelButton
+                          invoiceId={invoice.id}
+                          invoiceNumber={invoice.number}
+                          size="sm"
+                        />
+                      )}
+                    {invoice.registrationStatus === "REGISTERED" &&
+                      !receiptIssued && (
+                        <ReceiptButton
+                          invoiceId={invoice.id}
+                          invoiceNumber={invoice.number}
+                          size="sm"
+                        />
+                      )}
+                  </div>
+                  {receiptIssued && (
+                    <p className="text-xs text-muted-foreground">
+                      Cancellation isn&apos;t available once a sales receipt has
+                      been issued.
+                    </p>
+                  )}
                 </div>
-                {receiptIssued && (
-                  <p className="text-xs text-muted-foreground">
-                    Cancellation isn&apos;t available once a sales receipt has
-                    been issued.
-                  </p>
-                )}
-              </div>
-            )}
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
           <InvoicePreview data={invoice} seller={invoice.seller} />

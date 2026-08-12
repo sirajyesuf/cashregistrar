@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ChevronDown, ExternalLink, LogOut, User } from "lucide-react"
 import { authClient } from "@/lib/auth-client"
+import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +48,7 @@ export function AdminUserMenu({ name, email, fullWidth }: Props) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Account menu"
-        className={`py-1 pr-1.5 pl-1 ${fullWidth ? "w-full" : ""}`}
+        className={cn("py-1 pr-1.5 pl-1", fullWidth && "w-full")}
       >
         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
           {initials(name)}

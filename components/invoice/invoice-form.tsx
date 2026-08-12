@@ -4,10 +4,11 @@ import { Fragment, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Building2, ChevronDown, ChevronsUpDown, Plus, User, X } from "lucide-react"
+import { Building2, ChevronDown, ChevronsUpDown, Plus, TriangleAlert, User, X } from "lucide-react"
 import { Combobox } from "@base-ui/react/combobox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   Table,
   TableBody,
@@ -46,6 +47,7 @@ import {
 import { UNITS } from "@/lib/units"
 import {
   invoiceFormSchema,
+  buyerSchema,
   type InvoiceFormLine,
 } from "@/lib/invoice-schema"
 import { cn, uid } from "@/lib/utils"
@@ -228,6 +230,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
   const businessId = workspace?.businessId ?? ""
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   const { data: products = [] } = useQuery({
     queryKey: ["products", businessId],
@@ -258,7 +261,6 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
     },
     validators: {
       onChange: invoiceFormSchema,
-      onSubmit: invoiceFormSchema,
     },
     onSubmit: async ({ value }) => {
       setPending(true)
@@ -311,18 +313,21 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
       noValidate
       onSubmit={(e) => {
         e.preventDefault()
+        setSubmitted(true)
         form.handleSubmit().catch(() => {})
       }}
-      className="mx-auto max-w-4xl space-y-6"
+      className="mx-auto flex max-w-4xl flex-col gap-6"
     >
       <form.Subscribe
         selector={(state) => ({
           values: state.values,
-          fieldMeta: state.fieldMeta,
         })}
       >
         {({ values }) => {
           const transactionType = values.transactionType
+
+          const buyerHasErrors =
+            submitted && !buyerSchema.safeParse(values.buyer).success
 
           const derived = values.lines.map((item) => {
             const quantity = Number(item.quantity)
@@ -364,14 +369,20 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                 </div>
               </div>
 
-              <details className="group rounded-lg border">
-                <summary className="flex cursor-pointer flex-wrap items-center gap-2 px-4 py-3 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
-                  {transactionType === "B2B" ? (
-                    <Building2 className="size-4" />
-                  ) : (
-                    <User className="size-4" />
-                  )}
-                  Buyer Details
+              <Collapsible defaultOpen className="group rounded-lg border">
+                <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+                  <CollapsibleTrigger className="flex cursor-pointer items-center gap-2 text-sm font-medium select-none">
+                    {transactionType === "B2B" ? (
+                      <Building2 className="size-4" />
+                    ) : (
+                      <User className="size-4" />
+                    )}
+                    Buyer Details
+                    {buyerHasErrors && (
+                      <TriangleAlert className="size-4 text-destructive" />
+                    )}
+                    <ChevronDown className="size-4 transition-transform group-data-[open]:rotate-180" />
+                  </CollapsibleTrigger>
                   <span className="ml-auto inline-flex flex-wrap items-center justify-end gap-2">
                     {values.buyer.tin.trim() && (
                       <span className="text-xs text-muted-foreground">
@@ -382,9 +393,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                       type="button"
                       variant="outline"
                       size="xs"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
+                      onClick={() => {
                         form.setFieldValue("transactionType", "B2B")
                         form.setFieldValue("buyer", { ...TEST_BUYER })
                       }}
@@ -395,19 +404,17 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                       type="button"
                       variant="outline"
                       size="xs"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
+                      onClick={() => {
                         form.setFieldValue("transactionType", "B2C")
                         form.setFieldValue("buyer", { ...TEST_BUYER_B2C })
                       }}
                     >
                       Test B2C buyer
                     </Button>
-                    <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
                   </span>
-                </summary>
-                <div className="space-y-4 border-t p-4">
+                </div>
+                <CollapsibleContent>
+                  <div className="flex flex-col gap-4 border-t p-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <form.Field name="buyer.legalName">
                       {(field) => (
@@ -541,7 +548,8 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                     </form.Field>
                   </div>
                 </div>
-              </details>
+                </CollapsibleContent>
+              </Collapsible>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                 <form.Field name="cashierName">
@@ -586,7 +594,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                         size="sm"
                         onClick={() => linesField.pushValue(createLineItem())}
                       >
-                        <Plus className="mr-1 h-4 w-4" />
+                        <Plus data-icon="inline-start" />
                         Add Item
                       </Button>
                     </div>
@@ -807,16 +815,18 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                               </TableCell>
                               <TableCell>
                                 {linesField.state.value.length > 1 && (
-                                  <button
+                                  <Button
                                     type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
                                     onClick={() =>
                                       linesField.removeValue(index)
                                     }
                                     aria-label="Remove line item"
                                     className="text-muted-foreground hover:text-destructive"
                                   >
-                                    <X className="h-4 w-4" />
-                                  </button>
+                                    <X />
+                                  </Button>
                                 )}
                               </TableCell>
                             </TableRow>
@@ -857,7 +867,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                 </div>
               </div>
 
-              <div className="ml-auto w-64 space-y-1.5 border-t pt-3 text-sm">
+              <div className="ml-auto flex w-64 flex-col gap-1.5 border-t pt-3 text-sm">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span className="tabular-nums">

@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useWorkspace } from "@/components/workspace-provider"
 import { branchCreateSchema, type BranchCreateValues } from "@/lib/business-schema"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AddBranchPage() {
   const router = useRouter()
@@ -99,7 +100,7 @@ export default function AddBranchPage() {
   })
 
   if (!loaded) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>
+    return <Skeleton className="h-24 w-full" />
   }
 
   if (!isOwner) {
@@ -144,7 +145,7 @@ export default function AddBranchPage() {
             form.handleSubmit().catch(() => {})
           }}
         >
-          <div className="space-y-5 px-5 py-5 sm:px-6">
+          <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
             <form.Field name="name">
               {(field) => {
                 const isInvalid =

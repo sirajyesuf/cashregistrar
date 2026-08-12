@@ -2,8 +2,19 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Receipt as ReceiptIcon } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 
 type ReceiptButtonProps = {
   invoiceId: string
@@ -74,25 +85,35 @@ export function ReceiptButton({
 
   const handleIssue = () => {
     if (pending) return
-    if (
-      !window.confirm(
-        `Issue a sales receipt for invoice ${invoiceNumber} on EIMS?`
-      )
-    ) {
-      return
-    }
     mutation.mutate()
   }
 
   return (
-    <Button
-      variant="outline"
-      size={size}
-      onClick={handleIssue}
-      disabled={pending}
-    >
-      <ReceiptIcon className="size-3.5" />
-      {pending ? "Issuing…" : "Issue receipt"}
-    </Button>
+    <AlertDialog>
+      <AlertDialogTrigger
+        render={<Button variant="outline" size={size} disabled={pending} />}
+      >
+        {pending ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <ReceiptIcon data-icon="inline-start" />
+        )}
+        {pending ? "Issuing…" : "Issue receipt"}
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Issue a sales receipt?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Issue a sales receipt for invoice {invoiceNumber} on EIMS?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Not now</AlertDialogCancel>
+          <AlertDialogCancel onClick={handleIssue} disabled={pending}>
+            {pending ? "Issuing…" : "Issue receipt"}
+          </AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

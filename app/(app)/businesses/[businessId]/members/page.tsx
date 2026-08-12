@@ -7,8 +7,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, Copy, Trash2, UserPlus, Users } from "lucide-react"
 import { copyText } from "@/lib/copy"
 import { InviteMemberDialog } from "@/components/invite-member-dialog"
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/components/ui/empty"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -18,7 +21,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { toast } from "@/components/toast"
-import { cn } from "@/lib/utils"
 
 type Member = {
   id: string
@@ -50,11 +52,9 @@ const ROLE_LABELS: Record<string, string> = {
   CASHIER: "Cashier",
 }
 
-const INVITE_STATUS_STYLES: Record<Invitation["status"], string> = {
-  PENDING: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400",
-  ACCEPTED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400",
-  CANCELLED: "bg-muted text-muted-foreground",
-  EXPIRED: "bg-muted text-muted-foreground",
+function InvitationStatusBadge({ status }: { status: Invitation["status"] }) {
+  if (status === "ACCEPTED") return <Badge variant="success">Accepted</Badge>
+  return <Badge variant="outline">{status[0] + status.slice(1).toLowerCase()}</Badge>
 }
 
 function formatDate(value: string): string {
@@ -222,21 +222,15 @@ export default function MembersPage() {
   }
 
   const handleRemoveMember = (member: Member) => {
-    if (!window.confirm(`Remove ${member.user.name ?? member.user.email} from this business?`)) {
-      return
-    }
     removeMember.mutate(member.id)
   }
 
   const handleCancelInvite = (invitation: Invitation) => {
-    if (!window.confirm(`Cancel the invitation for ${invitation.email}?`)) {
-      return
-    }
     cancelInvitation.mutate(invitation.id)
   }
 
   if (!businessData) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>
+    return <Skeleton className="h-24 w-full" />
   }
 
   if (businessData.role !== "OWNER") {
@@ -283,8 +277,8 @@ export default function MembersPage() {
         <h2 className="text-sm font-semibold">Members</h2>
         <div className="mt-3 rounded-xl border">
           {membersPending ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              Loading…
+            <div className="p-8 text-center">
+              <Skeleton className="mx-auto h-40 w-full max-w-md" />
             </div>
           ) : (
             <Table>
@@ -316,17 +310,41 @@ export default function MembersPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       {member.role !== "OWNER" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveMember(member)}
-                          disabled={removeMember.isPending}
-                        >
-                          <Trash2 className="size-4 text-destructive" />
-                          <span className="sr-only">
-                            Remove {member.user.name ?? member.user.email}
-                          </span>
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={removeMember.isPending}
+                              />
+                            }
+                          >
+                            <Trash2 className="size-4 text-destructive" />
+                            <span className="sr-only">
+                              Remove {member.user.name ?? member.user.email}
+                            </span>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove member?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Remove {member.user.name ?? member.user.email}{" "}
+                                from this business?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep member</AlertDialogCancel>
+                              <AlertDialogCancel
+                                variant="destructive"
+                                onClick={() => handleRemoveMember(member)}
+                                disabled={removeMember.isPending}
+                              >
+                                Remove member
+                              </AlertDialogCancel>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
                     </TableCell>
                   </TableRow>
@@ -341,15 +359,18 @@ export default function MembersPage() {
         <h2 className="text-sm font-semibold">Pending invitations</h2>
         <div className="mt-3 rounded-xl border">
           {invitesPending ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              Loading…
+            <div className="p-8 text-center">
+              <Skeleton className="mx-auto h-40 w-full max-w-md" />
             </div>
           ) : invitations.length === 0 ? (
-            <div className="p-10 text-center">
-              <p className="text-sm text-muted-foreground">
-                No invitations yet. Invite someone to join your team.
-              </p>
-            </div>
+            <Empty className="p-10">
+              <EmptyContent>
+                <EmptyTitle>No invitations yet</EmptyTitle>
+                <EmptyDescription>
+                  Invite someone to join your team.
+                </EmptyDescription>
+              </EmptyContent>
+            </Empty>
           ) : (
             <Table>
               <TableHeader>
@@ -377,14 +398,7 @@ export default function MembersPage() {
                       {invitation.branch?.name ?? "—"}
                     </TableCell>
                     <TableCell>
-                      <span
-                        className={cn(
-                          "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
-                          INVITE_STATUS_STYLES[invitation.status]
-                        )}
-                      >
-                        {invitation.status[0] + invitation.status.slice(1).toLowerCase()}
-                      </span>
+                      <InvitationStatusBadge status={invitation.status} />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDate(invitation.expiresAt)}
@@ -399,17 +413,42 @@ export default function MembersPage() {
                               onClick={() => handleCopyLink(invitation)}
                               disabled={copyInvitation.isPending}
                             >
-                              <Copy className="size-3.5" />
+                              <Copy data-icon="inline-start" />
                               Copy link
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleCancelInvite(invitation)}
-                              disabled={cancelInvitation.isPending}
-                            >
-                              Cancel
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger
+                                render={
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={cancelInvitation.isPending}
+                                  />
+                                }
+                              >
+                                Cancel
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Cancel the invitation?
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Cancel the invitation for {invitation.email}?
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Keep it</AlertDialogCancel>
+                                  <AlertDialogCancel
+                                    variant="destructive"
+                                    onClick={() => handleCancelInvite(invitation)}
+                                    disabled={cancelInvitation.isPending}
+                                  >
+                                    Cancel invitation
+                                  </AlertDialogCancel>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </>
                         )}
                       </div>

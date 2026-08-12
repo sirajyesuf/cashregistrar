@@ -1,8 +1,43 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Ban, Loader2, Send, Trash2, X } from "lucide-react"
+import { useMemo, useState } from "react"
+import { Ban, Send, Trash2, TriangleAlert, X } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { toast } from "@/components/toast"
 import { hasIssuedReceipt } from "@/lib/invoice"
 
@@ -62,14 +97,11 @@ export function BulkActions({
   const cancellable = useMemo(() => invoices.filter(canCancel), [invoices])
   const deletable = useMemo(() => invoices.filter(canDelete), [invoices])
 
-  useEffect(() => {
-    if (!mode) return
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !pending) setMode(null)
-    }
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [mode, pending])
+  const open = mode !== null
+
+  const close = (next: boolean) => {
+    if (!next && !pending) setMode(null)
+  }
 
   const submit = async () => {
     const target = mode === "register" ? registerable : cancellable
@@ -169,7 +201,7 @@ export function BulkActions({
             }}
             disabled={pending}
           >
-            <Send />
+            <Send data-icon="inline-start" />
             Register {registerable.length}
           </Button>
         )}
@@ -183,20 +215,44 @@ export function BulkActions({
             }}
             disabled={pending}
           >
-            <Ban />
+            <Ban data-icon="inline-start" />
             Cancel {cancellable.length}
           </Button>
         )}
         {deletable.length > 0 && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={onDelete}
-            disabled={deleting || pending}
-          >
-            <Trash2 />
-            {deleting ? "Deleting…" : `Delete ${deletable.length}`}
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleting || pending}
+                />
+              }
+            >
+              <Trash2 data-icon="inline-start" />
+              {deleting ? "Deleting…" : `Delete ${deletable.length}`}
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete selected invoices?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Delete {deletable.length} selected invoice
+                  {deletable.length === 1 ? "" : "s"}? This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep them</AlertDialogCancel>
+                <AlertDialogCancel
+                  variant="destructive"
+                  onClick={onDelete}
+                  disabled={deleting || pending}
+                >
+                  {deleting ? "Deleting…" : "Delete"}
+                </AlertDialogCancel>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
         <Button
           variant="ghost"
@@ -210,143 +266,111 @@ export function BulkActions({
         </Button>
       </div>
 
-      {mode && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30 p-4 backdrop-blur-[2px] sm:items-center"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !pending) setMode(null)
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="bulk-action-title"
-            className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-2xl sm:p-6"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-                  EIMS bulk action
-                </p>
-                <h2
-                  id="bulk-action-title"
-                  className="mt-1 text-lg font-semibold tracking-tight"
-                >
-                  {mode === "register"
-                    ? "Register invoices?"
-                    : "Cancel invoices?"}
-                </h2>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setMode(null)}
-                disabled={pending}
-                aria-label="Close dialog"
-              >
-                <X />
-              </Button>
-            </div>
-
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+      <Dialog open={open} onOpenChange={close}>
+        <DialogContent showCloseButton={!pending}>
+          <DialogHeader>
+            <DialogTitle>
+              {mode === "register"
+                ? "Register invoices?"
+                : "Cancel invoices?"}
+            </DialogTitle>
+            <DialogDescription>
               {mode === "register"
                 ? "These invoices will be sent to EIMS together. They cannot be edited while processing."
                 : "Cancellation is sent to EIMS for each selected registered invoice. This action may not be reversible."}
-            </p>
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="mt-4 rounded-lg bg-muted/60 px-3 py-2.5 text-sm">
-              <span className="font-medium">
-                {mode === "register" ? registerable.length : cancellable.length}
-              </span>{" "}
-              invoice
-              {(mode === "register"
-                ? registerable.length
-                : cancellable.length) === 1
-                ? ""
-                : "s"}{" "}
-              selected
-            </div>
+          <div className="rounded-lg bg-muted/60 px-3 py-2.5 text-sm">
+            <span className="font-medium">
+              {mode === "register" ? registerable.length : cancellable.length}
+            </span>{" "}
+            invoice
+            {(mode === "register"
+              ? registerable.length
+              : cancellable.length) === 1
+              ? ""
+              : "s"}{" "}
+            selected
+          </div>
 
-            {errorResponse !== null && (
-              <details
-                open
-                className="mt-4 overflow-hidden rounded-lg border border-destructive/30 bg-destructive/[0.04]"
-              >
-                <summary className="cursor-pointer px-3 py-2.5 text-sm font-medium text-destructive outline-none focus-visible:ring-3 focus-visible:ring-ring/30">
-                  Full EIMS response
-                </summary>
-                <pre className="max-h-56 overflow-auto border-t border-destructive/20 px-3 py-3 font-mono text-[11px] leading-5 whitespace-pre-wrap text-foreground">
-                  {JSON.stringify(errorResponse, null, 2)}
-                </pre>
-              </details>
-            )}
+          {errorResponse !== null && (
+            <Alert variant="destructive">
+              <TriangleAlert />
+              <AlertTitle>EIMS rejected the request</AlertTitle>
+              <AlertDescription>
+                <Collapsible className="mt-2">
+                  <CollapsibleTrigger className="text-xs font-medium underline">
+                    Full EIMS response
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <pre className="mt-2 max-h-56 overflow-auto rounded-md bg-muted p-3 font-mono text-[11px] leading-5 whitespace-pre-wrap text-foreground">
+                      {JSON.stringify(errorResponse, null, 2)}
+                    </pre>
+                  </CollapsibleContent>
+                </Collapsible>
+              </AlertDescription>
+            </Alert>
+          )}
 
-            {mode === "cancel" && (
-              <div className="mt-4 grid gap-3">
-                <label
-                  className="grid gap-1.5 text-sm font-medium"
-                  htmlFor="bulk-reason-code"
+          {mode === "cancel" && (
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="bulk-reason-code">Reason code</FieldLabel>
+                <Select
+                  value={reasonCode}
+                  onValueChange={(value) => setReasonCode(value ?? "1")}
                 >
-                  Reason code
-                  <select
-                    id="bulk-reason-code"
-                    value={reasonCode}
-                    onChange={(event) => setReasonCode(event.target.value)}
-                    className="h-9 rounded-lg border border-input bg-background px-3 font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-                  >
-                    <option value="1">Duplicate invoice</option>
-                    <option value="2">Data error</option>
-                    <option value="6">Calculation error</option>
-                  </select>
-                </label>
-                <label
-                  className="grid gap-1.5 text-sm font-medium"
-                  htmlFor="bulk-remark"
-                >
+                  <SelectTrigger id="bulk-reason-code">
+                    <SelectValue placeholder="Select reason" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Duplicate invoice</SelectItem>
+                    <SelectItem value="2">Data error</SelectItem>
+                    <SelectItem value="6">Calculation error</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="bulk-remark">
                   Remark{" "}
                   <span className="font-normal text-muted-foreground">
                     (optional)
                   </span>
-                  <textarea
-                    id="bulk-remark"
-                    value={remark}
-                    onChange={(event) => setRemark(event.target.value)}
-                    rows={3}
-                    maxLength={500}
-                    placeholder="Add context for the cancellation"
-                    className="resize-none rounded-lg border border-input bg-background px-3 py-2 font-normal outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-                  />
-                </label>
-              </div>
-            )}
+                </FieldLabel>
+                <Textarea
+                  id="bulk-remark"
+                  value={remark}
+                  onChange={(event) => setRemark(event.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Add context for the cancellation"
+                />
+              </Field>
+            </FieldGroup>
+          )}
 
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setMode(null)}
-                disabled={pending}
-              >
-                Keep selected
-              </Button>
-              <Button onClick={submit} disabled={pending}>
-                {pending ? (
-                  <Loader2 className="animate-spin" />
-                ) : mode === "register" ? (
-                  <Send />
-                ) : (
-                  <Ban />
-                )}
-                {pending
-                  ? "Submitting…"
-                  : mode === "register"
-                    ? "Submit registration"
-                    : "Submit cancellation"}
-              </Button>
-            </div>
-          </section>
-        </div>
-      )}
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />} disabled={pending}>
+              Keep selected
+            </DialogClose>
+            <Button onClick={submit} disabled={pending}>
+              {pending ? (
+                <Spinner data-icon="inline-start" />
+              ) : mode === "register" ? (
+                <Send data-icon="inline-start" />
+              ) : (
+                <Ban data-icon="inline-start" />
+              )}
+              {pending
+                ? "Submitting…"
+                : mode === "register"
+                  ? "Submit registration"
+                  : "Submit cancellation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

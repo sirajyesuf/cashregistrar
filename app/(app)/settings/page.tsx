@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Info } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "@/components/toast"
 
 type ProfileForm = {
@@ -122,18 +124,25 @@ export default function SettingsPage() {
         </Link>
       </div>
 
-      {!loaded && <p className="text-sm text-muted-foreground">Loading…</p>}
+      {!loaded && (
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-72 w-full" />
+        </div>
+      )}
 
       {loaded && (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <section className="rounded-lg border p-4">
-            <h2 className="mb-4 text-base font-semibold">Business</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              This information appears on the invoices you issue.
-            </p>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="businessName">Business Name</Label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          <section className="rounded-lg border bg-card p-4">
+            <div className="mb-4">
+              <h2 className="text-base font-semibold">Business</h2>
+              <p className="text-sm text-muted-foreground">
+                This information appears on the invoices you issue.
+              </p>
+            </div>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="businessName">Business Name</FieldLabel>
                 <Input
                   id="businessName"
                   value={profile.businessName}
@@ -141,74 +150,71 @@ export default function SettingsPage() {
                   placeholder="e.g. ABC Trading"
                   required
                 />
-              </div>
-              <div>
-                <Label htmlFor="street">Street</Label>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="street">Street</FieldLabel>
                 <Input
                   id="street"
                   value={profile.street}
                   onChange={(e) => update("street", e.target.value)}
                   placeholder="e.g. 123 Business Street"
                 />
-              </div>
+              </Field>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="city">City</Label>
+                <Field>
+                  <FieldLabel htmlFor="city">City</FieldLabel>
                   <Input
                     id="city"
                     value={profile.city}
                     onChange={(e) => update("city", e.target.value)}
                     placeholder="e.g. Addis Ababa"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="country">Country</Label>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="country">Country</FieldLabel>
                   <Input
                     id="country"
                     value={profile.country}
                     onChange={(e) => update("country", e.target.value)}
                     placeholder="e.g. Ethiopia"
                   />
-                </div>
+                </Field>
               </div>
-            </div>
+            </FieldGroup>
           </section>
 
-          <section className="rounded-lg border p-4">
-            <h2 className="mb-1 text-base font-semibold">EIMS Registration</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Sent with every invoice registered to the Ministry of Revenue.
-            </p>
-
-            <div className="mb-5 flex items-start gap-2 rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-              <Info className="mt-0.5 size-4 shrink-0" />
-              <span className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                <span>
-                  Source system: <strong>{source.systemNumber || "—"}</strong> (
-                  {source.systemType || "—"})
-                </span>
-                <span>
-                  Taxpayer TIN: <strong>{source.tin || "—"}</strong>
-                </span>
-                <span>
-                  VAT number: <strong>{source.vatNumber || "—"}</strong>
-                </span>
-              </span>
+          <section className="rounded-lg border bg-card p-4">
+            <div className="mb-4">
+              <h2 className="text-base font-semibold">EIMS Registration</h2>
+              <p className="text-sm text-muted-foreground">
+                Sent with every invoice registered to the Ministry of Revenue.
+              </p>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="legalName">Legal Name</Label>
+            <Alert className="mb-5 border-dashed">
+              <Info />
+              <AlertTitle>Source system</AlertTitle>
+              <AlertDescription>
+                Source system: <strong>{source.systemNumber || "—"}</strong> (
+                {source.systemType || "—"}) · Taxpayer TIN:{" "}
+                <strong>{source.tin || "—"}</strong> · VAT number:{" "}
+                <strong>{source.vatNumber || "—"}</strong>
+              </AlertDescription>
+            </Alert>
+
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="legalName">Legal Name</FieldLabel>
                 <Input
                   id="legalName"
                   value={profile.legalName}
                   onChange={(e) => update("legalName", e.target.value)}
                   placeholder="Registered legal name"
                 />
-              </div>
+              </Field>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="email">Email</Label>
+                <Field>
+                  <FieldLabel htmlFor="email">Email</FieldLabel>
                   <Input
                     id="email"
                     type="email"
@@ -216,67 +222,67 @@ export default function SettingsPage() {
                     onChange={(e) => update("email", e.target.value)}
                     placeholder="contact@example.com"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone</Label>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="phone">Phone</FieldLabel>
                   <Input
                     id="phone"
                     value={profile.phone}
                     onChange={(e) => update("phone", e.target.value)}
                     placeholder="e.g. 0912345678"
                   />
-                </div>
+                </Field>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div>
-                  <Label htmlFor="region">Region</Label>
+                <Field>
+                  <FieldLabel htmlFor="region">Region</FieldLabel>
                   <Input
                     id="region"
                     value={profile.region}
                     onChange={(e) => update("region", e.target.value)}
                     placeholder="e.g. 13"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="subCity">Sub-City</Label>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="subCity">Sub-City</FieldLabel>
                   <Input
                     id="subCity"
                     value={profile.subCity}
                     onChange={(e) => update("subCity", e.target.value)}
                     placeholder="Sub-city"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="wereda">Wereda</Label>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="wereda">Wereda</FieldLabel>
                   <Input
                     id="wereda"
                     value={profile.wereda}
                     onChange={(e) => update("wereda", e.target.value)}
                     placeholder="Wereda / district"
                   />
-                </div>
+                </Field>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="houseNumber">House Number</Label>
+                <Field>
+                  <FieldLabel htmlFor="houseNumber">House Number</FieldLabel>
                   <Input
                     id="houseNumber"
                     value={profile.houseNumber}
                     onChange={(e) => update("houseNumber", e.target.value)}
                     placeholder="House / building number"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="locality">Locality</Label>
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="locality">Locality</FieldLabel>
                   <Input
                     id="locality"
                     value={profile.locality}
                     onChange={(e) => update("locality", e.target.value)}
                     placeholder="Locality"
                   />
-                </div>
+                </Field>
               </div>
-            </div>
+            </FieldGroup>
           </section>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

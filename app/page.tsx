@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react"
 import { ThemeSwitcher } from "@/components/theme-switcher"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { getSessionUser } from "@/lib/auth/user"
 
@@ -88,13 +89,13 @@ function MockInvoice() {
             INV-0042
           </p>
         </div>
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
-          <CheckCircle2 className="size-3" />
+        <Badge variant="success">
+          <CheckCircle2 />
           Registered
-        </span>
+        </Badge>
       </div>
 
-      <div className="mt-4 space-y-3">
+      <div className="mt-4 flex flex-col gap-3">
         {[
           ["Phone", "2 × 1,000.00"],
           ["Service fee", "1 × 500.00"],
@@ -106,7 +107,7 @@ function MockInvoice() {
         ))}
       </div>
 
-      <div className="mt-4 space-y-1 border-t pt-3 text-sm">
+      <div className="mt-4 flex flex-col gap-1 border-t pt-3 text-sm">
         <div className="flex justify-between text-muted-foreground">
           <span>Subtotal</span>
           <span className="tabular-nums">2,500.00</span>
@@ -126,7 +127,7 @@ function MockInvoice() {
           <p className="font-medium text-foreground">Sales receipt</p>
           <p className="mt-0.5 font-mono">REC000000000000004</p>
         </div>
-        <span className="flex size-11 items-center justify-center rounded-md border bg-white text-muted-foreground dark:bg-background">
+        <span className="flex size-11 items-center justify-center rounded-md border bg-background text-muted-foreground">
           <QrCode className="size-6" />
         </span>
       </div>

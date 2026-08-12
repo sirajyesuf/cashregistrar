@@ -3,9 +3,9 @@
 import { createContext, useContext, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Menu } from "@base-ui/react/menu"
 import { LogOut, Menu as MenuIcon, UserRoundCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuLinkItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { QueryProvider } from "@/components/query-provider"
 import { UserMenu } from "@/components/user-menu"
 import { WorkspaceProvider } from "@/components/workspace-provider"
@@ -96,33 +96,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </nav>
             </div>
             <div className="flex items-center gap-2">
-              <Menu.Root>
-                <Menu.Trigger
+              <DropdownMenu>
+                <DropdownMenuTrigger
                   aria-label="Open navigation"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors outline-none select-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-muted md:hidden"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg px-0 md:hidden"
                 >
-                  <MenuIcon className="size-4" />
-                </Menu.Trigger>
-                <Menu.Portal>
-                  <Menu.Positioner
-                    className="outline-none"
-                    sideOffset={8}
-                    align="end"
-                  >
-                    <Menu.Popup className="relative z-50 w-44 origin-[var(--transform-origin)] rounded-xl border bg-popover p-1 text-popover-foreground shadow-md transition-[scale,opacity] duration-100 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
-                      {NAV.map((item) => (
-                        <Menu.LinkItem
-                          key={item.href}
-                          className="flex cursor-default items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none select-none data-highlighted:bg-muted data-disabled:opacity-50"
-                          render={<Link href={item.href} />}
-                        >
-                          {item.label}
-                        </Menu.LinkItem>
-                      ))}
-                    </Menu.Popup>
-                  </Menu.Positioner>
-                </Menu.Portal>
-              </Menu.Root>
+                  <MenuIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-44">
+                  {NAV.map((item) => (
+                    <DropdownMenuLinkItem
+                      key={item.href}
+                      render={<Link href={item.href} />}
+                    >
+                      {item.label}
+                    </DropdownMenuLinkItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
               {user && (
                 <UserMenu
                   name={user.name}

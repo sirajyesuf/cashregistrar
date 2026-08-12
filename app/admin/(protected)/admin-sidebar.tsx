@@ -3,7 +3,11 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Dialog } from "@base-ui/react/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   LayoutDashboard,
   Menu,
@@ -13,6 +17,7 @@ import {
   Users,
   X,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { cn } from "@/lib/utils"
 import { AdminUserMenu } from "./admin-user-menu"
@@ -86,14 +91,16 @@ export function AdminSidebar({
     <>
       {/* Mobile top bar */}
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-background/80 px-4 backdrop-blur md:hidden">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-sm"
           onClick={() => setMobileOpen(true)}
           aria-label="Open navigation"
-          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="text-muted-foreground"
         >
-          <Menu className="size-5" />
-        </button>
+          <Menu />
+        </Button>
         <Brand />
         <div className="flex items-center gap-2">
           <ThemeSwitcher />
@@ -120,33 +127,35 @@ export function AdminSidebar({
       </div>
 
       {/* Mobile drawer */}
-      <Dialog.Root open={mobileOpen} onOpenChange={setMobileOpen}>
-        <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/50" />
-          <Dialog.Popup className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-card shadow-xl outline-none">
-            <div className="flex h-14 items-center justify-between border-b px-4">
-              <Brand />
-              <button
-                type="button"
-                onClick={() => setMobileOpen(false)}
-                aria-label="Close navigation"
-                className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3">
-              <NavItems
-                pathname={pathname}
-                onNavigate={() => setMobileOpen(false)}
-              />
-            </div>
-            <div className="border-t p-3">
-              <AdminUserMenu name={name} email={email} fullWidth />
-            </div>
-          </Dialog.Popup>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
+        <DialogContent
+          showCloseButton={false}
+          className="fixed inset-y-0 left-0 flex w-72 max-w-[calc(100%-2rem)] flex-col rounded-none border-r bg-card p-0 sm:max-w-xs"
+        >
+          <DialogTitle className="sr-only">Navigation</DialogTitle>
+          <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
+            <Brand />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close navigation"
+            >
+              <X />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3">
+            <NavItems
+              pathname={pathname}
+              onNavigate={() => setMobileOpen(false)}
+            />
+          </div>
+          <div className="border-t p-3">
+            <AdminUserMenu name={name} email={email} fullWidth />
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

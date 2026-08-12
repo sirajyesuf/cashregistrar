@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { authClient } from "@/lib/auth-client"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type AdminUser = {
   id: string
@@ -73,10 +74,10 @@ export default function AdminUsersPage() {
   const impersonatingId = impersonateMutation.variables?.id ?? null
 
   if (error) return <p className="text-sm text-destructive">{error.message}</p>
-  if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
+  if (isLoading) return <Skeleton className="h-24 w-full" />
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Users</h1>

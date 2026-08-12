@@ -14,6 +14,9 @@ import {
 import { useUser } from "@/components/app-shell"
 import { useWorkspace } from "@/components/workspace-provider"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Empty, EmptyContent, EmptyDescription, EmptyTitle } from "@/components/ui/empty"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -104,18 +107,20 @@ function StatCard({
   icon: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl border bg-card p-5 text-card-foreground shadow-sm">
-      <div className="flex items-start justify-between">
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-          {icon}
-        </span>
-      </div>
-      <p className="mt-3 text-2xl font-semibold tracking-tight tabular-nums">
-        {value}
-      </p>
-      {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
-    </div>
+    <Card>
+      <CardContent className="flex flex-col gap-2.5">
+        <div className="flex items-start justify-between">
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+            {icon}
+          </span>
+        </div>
+        <p className="text-2xl font-semibold tracking-tight tabular-nums">
+          {value}
+        </p>
+        {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -148,28 +153,28 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       {!workspace ? (
-        <div className="rounded-xl border border-dashed p-10 text-center">
-          <p className="text-sm text-muted-foreground">
-            No business selected. Create a business to get started.
-          </p>
-          <Link href="/businesses/new" className="mt-4 inline-block">
-            <Button>Create business</Button>
-          </Link>
-        </div>
+        <Empty className="rounded-xl border border-dashed p-10">
+          <EmptyContent>
+            <EmptyTitle>No business selected</EmptyTitle>
+            <EmptyDescription>
+              Create a business to get started.
+            </EmptyDescription>
+            <Link href="/businesses/new">
+              <Button>Create business</Button>
+            </Link>
+          </EmptyContent>
+        </Empty>
       ) : !data ? (
-        <div className="space-y-6">
-          <div className="h-16 w-2/3 animate-pulse rounded-lg bg-muted" />
+        <div className="flex flex-col gap-6">
+          <Skeleton className="h-16 w-2/3" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-28 animate-pulse rounded-xl border bg-muted/50"
-              />
+              <Skeleton key={i} className="h-28" />
             ))}
           </div>
           <div className="grid gap-6 lg:grid-cols-3">
-            <div className="h-64 animate-pulse rounded-xl border bg-muted/50 lg:col-span-2" />
-            <div className="h-64 animate-pulse rounded-xl border bg-muted/50" />
+            <Skeleton className="h-64 lg:col-span-2" />
+            <Skeleton className="h-64" />
           </div>
         </div>
       ) : (
@@ -192,13 +197,13 @@ export default function DashboardPage() {
             <div className="flex gap-2">
               <Link href="/invoices">
                 <Button variant="outline">
-                  <ReceiptText className="size-4" />
+                  <ReceiptText data-icon="inline-start" />
                   My Invoices
                 </Button>
               </Link>
               <Link href="/invoices/new">
                 <Button>
-                  <FilePlus2 className="size-4" />
+                  <FilePlus2 data-icon="inline-start" />
                   New Invoice
                 </Button>
               </Link>
@@ -254,14 +259,17 @@ export default function DashboardPage() {
             </div>
 
             {data.recent.length === 0 ? (
-              <div className="rounded-xl border border-dashed p-10 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No invoices yet.
-                </p>
-                <Link href="/invoices/new" className="mt-4 inline-block">
-                  <Button>Create your first invoice</Button>
-                </Link>
-              </div>
+              <Empty className="rounded-xl border border-dashed p-10">
+                <EmptyContent>
+                  <EmptyTitle>No invoices yet</EmptyTitle>
+                  <EmptyDescription>
+                    Create your first invoice to get started.
+                  </EmptyDescription>
+                  <Link href="/invoices/new">
+                    <Button>Create your first invoice</Button>
+                  </Link>
+                </EmptyContent>
+              </Empty>
             ) : (
               <div className="rounded-xl border">
                 <Table>

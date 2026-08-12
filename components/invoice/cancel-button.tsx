@@ -1,9 +1,20 @@
 "use client"
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Ban, Loader2 } from "lucide-react"
+import { Ban } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 
 type CancelButtonProps = {
   invoiceId: string
@@ -62,35 +73,39 @@ export function CancelButton({
 
   const handleCancel = () => {
     if (pending) return
-    if (
-      !window.confirm(
-        `Send a cancellation request for invoice ${invoiceNumber} to EIMS?`
-      )
-    ) {
-      return
-    }
     mutation.mutate()
   }
 
   return (
-    <Button
-      variant="outline"
-      size={size}
-      onClick={handleCancel}
-      disabled={pending}
-      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-    >
-      {pending ? (
-        <span className="inline-flex items-center gap-1">
-          <Loader2 className="size-3.5 animate-spin" />
-          Cancelling…
-        </span>
-      ) : (
-        <span className="inline-flex items-center gap-1">
-          <Ban className="size-3.5" />
-          Cancel
-        </span>
-      )}
-    </Button>
+    <AlertDialog>
+      <AlertDialogTrigger
+        render={<Button variant="destructive" size={size} disabled={pending} />}
+      >
+        {pending ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <Ban data-icon="inline-start" />
+        )}
+        {pending ? "Cancelling…" : "Cancel"}
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancel invoice?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Send a cancellation request for invoice {invoiceNumber} to EIMS?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep invoice</AlertDialogCancel>
+          <AlertDialogCancel
+            variant="destructive"
+            onClick={handleCancel}
+            disabled={pending}
+          >
+            {pending ? "Cancelling…" : "Cancel invoice"}
+          </AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

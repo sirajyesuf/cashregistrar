@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AdminProfilePage() {
   const [name, setName] = useState("")
@@ -73,10 +74,10 @@ export default function AdminProfilePage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>
+  if (loading) return <Skeleton className="h-24 w-full" />
 
   return (
-    <div className="max-w-lg space-y-4">
+    <div className="flex max-w-lg flex-col gap-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -86,55 +87,59 @@ export default function AdminProfilePage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-4 rounded-xl border bg-card p-5"
+        className="flex flex-col gap-4 rounded-xl border bg-card p-5"
       >
-        <div>
-          <Label htmlFor="profileName">Name</Label>
-          <Input
-            id="profileName"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="profileEmail">Email</Label>
-          <Input id="profileEmail" value={email} disabled />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Email cannot be changed.
-          </p>
-        </div>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="profileName">Name</FieldLabel>
+            <Input
+              id="profileName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="profileEmail">Email</FieldLabel>
+            <Input id="profileEmail" value={email} disabled />
+            <p className="text-xs text-muted-foreground">
+              Email cannot be changed.
+            </p>
+          </Field>
+        </FieldGroup>
 
         <div className="border-t pt-4">
           <p className="text-sm font-semibold">Change password</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             Leave blank to keep your current password.
           </p>
-          <div className="mt-3 space-y-3">
-            <div>
-              <Label htmlFor="currentPassword">Current password</Label>
-              <Input
-                id="currentPassword"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
-            <div>
-              <Label htmlFor="newPassword">New password</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                minLength={5}
-                autoComplete="new-password"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                At least 5 characters.
-              </p>
-            </div>
+          <div className="mt-3 flex flex-col gap-3">
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="currentPassword">Current password</FieldLabel>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="newPassword">New password</FieldLabel>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  minLength={5}
+                  autoComplete="new-password"
+                />
+                <p className="text-xs text-muted-foreground">
+                  At least 5 characters.
+                </p>
+              </Field>
+            </FieldGroup>
           </div>
         </div>
 
