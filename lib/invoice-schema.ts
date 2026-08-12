@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { UNIT_CODES } from "@/lib/units"
 
 const EIMS_EMAIL_REGEX = /^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$/
 const EIMS_TIN_REGEX = /^[0-9]{10,20}$/
@@ -86,7 +87,7 @@ export const invoiceLineInputSchema = z.object({
     .finite()
     .nonnegative("Unit price cannot be negative"),
   itemCode: z.string().trim(),
-  unit: z.string().trim(),
+  unit: z.enum(UNIT_CODES),
 })
 
 export type InvoiceLineInput = z.infer<typeof invoiceLineInputSchema>
@@ -149,7 +150,7 @@ export const invoiceFormLineSchema = z.object({
       "Unit price cannot be negative"
     ),
   itemCode: z.string(),
-  unit: z.string(),
+  unit: z.enum(UNIT_CODES),
 })
 
 export type InvoiceFormLine = z.infer<typeof invoiceFormLineSchema>

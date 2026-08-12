@@ -262,6 +262,14 @@ enum TransactionType {
   B2C
 }
 
+enum Unit {
+  MTR
+  LTR
+  KLG
+  PCS
+  ROL
+}
+
 model Invoice {
   id         String  @id @default(cuid())
   number     String
@@ -343,7 +351,7 @@ model InvoiceLine {
   unitPrice        Decimal  @db.Decimal(12, 2)
   total            Decimal  @db.Decimal(14, 2)
   itemCode         String?
-  unit             String   @default("PCS")
+  unit             Unit     @default(PCS)
   natureOfSupplies String   @default("goods")
   taxCode          String?
   discount         Decimal? @db.Decimal(14, 2)
@@ -404,7 +412,7 @@ model Product {
   businessId   String
   name         String
   itemCode     String?
-  unit         String   @default("PCS")
+  unit         Unit    @default(PCS)
   sellingPrice Decimal  @db.Decimal(14, 2)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

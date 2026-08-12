@@ -1,6 +1,20 @@
-export const UNITS = ["PCS", "KG", "M", "L", "BOX", "EA", "Other"] as const
+import type { $Enums } from "@prisma/client"
 
-export type Unit = (typeof UNITS)[number]
+export type Unit = $Enums.Unit
+
+export const UNITS: Record<Unit, string> = {
+  MTR: "Meter",
+  LTR: "Liter",
+  KLG: "Kilogram",
+  PCS: "Pieces",
+  ROL: "Roll",
+}
+
+export const UNIT_CODES = Object.keys(UNITS) as Unit[]
 
 export const UNIT_OPTIONS: ReadonlyArray<{ value: Unit; label: string }> =
-  UNITS.map((value) => ({ value, label: value }))
+  UNIT_CODES.map((code) => ({ value: code, label: UNITS[code] }))
+
+export function unitLabel(unit: string | null | undefined): string {
+  return unit ? (UNITS[unit as Unit] ?? unit) : ""
+}

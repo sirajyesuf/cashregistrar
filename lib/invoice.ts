@@ -1,3 +1,5 @@
+import { type Unit } from "@/lib/units"
+
 export type TransactionType = "B2B" | "B2C"
 
 export type BuyerDetails = {
@@ -173,7 +175,7 @@ type ApiLine = {
   unitPrice: ApiMoney
   total: ApiMoney
   itemCode?: string | null
-  unit?: string | null
+  unit?: Unit | null
 }
 
 type ApiInvoice = {

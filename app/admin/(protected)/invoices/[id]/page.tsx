@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { copyText } from "@/lib/copy"
+import { unitLabel } from "@/lib/units"
 import { formatCents, moneyToCents } from "@/lib/invoice"
 import { StatusBadge } from "../../status-badge"
 import type { TransactionType } from "@/lib/invoice"
@@ -354,7 +355,7 @@ export default function AdminInvoiceViewPage({
                       {line.quantity}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {line.unit}
+                      {unitLabel(line.unit)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatCents(moneyToCents(line.unitPrice))}

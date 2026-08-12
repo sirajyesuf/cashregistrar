@@ -29,7 +29,7 @@ import {
 import { toast } from "@/components/toast"
 import { useWorkspace } from "@/components/workspace-provider"
 import { formatCents, moneyToCents } from "@/lib/invoice"
-import { UNIT_OPTIONS } from "@/lib/units"
+import { UNIT_OPTIONS, unitLabel } from "@/lib/units"
 
 type Product = {
   id: string
@@ -343,7 +343,7 @@ export default function ProductsPage() {
                     {product.itemCode || "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {product.unit || "PCS"}
+                    {unitLabel(product.unit) || "PCS"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatCents(moneyToCents(product.sellingPrice))}

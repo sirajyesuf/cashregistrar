@@ -44,7 +44,7 @@ import {
   type BuyerDetails,
   type TransactionType,
 } from "@/lib/invoice"
-import { UNITS } from "@/lib/units"
+import { UNIT_OPTIONS } from "@/lib/units"
 import {
   invoiceFormSchema,
   buyerSchema,
@@ -785,9 +785,12 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                                           <SelectValue placeholder="Unit" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          {UNITS.map((u) => (
-                                            <SelectItem key={u} value={u}>
-                                              {u}
+                                          {UNIT_OPTIONS.map((option) => (
+                                            <SelectItem
+                                              key={option.value}
+                                              value={option.value}
+                                            >
+                                              {option.label}
                                             </SelectItem>
                                           ))}
                                         </SelectContent>

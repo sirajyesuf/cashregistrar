@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import type { PreviewInvoice, SellerInfo } from "@/lib/invoice"
 import { formatCents } from "@/lib/invoice"
+import { unitLabel } from "@/lib/units"
 
 type Props = {
   data: PreviewInvoice
@@ -137,7 +138,7 @@ export function InvoicePreview({ data, seller }: Props) {
                     {item.description}
                   </td>
                   <td className="py-3 text-right text-gray-900 tabular-nums">
-                    {item.quantity} {item.unit || ""}
+                    {item.quantity} {unitLabel(item.unit)}
                   </td>
                   <td className="py-3 text-right text-gray-900 tabular-nums">
                     {formatCents(item.unitPriceCents)}

@@ -9,6 +9,7 @@ import {
   type InvoiceFormInitial,
 } from "@/components/invoice/invoice-form"
 import { centsToMoney, moneyToCents } from "@/lib/invoice"
+import { type Unit } from "@/lib/units"
 import { Skeleton } from "@/components/ui/skeleton"
 
 type ApiLine = {
@@ -17,7 +18,7 @@ type ApiLine = {
   quantity: string
   unitPrice: string
   itemCode?: string | null
-  unit?: string | null
+  unit?: Unit | null
 }
 
 type ApiInvoice = {
