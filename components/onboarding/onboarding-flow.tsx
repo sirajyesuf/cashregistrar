@@ -1,22 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMutation } from "@tanstack/react-query"
 import { useForm, type DeepKeysOfType } from "@tanstack/react-form"
-import {
-  ArrowLeft,
-  ArrowRight,
-  Building2,
-  Check,
-  Store,
-} from "lucide-react"
-import {
-  Field,
-  FieldError,
-  FieldLabel,
-} from "@/components/ui/field"
+import { ArrowLeft, ArrowRight, Building2, Check, Store } from "lucide-react"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -166,6 +156,15 @@ export function OnboardingFlow() {
   const { setWorkspace } = useWorkspace()
   const [step, setStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [transitionLock, setTransitionLock] = useState(false)
+  const lockTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const goToStep = (next: number) => {
+    setStep(next)
+    setTransitionLock(true)
+    if (lockTimeout.current) clearTimeout(lockTimeout.current)
+    lockTimeout.current = setTimeout(() => setTransitionLock(false), 500)
+  }
 
   const createMutation = useMutation({
     mutationFn: async (value: CreateBusinessFormValues) => {
@@ -266,7 +265,7 @@ export function OnboardingFlow() {
       }
       return
     }
-    setStep((current) => Math.min(current + 1, STEPS.length - 1))
+    goToStep(Math.min(step + 1, STEPS.length - 1))
   }
 
   return (
@@ -336,6 +335,12 @@ export function OnboardingFlow() {
           }
         }}
       >
+        <button
+          type="submit"
+          className="sr-only"
+          aria-hidden="true"
+          tabIndex={-1}
+        />
         <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
           {step === 0 && (
             <>
@@ -437,11 +442,7 @@ export function OnboardingFlow() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <form.Field name="morCredential.tin">
                   {(field) => (
-                    <FieldInput
-                      field={field}
-                      label="TIN"
-                      autoComplete="off"
-                    />
+                    <FieldInput field={field} label="TIN" autoComplete="off" />
                   )}
                 </form.Field>
                 <form.Field name="morCredential.vatNumber">
@@ -512,9 +513,7 @@ export function OnboardingFlow() {
                 title="First branch"
               />
               <form.Field name="branch.name">
-                {(field) => (
-                  <FieldInput field={field} label="Branch name" />
-                )}
+                {(field) => <FieldInput field={field} label="Branch name" />}
               </form.Field>
               <form.Field name="branch.address">
                 {(field) => (
@@ -542,7 +541,7 @@ export function OnboardingFlow() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setStep((current) => current - 1)}
+                  onClick={() => goToStep(step - 1)}
                   disabled={pending}
                 >
                   <ArrowLeft className="size-3.5" />
@@ -557,12 +556,20 @@ export function OnboardingFlow() {
                 </Link>
               )}
               {step < STEPS.length - 1 ? (
-                <Button type="button" onClick={advance}>
+                <Button
+                  type="button"
+                  onClick={advance}
+                  disabled={pending || transitionLock}
+                >
                   Continue
                   <ArrowRight className="size-3.5" />
                 </Button>
               ) : (
-                <Button type="submit" disabled={pending}>
+                <Button
+                  type="button"
+                  disabled={pending || transitionLock}
+                  onClick={() => form.handleSubmit().catch(() => {})}
+                >
                   {pending ? "Creating…" : "Create business"}
                 </Button>
               )}
