@@ -270,11 +270,23 @@ enum Unit {
   ROL
 }
 
+enum TaxCode {
+  TOT2
+  VATEX
+  VATWH
+  WHOP2
+  WTHOT
+  TOT10
+  VAT0
+  VAT15
+}
+
 model Invoice {
   id         String  @id @default(cuid())
   number     String
   date       String  @db.VarChar(10)
-  taxRate    Decimal @db.Decimal(5, 2)
+  taxCode    TaxCode @default(VAT15)
+  taxRate    Decimal @default(0.15) @db.Decimal(5, 2)
   subtotal   Decimal @db.Decimal(14, 2)
   taxAmount  Decimal @db.Decimal(14, 2)
   grandTotal Decimal @db.Decimal(14, 2)

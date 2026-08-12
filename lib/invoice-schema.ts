@@ -1,4 +1,6 @@
 import { z } from "zod"
+
+import { TAX_CODE_CODES, rateForTaxCode } from "@/lib/einvoice/tax"
 import { UNIT_CODES } from "@/lib/units"
 
 const EIMS_EMAIL_REGEX = /^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$/
@@ -97,13 +99,12 @@ export const invoiceInputSchema = z
     date: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "A valid date is required"),
+    taxCode: z.enum(TAX_CODE_CODES),
     taxRate: z
       .number()
       .finite()
-      .refine(
-        (value) => value === 0 || value === 15,
-        "Tax rate must be 0% or 15% (EIMS only supports VAT0 and VAT15)"
-      ),
+      .nonnegative("Tax rate cannot be negative")
+      .max(1, "Tax rate must be at most 100%"),
     transactionType: transactionTypeSchema,
     buyer: buyerSchema,
     cashierName: z.string(),
@@ -116,6 +117,15 @@ export const invoiceInputSchema = z
     lines: z
       .array(invoiceLineInputSchema)
       .min(1, "At least one line item is required"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.taxRate !== rateForTaxCode(data.taxCode)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["taxRate"],
+        message: "Tax rate does not match the selected tax code",
+      })
+    }
   })
 
 export type InvoiceInput = z.infer<typeof invoiceInputSchema>
@@ -160,12 +170,11 @@ export const invoiceFormSchema = z
     date: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "A valid date is required"),
+    taxCode: z.enum(TAX_CODE_CODES),
     taxRate: z
       .number()
-      .refine(
-        (value) => value === 0 || value === 15,
-        "Tax rate must be 0% or 15% (EIMS only supports VAT0 and VAT15)"
-      ),
+      .nonnegative("Tax rate cannot be negative")
+      .max(1, "Tax rate must be at most 100%"),
     transactionType: transactionTypeSchema,
     buyer: buyerSchema,
     cashierName: z.string(),
@@ -177,6 +186,15 @@ export const invoiceFormSchema = z
     lines: z
       .array(invoiceFormLineSchema)
       .min(1, "At least one line item is required"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.taxRate !== rateForTaxCode(data.taxCode)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["taxRate"],
+        message: "Tax rate does not match the selected tax code",
+      })
+    }
   })
   .refine((data) => !isFutureDate(data.date), {
     message: "Date cannot be in the future",

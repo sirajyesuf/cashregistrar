@@ -97,6 +97,7 @@ export async function POST(request: Request) {
     }
     const issues = validateLineTotals({
       lines: invoice.lines,
+      taxCode: invoice.taxCode,
       taxRate: Number(invoice.taxRate),
     })
     if (issues.length > 0)

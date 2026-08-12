@@ -112,6 +112,7 @@ export type PreviewInvoice = {
   id: string
   number: string
   date: string
+  taxCode?: string | null
   taxRate: number
   lineItems: PreviewLineItem[]
   transactionType?: TransactionType
@@ -154,7 +155,7 @@ export function calculateTotalsCents(
     (sum, item) => sum + item.totalCents,
     0
   )
-  const taxAmountCents = Math.round((subtotalCents * taxRate) / 100)
+  const taxAmountCents = Math.round(subtotalCents * taxRate)
   const grandTotalCents = subtotalCents + taxAmountCents
   return { subtotalCents, taxAmountCents, grandTotalCents }
 }
@@ -182,6 +183,7 @@ type ApiInvoice = {
   id: string
   number: string
   date: string
+  taxCode?: string | null
   taxRate: ApiMoney
   subtotal: ApiMoney
   taxAmount: ApiMoney
@@ -227,6 +229,7 @@ export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
     id: invoice.id,
     number: invoice.number,
     date: invoice.date.slice(0, 10),
+    taxCode: invoice.taxCode ?? undefined,
     taxRate: Number(invoice.taxRate),
     lineItems,
     transactionType:

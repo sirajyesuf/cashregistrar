@@ -120,6 +120,7 @@ export async function POST(request: Request) {
 
   const lineTotalIssues = validateLineTotals({
     lines: invoice.lines,
+    taxCode: invoice.taxCode,
     taxRate: Number(invoice.taxRate),
   })
   if (lineTotalIssues.length > 0) {
@@ -134,8 +135,8 @@ export async function POST(request: Request) {
                 )} but is ${issue.received.toFixed(2)}`
             )
             .join("; ") +
-          ". This usually means the invoice tax rate is not 0% or 15%. " +
-          "Edit the invoice and set the tax rate to 0 or 15, or fix the line totals.",
+          ". This usually means the invoice tax rate does not match the selected tax code. " +
+          "Edit the invoice and set the tax rate to match the tax code, or fix the line totals.",
       },
       { status: 400 }
     )

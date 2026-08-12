@@ -127,6 +127,7 @@ export async function POST(request: Request) {
 
   const {
     date,
+    taxCode,
     taxRate,
     transactionType,
     buyer,
@@ -145,7 +146,7 @@ export async function POST(request: Request) {
     (sum, line) => sum + Math.round(line.quantity * line.unitPriceCents),
     0
   )
-  const taxAmountCents = Math.round((subtotalCents * taxRate) / 100)
+  const taxAmountCents = Math.round(subtotalCents * taxRate)
   const grandTotalCents = subtotalCents + taxAmountCents
 
   const counter = await prisma.counter.upsert({
@@ -182,6 +183,7 @@ export async function POST(request: Request) {
       branchId: workspace.branchId,
       ...sellerSnapshot,
       buyerLegalName: buyer.legalName,
+      taxCode,
       taxRate: new Prisma.Decimal(taxRate),
       subtotal: centsToDecimal(subtotalCents),
       taxAmount: centsToDecimal(taxAmountCents),

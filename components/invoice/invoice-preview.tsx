@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner"
 import type { PreviewInvoice, SellerInfo } from "@/lib/invoice"
 import { formatCents } from "@/lib/invoice"
 import { unitLabel } from "@/lib/units"
+import { taxCodeLabel } from "@/lib/einvoice/tax"
 
 type Props = {
   data: PreviewInvoice
@@ -160,7 +161,10 @@ export function InvoicePreview({ data, seller }: Props) {
             </span>
           </div>
           <div className="flex justify-between text-gray-600">
-            <span>Tax ({data.taxRate}%)</span>
+            <span>
+              Tax ({taxCodeLabel(data.taxCode)} {Math.round(data.taxRate * 100)}
+              %)
+            </span>
             <span className="tabular-nums">
               {formatCents(data.taxAmountCents)}
             </span>

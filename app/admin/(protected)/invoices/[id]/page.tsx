@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table"
 import { copyText } from "@/lib/copy"
 import { unitLabel } from "@/lib/units"
+import { taxCodeLabel } from "@/lib/einvoice/tax"
 import { formatCents, moneyToCents } from "@/lib/invoice"
 import { StatusBadge } from "../../status-badge"
 import type { TransactionType } from "@/lib/invoice"
@@ -27,6 +28,7 @@ type AdminInvoiceView = {
   id: string
   number: string
   date: string
+  taxCode: string | null
   taxRate: string
   transactionType: TransactionType
   buyerLegalName: string | null
@@ -377,7 +379,10 @@ export default function AdminInvoiceViewPage({
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Tax ({invoice.taxRate}%)</span>
+              <span>
+                Tax ({taxCodeLabel(invoice.taxCode)}{" "}
+                {Math.round(Number(invoice.taxRate) * 100)}%)
+              </span>
               <span className="tabular-nums">
                 {formatCents(moneyToCents(invoice.taxAmount))}
               </span>

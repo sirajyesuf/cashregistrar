@@ -22,6 +22,7 @@ type ApiInvoice = {
   id: string
   number: string
   date: string
+  taxCode?: string | null
   taxRate: string
   subtotal: string
   taxAmount: string

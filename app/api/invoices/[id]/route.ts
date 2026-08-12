@@ -116,7 +116,7 @@ export async function PUT(
     (sum, line) => sum + Math.round(line.quantity * line.unitPriceCents),
     0
   )
-  const taxAmountCents = Math.round((subtotalCents * data.taxRate) / 100)
+  const taxAmountCents = Math.round(subtotalCents * data.taxRate)
   const grandTotalCents = subtotalCents + taxAmountCents
 
   const [business, credential] = await Promise.all([
@@ -133,6 +133,7 @@ export async function PUT(
         date: data.date,
         ...sellerSnapshot,
         buyerLegalName: data.buyer.legalName,
+        taxCode: data.taxCode,
         taxRate: new Prisma.Decimal(data.taxRate),
         subtotal: centsToDecimal(subtotalCents),
         taxAmount: centsToDecimal(taxAmountCents),

@@ -25,6 +25,7 @@ type ApiInvoice = {
   id: string
   number: string
   date: string
+  taxCode?: string | null
   taxRate: string
   transactionType?: string | null
   buyerLegalName?: string | null
@@ -58,6 +59,7 @@ function formInitialFromApi(invoice: ApiInvoice): InvoiceFormInitial {
       itemCode: line.itemCode ?? "",
       unit: line.unit ?? "PCS",
     })),
+    taxCode: invoice.taxCode ?? "VAT15",
     taxRate: Number(invoice.taxRate),
     transactionType: invoice.transactionType === "B2C" ? "B2C" : "B2B",
     buyer: {

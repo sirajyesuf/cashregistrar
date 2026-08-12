@@ -1,7 +1,6 @@
 import type { Business, Invoice, InvoiceLine, MorCredential } from "@prisma/client"
 
 import type { EimsConfig } from "./config"
-import { taxCodeForRate } from "./tax"
 
 export type RegisterPayload = {
   BuyerDetails: {
@@ -178,7 +177,7 @@ export function buildRegisterPayload(params: {
       const unitPrice = Number(line.unitPrice)
       const quantity = Number(line.quantity)
       const preTaxValue = round2(quantity * unitPrice)
-      const taxAmount = round2((preTaxValue * rate) / 100)
+      const taxAmount = round2(preTaxValue * rate)
       const discount = line.discount != null ? Number(line.discount) : 0
       return {
         Discount: round2(discount),
@@ -191,7 +190,7 @@ export function buildRegisterPayload(params: {
         Quantity: quantity,
         LineNumber: line.lineNumber,
         TaxAmount: taxAmount,
-        TaxCode: line.taxCode ?? taxCodeForRate(rate),
+        TaxCode: invoice.taxCode,
         TotalLineAmount: round2(preTaxValue + taxAmount - discount),
         Unit: line.unit,
         UnitPrice: unitPrice,

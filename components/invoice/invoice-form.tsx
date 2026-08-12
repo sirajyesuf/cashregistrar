@@ -46,6 +46,11 @@ import {
 } from "@/lib/invoice"
 import { UNIT_OPTIONS } from "@/lib/units"
 import {
+  TAX_CODE_OPTIONS,
+  rateForTaxCode,
+  type TaxCode,
+} from "@/lib/einvoice/tax"
+import {
   invoiceFormSchema,
   buyerSchema,
   type InvoiceFormLine,
@@ -62,6 +67,7 @@ const TRANSACTION_TYPES = [
 export type InvoiceFormInitial = {
   date: string
   lines: Array<Omit<InvoiceFormLine, "id" | "productId"> & { productId?: string }>
+  taxCode: string
   taxRate: number
   transactionType: TransactionType
   buyer: BuyerDetails
@@ -252,7 +258,8 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
           id: uid(),
           productId: line.productId ?? "",
         })) ?? [createLineItem()],
-      taxRate: initial?.taxRate ?? 15,
+      taxCode: initial?.taxCode ?? "VAT15",
+      taxRate: initial?.taxRate ?? 0.15,
       transactionType: initial?.transactionType ?? "B2B",
       buyer: initial?.buyer ?? EMPTY_BUYER,
       cashierName: initial?.cashierName ?? "AAA",
@@ -273,6 +280,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               date: value.date,
+              taxCode: value.taxCode,
               taxRate: value.taxRate,
               transactionType: value.transactionType,
               buyer: value.buyer,
@@ -857,15 +865,51 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
 
               <div className="flex flex-wrap gap-4">
                 <div className="flex-1" />
-                <div className="w-48">
-                  <form.Field name="taxRate">
-                    {(field) => (
-                      <TextField
-                        field={field}
-                        label="Tax Rate (%)"
-                        formatChange={(raw) => Number(raw)}
-                      />
-                    )}
+                <div className="w-56">
+                  <form.Field name="taxCode">
+                    {(field) => {
+                      const isInvalid =
+                        field.state.meta.isTouched &&
+                        !field.state.meta.isValid
+                      return (
+                        <Field>
+                          <FieldLabel htmlFor="tax-code">Tax Code</FieldLabel>
+                          <Select
+                            value={field.state.value as string}
+                            onValueChange={(value) => {
+                              const code = (value ?? "VAT15") as TaxCode
+                              field.handleChange(code as never)
+                              form.setFieldValue(
+                                "taxRate",
+                                rateForTaxCode(code) as never
+                              )
+                            }}
+                          >
+                            <SelectTrigger
+                              id="tax-code"
+                              aria-label="Tax code"
+                              aria-invalid={isInvalid}
+                            >
+                              <SelectValue placeholder="Select tax code" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TAX_CODE_OPTIONS.map((option) => (
+                                <SelectItem
+                                  key={option.value}
+                                  value={option.value}
+                                >
+                                  {option.label} ({Math.round(option.rate * 100)}
+                                  %)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {isInvalid && (
+                            <FieldError errors={field.state.meta.errors} />
+                          )}
+                        </Field>
+                      )
+                    }}
                   </form.Field>
                 </div>
               </div>
@@ -878,7 +922,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Tax ({values.taxRate}%)</span>
+                  <span>Tax ({Math.round(values.taxRate * 100)}%)</span>
                   <span className="tabular-nums">
                     {formatCents(totals.taxAmountCents)}
                   </span>
