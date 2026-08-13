@@ -11,20 +11,13 @@ function value(name, fallback) {
 }
 
 const seller = {
-  street: value("EINVOICE_SELLER_STREET", ""),
   city: value("EINVOICE_SELLER_CITY", "101"),
   country: value("EINVOICE_SELLER_COUNTRY", "ET"),
-  legalName: value(
-    "EINVOICE_SELLER_LEGAL_NAME",
-    "Empire Technological solution"
-  ),
   email: value("EINVOICE_SELLER_EMAIL", "seretse@empire.et"),
   phone: value("EINVOICE_SELLER_PHONE", "+251976524241"),
   region: value("EINVOICE_SELLER_REGION", "1"),
-  subCity: value("EINVOICE_SELLER_SUBCITY", "A"),
   wereda: value("EINVOICE_SELLER_WEREDA", "13"),
   houseNumber: value("EINVOICE_SELLER_HOUSE_NUMBER", "101"),
-  locality: value("EINVOICE_SELLER_LOCALITY", "Bole"),
 }
 
 async function firstBusinessId() {

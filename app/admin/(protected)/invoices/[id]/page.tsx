@@ -60,6 +60,12 @@ type AdminInvoiceView = {
     message: string
     issues: { portion: string; messages: string[] }[]
   } | null
+  cancellationError: {
+    statusCode?: number | null
+    message?: string | null
+    msg?: string | null
+    issues?: { portion: string; messages: string[] }[]
+  } | null
   receipt: {
     status: string | null
     eimsStatus: string | null
@@ -243,6 +249,21 @@ export default function AdminInvoiceViewPage({
               issues={invoice.registrationError?.issues ?? []}
             />
           )}
+          {invoice.registrationStatus !== "CANCELLED" &&
+            invoice.cancellationError && (
+              <FailurePanel
+                title="Cancellation failed"
+                statusCode={invoice.cancellationError.statusCode ?? null}
+                message={
+                  invoice.cancellationError.message ||
+                  invoice.cancellationError.msg ||
+                  (invoice.cancellationError.issues?.length
+                    ? "EIMS rejected the cancellation."
+                    : "EIMS rejected the cancellation. No error details were stored.")
+                }
+                issues={invoice.cancellationError.issues ?? []}
+              />
+            )}
           {invoice.receipt?.status === "FAILED" && (
             <FailurePanel
               title="Receipt failed"

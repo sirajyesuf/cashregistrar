@@ -5,11 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
 import { ArrowLeft, Building2 } from "lucide-react"
-import {
-  Field,
-  FieldError,
-  FieldLabel,
-} from "@/components/ui/field"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -91,6 +87,8 @@ export default function AddBusinessPage() {
       phone: "",
       region: "",
       wereda: "",
+      country: "",
+      houseNumber: "",
       morCredential: {
         tin: "",
         vatNumber: "",
@@ -204,9 +202,7 @@ export default function AddBusinessPage() {
                     name={field.name}
                     value={field.state.value}
                     onBlur={field.handleBlur}
-                    onChange={(event) =>
-                      field.handleChange(event.target.value)
-                    }
+                    onChange={(event) => field.handleChange(event.target.value)}
                     autoComplete="street-address"
                   />
                 </Field>
@@ -369,6 +365,58 @@ export default function AddBusinessPage() {
                   )
                 }}
               </form.Field>
+
+              <form.Field name="country">
+                {(field) => {
+                  const isInvalid =
+                    field.state.meta.isTouched && !field.state.meta.isValid
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <FieldLabel htmlFor={field.name}>Country</FieldLabel>
+                      <Input
+                        id={field.name}
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(event.target.value)
+                        }
+                        placeholder="e.g. Ethiopia"
+                        aria-invalid={isInvalid}
+                      />
+                      {isInvalid && (
+                        <FieldError errors={field.state.meta.errors} />
+                      )}
+                    </Field>
+                  )
+                }}
+              </form.Field>
+
+              <form.Field name="houseNumber">
+                {(field) => {
+                  const isInvalid =
+                    field.state.meta.isTouched && !field.state.meta.isValid
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <FieldLabel htmlFor={field.name}>House number</FieldLabel>
+                      <Input
+                        id={field.name}
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(event.target.value)
+                        }
+                        placeholder="House / building number"
+                        aria-invalid={isInvalid}
+                      />
+                      {isInvalid && (
+                        <FieldError errors={field.state.meta.errors} />
+                      )}
+                    </Field>
+                  )
+                }}
+              </form.Field>
             </div>
 
             <div className="flex items-center gap-2 pt-1">
@@ -504,7 +552,9 @@ export default function AddBusinessPage() {
                     field.state.meta.isTouched && !field.state.meta.isValid
                   return (
                     <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Client secret</FieldLabel>
+                      <FieldLabel htmlFor={field.name}>
+                        Client secret
+                      </FieldLabel>
                       <Input
                         id={field.name}
                         name={field.name}
@@ -592,9 +642,7 @@ export default function AddBusinessPage() {
                     name={field.name}
                     value={field.state.value}
                     onBlur={field.handleBlur}
-                    onChange={(event) =>
-                      field.handleChange(event.target.value)
-                    }
+                    onChange={(event) => field.handleChange(event.target.value)}
                     autoComplete="street-address"
                   />
                 </Field>

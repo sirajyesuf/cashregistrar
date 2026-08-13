@@ -58,7 +58,17 @@ const STEPS = [
 ] as const
 
 const STEP_FIELDS: StringField[][] = [
-  ["name", "address", "city", "region", "wereda", "phone", "email"],
+  [
+    "name",
+    "address",
+    "city",
+    "region",
+    "wereda",
+    "phone",
+    "email",
+    "country",
+    "houseNumber",
+  ],
   [
     "morCredential.tin",
     "morCredential.vatNumber",
@@ -228,6 +238,8 @@ export function OnboardingFlow() {
       phone: "",
       region: "",
       wereda: "",
+      country: "",
+      houseNumber: "",
       morCredential: {
         tin: "",
         vatNumber: "",
@@ -430,6 +442,24 @@ export function OnboardingFlow() {
                       autoComplete="email"
                       placeholder="contact@example.com"
                       className="sm:col-span-2"
+                    />
+                  )}
+                </form.Field>
+                <form.Field name="country">
+                  {(field) => (
+                    <FieldInput
+                      field={field}
+                      label="Country"
+                      placeholder="e.g. Ethiopia"
+                    />
+                  )}
+                </form.Field>
+                <form.Field name="houseNumber">
+                  {(field) => (
+                    <FieldInput
+                      field={field}
+                      label="House number"
+                      placeholder="House / building number"
                     />
                   )}
                 </form.Field>

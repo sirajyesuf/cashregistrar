@@ -6,17 +6,9 @@ export const morCredentialSchema = z.object({
   tin: z.string().trim().min(1, "TIN is required").max(40),
   vatNumber: z.string().trim().max(40),
   clientId: z.string().trim().min(1, "Client ID is required").max(200),
-  clientSecret: z
-    .string()
-    .trim()
-    .min(1, "Client secret is required")
-    .max(200),
+  clientSecret: z.string().trim().min(1, "Client secret is required").max(200),
   apiKey: z.string().trim().min(1, "API key is required").max(200),
-  systemNumber: z
-    .string()
-    .trim()
-    .min(1, "System number is required")
-    .max(80),
+  systemNumber: z.string().trim().min(1, "System number is required").max(80),
   systemType: z.string().trim().max(40),
 })
 
@@ -54,6 +46,8 @@ const sellerFields = {
     ),
   region: z.enum([...REGION_CODES, ""]),
   wereda: positiveIntegerField("Wereda", 120),
+  country: z.string().trim().max(120),
+  houseNumber: z.string().trim().max(120),
 }
 
 export const businessCreateSchema = z.object({

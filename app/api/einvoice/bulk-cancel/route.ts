@@ -5,8 +5,13 @@ import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
 import { callEims } from "@/lib/einvoice/client"
 import { getConfig } from "@/lib/einvoice/config"
+import {
+  cancellationReasonCode,
+  DEFAULT_CANCELLATION_REASON,
+  isCancellationReason,
+} from "@/lib/einvoice/cancellation-reason"
 import { hasIssuedReceipt } from "@/lib/invoice"
-import { extractErrorMessage } from "@/lib/einvoice/eims-error"
+import { extractErrorMessage, isEimsAuthError } from "@/lib/einvoice/eims-error"
 
 export const runtime = "nodejs"
 
@@ -15,6 +20,10 @@ export const runtime = "nodejs"
  * per-IRN results (no conversationId, no callback). A result is a success when
  * its lowercase `status` is "C" (cancelled); otherwise it carries an uppercase
  * `Status` (e.g. "Processing_Error") with a human-readable `msg`.
+ *
+ * A "Processing_Error" whose `msg` says the IRN is "already Canceled" is also
+ * treated as success (idempotent): the document was cancelled by an earlier
+ * request but our local write failed, so we reconcile instead of failing.
  */
 
 function text(value: unknown): string | null {
@@ -29,9 +38,7 @@ function cancelResultEntries(data: unknown): Record<string, unknown>[] {
     )
   }
   const root =
-    data && typeof data === "object"
-      ? (data as Record<string, unknown>)
-      : null
+    data && typeof data === "object" ? (data as Record<string, unknown>) : null
   const body = root?.body
   if (Array.isArray(body)) {
     return body.filter(
@@ -44,7 +51,14 @@ function cancelResultEntries(data: unknown): Record<string, unknown>[] {
 
 function cancelResultSuccess(entry: Record<string, unknown>): boolean {
   const status = text(entry.status)?.toUpperCase()
-  return status === "C" || status === "CANCELLED"
+  if (status === "C" || status === "CANCELLED") return true
+
+  // Idempotency: EIMS reports "IRN already Canceled." when the document was
+  // cancelled by an earlier request whose local write failed. Treat it as a
+  // success so the invoice is reconciled to CANCELLED locally.
+  const msg = text(entry.msg)
+  if (msg && /already\s*cancel(?:ed|led)?/i.test(msg)) return true
+  return false
 }
 
 function asJson(value: unknown): Prisma.InputJsonValue {
@@ -56,7 +70,7 @@ export async function POST(request: Request) {
   if (!user)
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
 
-  let body: { invoiceIds?: unknown; reasonCode?: unknown; remark?: unknown }
+  let body: { invoiceIds?: unknown; reason?: unknown; remark?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -114,10 +128,10 @@ export async function POST(request: Request) {
   const byId = new Map(invoices.map((invoice) => [invoice.id, invoice]))
   const orderedInvoices = invoiceIds.map((id) => byId.get(id)!)
   const businessId = orderedInvoices[0]?.businessId ?? ""
-  const reasonCode =
-    typeof body.reasonCode === "string" && body.reasonCode.trim()
-      ? body.reasonCode.trim()
-      : "1"
+  const reason = isCancellationReason(body.reason)
+    ? body.reason
+    : DEFAULT_CANCELLATION_REASON
+  const reasonCode = cancellationReasonCode(reason)
   const remark = typeof body.remark === "string" ? body.remark.trim() : ""
 
   try {
@@ -193,14 +207,15 @@ export async function POST(request: Request) {
           rawResponse: asJson(result.data),
           items: {
             create: orderedInvoices.map((invoice) => {
-              const outcome = outcomes.find(
-                (o) => o.invoice?.id === invoice.id
-              )
+              const outcome = outcomes.find((o) => o.invoice?.id === invoice.id)
               return {
                 invoiceId: invoice.id,
                 irn: invoice.irn!,
                 status: outcome?.success ? "SUCCEEDED" : "FAILED",
-                error: outcome && !outcome.success ? asJson(outcome.entry) : Prisma.DbNull,
+                error:
+                  outcome && !outcome.success
+                    ? asJson(outcome.entry)
+                    : Prisma.DbNull,
                 rawResult: outcome ? asJson(outcome.entry) : Prisma.DbNull,
               }
             }),
@@ -215,8 +230,12 @@ export async function POST(request: Request) {
             ? {
                 registrationStatus: "CANCELLED",
                 registrationError: Prisma.DbNull,
+                cancellationReason: reason,
+                cancellationRemark: remark || null,
+                cancellationError: Prisma.DbNull,
+                cancelledAt: new Date(),
               }
-            : { registrationError: asJson(outcome.entry) },
+            : { cancellationError: asJson(outcome.entry) },
         })
       }
       const status =
@@ -240,6 +259,17 @@ export async function POST(request: Request) {
       failed,
     })
   } catch (err) {
+    if (isEimsAuthError(err)) {
+      return NextResponse.json(
+        {
+          error: err.message,
+          code: err.code,
+          statusCode: 502,
+          detail: { eimsStatusCode: err.eimsStatusCode },
+        },
+        { status: 502 }
+      )
+    }
     const message =
       err instanceof Error ? err.message : "Bulk cancellation failed"
     return NextResponse.json({ error: message }, { status: 500 })

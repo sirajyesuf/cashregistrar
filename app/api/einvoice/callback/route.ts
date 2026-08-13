@@ -147,7 +147,11 @@ export async function POST(request: Request) {
             irn: operation.type === "REGISTER" ? irn : undefined,
             registeredAt:
               operation.type === "REGISTER" ? new Date() : undefined,
+            cancelledAt:
+              operation.type === "CANCEL" ? new Date() : undefined,
             registrationError: Prisma.DbNull,
+            cancellationError:
+              operation.type === "CANCEL" ? Prisma.DbNull : undefined,
           },
         })
       } else {
@@ -161,12 +165,13 @@ export async function POST(request: Request) {
         })
         await tx.invoice.update({
           where: { id: item.invoiceId },
-          data: {
-            ...(operation.type === "REGISTER"
-              ? { registrationStatus: "FAILED" as const }
-              : {}),
-            registrationError: resultError(result),
-          },
+          data:
+            operation.type === "REGISTER"
+              ? {
+                  registrationStatus: "FAILED" as const,
+                  registrationError: resultError(result),
+                }
+              : { cancellationError: resultError(result) },
         })
         if (operation.type === "REGISTER") {
           const expected = expectedSequenceCounter(result)

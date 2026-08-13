@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import Link from "next/link"
 import { Ban, Send, Trash2, TriangleAlert, X } from "lucide-react"
 import {
   AlertDialog,
@@ -24,7 +25,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Select,
   SelectContent,
@@ -33,13 +38,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { toast } from "@/components/toast"
 import { hasIssuedReceipt } from "@/lib/invoice"
+import {
+  CANCELLATION_REASON_OPTIONS,
+  DEFAULT_CANCELLATION_REASON,
+  type CancellationReason,
+} from "@/lib/einvoice/cancellation-reason"
 
 type BulkInvoice = {
   id: string
@@ -50,10 +56,23 @@ type BulkInvoice = {
 
 type BulkActionsProps = {
   invoices: BulkInvoice[]
+  businessId?: string
   onClear: () => void
   onDelete: () => void
   onSubmitted: () => void
   deleting?: boolean
+}
+
+type BulkErrorResponse = {
+  httpStatus: number
+  response: {
+    ok?: boolean
+    error?: string
+    code?: string
+    statusCode?: number
+    retryAfter?: string | null
+    detail?: unknown
+  }
 }
 
 type DialogMode = "register" | "cancel" | null
@@ -82,16 +101,21 @@ function canDelete(invoice: BulkInvoice): boolean {
 
 export function BulkActions({
   invoices,
+  businessId,
   onClear,
   onDelete,
   onSubmitted,
   deleting = false,
 }: BulkActionsProps) {
   const [mode, setMode] = useState<DialogMode>(null)
-  const [reasonCode, setReasonCode] = useState("1")
+  const [reason, setReason] = useState<CancellationReason>(
+    DEFAULT_CANCELLATION_REASON
+  )
   const [remark, setRemark] = useState("")
   const [pending, setPending] = useState(false)
-  const [errorResponse, setErrorResponse] = useState<unknown>(null)
+  const [errorResponse, setErrorResponse] = useState<BulkErrorResponse | null>(
+    null
+  )
 
   const registerable = useMemo(() => invoices.filter(canRegister), [invoices])
   const cancellable = useMemo(() => invoices.filter(canCancel), [invoices])
@@ -121,7 +145,7 @@ export function BulkActions({
               ? { invoiceIds: target.map((invoice) => invoice.id) }
               : {
                   invoiceIds: target.map((invoice) => invoice.id),
-                  reasonCode,
+                  reason,
                   remark: remark.trim(),
                 }
           ),
@@ -130,6 +154,7 @@ export function BulkActions({
       const body = (await response.json().catch(() => ({}))) as {
         ok?: boolean
         error?: string
+        code?: string
         statusCode?: number
         retryAfter?: string | null
         conversationId?: string
@@ -144,6 +169,7 @@ export function BulkActions({
           httpStatus: response.status,
           response: body,
         })
+        if (body.code === "EIMS_AUTH") throw body
         const status = body.statusCode ? ` (EIMS ${body.statusCode})` : ""
         throw new Error(
           `${body.error ?? `Bulk ${mode} failed (${response.status})`}${status}`
@@ -171,11 +197,30 @@ export function BulkActions({
       setRemark("")
       onSubmitted()
     } catch (error) {
+      const body = error as { code?: string; error?: string } | null
+      const authError = body?.code === "EIMS_AUTH"
       toast.add({
         type: "destructive",
-        title: "Bulk action failed",
-        description:
-          error instanceof Error ? error.message : "Please try again.",
+        title: authError
+          ? "Check your MOR credentials"
+          : "Bulk action failed",
+        description: authError ? (
+          <>
+            {body?.error}{" "}
+            {businessId && (
+              <Link
+                href={`/businesses/${businessId}/edit`}
+                className="font-medium underline underline-offset-2"
+              >
+                Fix credentials
+              </Link>
+            )}
+          </>
+        ) : error instanceof Error ? (
+          error.message
+        ) : (
+          "Please try again."
+        ),
       })
     } finally {
       setPending(false)
@@ -270,9 +315,7 @@ export function BulkActions({
         <DialogContent showCloseButton={!pending}>
           <DialogHeader>
             <DialogTitle>
-              {mode === "register"
-                ? "Register invoices?"
-                : "Cancel invoices?"}
+              {mode === "register" ? "Register invoices?" : "Cancel invoices?"}
             </DialogTitle>
             <DialogDescription>
               {mode === "register"
@@ -294,40 +337,67 @@ export function BulkActions({
             selected
           </div>
 
-          {errorResponse !== null && (
-            <Alert variant="destructive">
-              <TriangleAlert />
-              <AlertTitle>EIMS rejected the request</AlertTitle>
-              <AlertDescription>
-                <Collapsible className="mt-2">
-                  <CollapsibleTrigger className="text-xs font-medium underline">
-                    Full EIMS response
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <pre className="mt-2 max-h-56 overflow-auto rounded-md bg-muted p-3 font-mono text-[11px] leading-5 whitespace-pre-wrap text-foreground">
-                      {JSON.stringify(errorResponse, null, 2)}
-                    </pre>
-                  </CollapsibleContent>
-                </Collapsible>
-              </AlertDescription>
-            </Alert>
-          )}
+          {errorResponse !== null &&
+            (errorResponse.response.code === "EIMS_AUTH" ? (
+              <Alert variant="default">
+                <TriangleAlert />
+                <AlertTitle>Check your MOR credentials</AlertTitle>
+                <AlertDescription>
+                  <div className="flex flex-col gap-1">
+                    <span>{errorResponse.response.error}</span>
+                    {businessId && (
+                      <Link
+                        href={`/businesses/${businessId}/edit`}
+                        className="font-medium underline underline-offset-2"
+                      >
+                        Fix credentials
+                      </Link>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert variant="destructive">
+                <TriangleAlert />
+                <AlertTitle>EIMS rejected the request</AlertTitle>
+                <AlertDescription>
+                  <Collapsible className="mt-2">
+                    <CollapsibleTrigger className="text-xs font-medium underline">
+                      Full EIMS response
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <pre className="mt-2 max-h-56 overflow-auto rounded-md bg-muted p-3 font-mono text-[11px] leading-5 whitespace-pre-wrap text-foreground">
+                        {JSON.stringify(errorResponse, null, 2)}
+                      </pre>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </AlertDescription>
+              </Alert>
+            ))}
 
           {mode === "cancel" && (
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="bulk-reason-code">Reason code</FieldLabel>
+                <FieldLabel htmlFor="bulk-reason-code">Reason</FieldLabel>
                 <Select
-                  value={reasonCode}
-                  onValueChange={(value) => setReasonCode(value ?? "1")}
+                  value={reason}
+                  onValueChange={(value) =>
+                    setReason(
+                      (value as CancellationReason) ??
+                        DEFAULT_CANCELLATION_REASON
+                    )
+                  }
+                  items={CANCELLATION_REASON_OPTIONS}
                 >
                   <SelectTrigger id="bulk-reason-code">
                     <SelectValue placeholder="Select reason" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Duplicate invoice</SelectItem>
-                    <SelectItem value="2">Data error</SelectItem>
-                    <SelectItem value="6">Calculation error</SelectItem>
+                    {CANCELLATION_REASON_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </Field>
@@ -351,7 +421,10 @@ export function BulkActions({
           )}
 
           <DialogFooter>
-            <DialogClose render={<Button variant="outline" />} disabled={pending}>
+            <DialogClose
+              render={<Button variant="outline" />}
+              disabled={pending}
+            >
               Keep selected
             </DialogClose>
             <Button onClick={submit} disabled={pending}>

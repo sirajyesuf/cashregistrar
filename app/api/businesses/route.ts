@@ -90,6 +90,8 @@ export async function POST(request: Request) {
           phone: parsed.data.phone ?? null,
           region: parsed.data.region || null,
           wereda: parsed.data.wereda ?? null,
+          country: parsed.data.country ?? "",
+          houseNumber: parsed.data.houseNumber ?? null,
         },
       })
       await tx.morCredential.create({

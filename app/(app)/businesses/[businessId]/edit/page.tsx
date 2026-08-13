@@ -7,11 +7,7 @@ import { useForm } from "@tanstack/react-form"
 import { useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, Building2, Check, Copy, KeyRound } from "lucide-react"
 import { copyText } from "@/lib/copy"
-import {
-  Field,
-  FieldError,
-  FieldLabel,
-} from "@/components/ui/field"
+import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -56,6 +52,8 @@ type BusinessDetails = {
   phone: string | null
   region: string | null
   wereda: string | null
+  country: string
+  houseNumber: string | null
   morCredential: MorCredentialDetails | null
 }
 
@@ -146,6 +144,8 @@ function EditBusinessForm({
       phone: initial.phone ?? "",
       region: initial.region ?? "",
       wereda: initial.wereda ?? "",
+      country: initial.country ?? "",
+      houseNumber: initial.houseNumber ?? "",
       morCredential: {
         tin: initial.morCredential?.tin ?? "",
         vatNumber: initial.morCredential?.vatNumber ?? "",
@@ -174,6 +174,8 @@ function EditBusinessForm({
             phone: value.phone,
             region: value.region,
             wereda: value.wereda,
+            country: value.country,
+            houseNumber: value.houseNumber,
             morCredential: value.morCredential,
           }),
         })
@@ -255,9 +257,7 @@ function EditBusinessForm({
                     name={field.name}
                     value={field.state.value}
                     onBlur={field.handleBlur}
-                    onChange={(event) =>
-                      field.handleChange(event.target.value)
-                    }
+                    onChange={(event) => field.handleChange(event.target.value)}
                     autoFocus
                     aria-invalid={isInvalid}
                   />
@@ -276,9 +276,7 @@ function EditBusinessForm({
                   name={field.name}
                   value={field.state.value}
                   onBlur={field.handleBlur}
-                  onChange={(event) =>
-                    field.handleChange(event.target.value)
-                  }
+                  onChange={(event) => field.handleChange(event.target.value)}
                   autoComplete="street-address"
                 />
               </Field>
@@ -329,9 +327,7 @@ function EditBusinessForm({
                     <FieldLabel htmlFor={field.name}>Region</FieldLabel>
                     <Select
                       value={field.state.value}
-                      onValueChange={(value) =>
-                        field.handleChange(value ?? "")
-                      }
+                      onValueChange={(value) => field.handleChange(value ?? "")}
                       items={REGION_OPTIONS}
                     >
                       <SelectTrigger
@@ -396,9 +392,7 @@ function EditBusinessForm({
                     name={field.name}
                     value={field.state.value}
                     onBlur={field.handleBlur}
-                    onChange={(event) =>
-                      field.handleChange(event.target.value)
-                    }
+                    onChange={(event) => field.handleChange(event.target.value)}
                     placeholder="e.g. +251900000000"
                   />
                 </Field>
@@ -423,6 +417,58 @@ function EditBusinessForm({
                       }
                       autoComplete="email"
                       placeholder="contact@example.com"
+                      aria-invalid={isInvalid}
+                    />
+                    {isInvalid && (
+                      <FieldError errors={field.state.meta.errors} />
+                    )}
+                  </Field>
+                )
+              }}
+            </form.Field>
+
+            <form.Field name="country">
+              {(field) => {
+                const isInvalid =
+                  field.state.meta.isTouched && !field.state.meta.isValid
+                return (
+                  <Field data-invalid={isInvalid}>
+                    <FieldLabel htmlFor={field.name}>Country</FieldLabel>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      placeholder="e.g. Ethiopia"
+                      aria-invalid={isInvalid}
+                    />
+                    {isInvalid && (
+                      <FieldError errors={field.state.meta.errors} />
+                    )}
+                  </Field>
+                )
+              }}
+            </form.Field>
+
+            <form.Field name="houseNumber">
+              {(field) => {
+                const isInvalid =
+                  field.state.meta.isTouched && !field.state.meta.isValid
+                return (
+                  <Field data-invalid={isInvalid}>
+                    <FieldLabel htmlFor={field.name}>House number</FieldLabel>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      placeholder="House / building number"
                       aria-invalid={isInvalid}
                     />
                     {isInvalid && (
@@ -475,9 +521,7 @@ function EditBusinessForm({
                     name={field.name}
                     value={field.state.value}
                     onBlur={field.handleBlur}
-                    onChange={(event) =>
-                      field.handleChange(event.target.value)
-                    }
+                    onChange={(event) => field.handleChange(event.target.value)}
                     autoComplete="off"
                   />
                 </Field>
@@ -669,9 +713,7 @@ export default function EditBusinessPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Edit business</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {business.name}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{business.name}</p>
         </div>
         <Link href="/dashboard">
           <Button variant="outline" size="sm">

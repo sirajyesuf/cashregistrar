@@ -148,6 +148,10 @@ export async function PUT(
         registrationStatus: null,
         registrationError: Prisma.JsonNull,
         registeredAt: null,
+        cancellationReason: null,
+        cancellationRemark: null,
+        cancellationError: Prisma.JsonNull,
+        cancelledAt: null,
         lines: {
           create: lines.map((line, index) => ({
             lineNumber: index + 1,

@@ -319,6 +319,7 @@ export default function InvoicesPage() {
               invoices={invoices.filter((invoice) =>
                 selected.includes(invoice.id)
               )}
+              businessId={businessId}
               onClear={() => setSelected([])}
               onDelete={handleBulkDelete}
               onSubmitted={() => {
@@ -393,6 +394,7 @@ export default function InvoicesPage() {
                       <div className="flex items-center justify-end gap-2">
                         <RegisterButton
                           invoiceId={invoice.id}
+                          businessId={businessId}
                           size="sm"
                           disabled={
                             invoice.registrationStatus === "REGISTERED" ||
@@ -404,6 +406,7 @@ export default function InvoicesPage() {
                             <CancelButton
                               invoiceId={invoice.id}
                               invoiceNumber={invoice.number}
+                              businessId={businessId}
                               size="sm"
                             />
                           )}

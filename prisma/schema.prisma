@@ -48,17 +48,13 @@ model Business {
   address   String?
   currency  String   @default("ETB")
   active    Boolean  @default(true)
-  street    String   @default("")
   city      String   @default("")
   country   String   @default("")
-  legalName String?
   email     String?
   phone     String?
   region    String?
-  subCity   String?
   wereda    String?
   houseNumber String?
-  locality  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -281,6 +277,13 @@ enum TaxCode {
   VAT15
 }
 
+enum CancellationReason {
+  DUPLICATE
+  dataEntryMistake
+  orderCancelled
+  OTHERS
+}
+
 model Invoice {
   id         String  @id @default(cuid())
   number     String
@@ -332,6 +335,10 @@ model Invoice {
   registrationStatus RegistrationStatus?
   registrationError  Json?
   registeredAt       DateTime?
+  cancellationReason CancellationReason?
+  cancellationRemark String?
+  cancellationError  Json?
+  cancelledAt        DateTime?
 
   receipt Receipt?
 

@@ -4,15 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useTheme } from "@/components/theme-provider"
-import {
-  ChevronDown,
-  LogOut,
-  Moon,
-  Settings,
-  Shield,
-  Sun,
-  UserRound,
-} from "lucide-react"
+import { ChevronDown, LogOut, Moon, Shield, Sun, UserRound } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,10 +73,6 @@ export function UserMenu({ name, email, isAdmin }: Props) {
         <DropdownMenuLinkItem render={<Link href="/profile" />}>
           <UserRound className="text-muted-foreground" />
           Profile
-        </DropdownMenuLinkItem>
-        <DropdownMenuLinkItem render={<Link href="/settings" />}>
-          <Settings className="text-muted-foreground" />
-          Settings
         </DropdownMenuLinkItem>
         {isAdmin && (
           <DropdownMenuLinkItem render={<Link href="/admin" />}>

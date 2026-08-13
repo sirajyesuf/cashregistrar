@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `Invoice` ADD COLUMN `cancellationReason` ENUM('DUPLICATE', 'DATA_ENTRY_MISTAKE', 'ORDER_CANCELLED', 'OTHERS') NULL,
+    ADD COLUMN `cancellationRemark` VARCHAR(191) NULL;

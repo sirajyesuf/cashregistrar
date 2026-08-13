@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
 
 const AUTH_ROUTES = ["/login", "/register"]
-const PROTECTED_ROUTES = ["/dashboard", "/invoices", "/settings"]
+const PROTECTED_ROUTES = ["/dashboard", "/invoices"]
 const ADMIN_LOGIN = "/admin/login"
 
 function matches(pathname: string, prefixes: string[]): boolean {

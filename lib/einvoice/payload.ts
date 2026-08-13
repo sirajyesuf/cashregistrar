@@ -101,7 +101,7 @@ function orEmpty(value: string | null | undefined): string {
  * invoice, which must work even before EIMS credentials are configured.
  */
 export function sellerSnapshotFromBusiness(
-  business: Pick<Business, "name" | "city" | "country" | "email" | "houseNumber" | "legalName" | "locality" | "phone" | "region" | "subCity" | "wereda"> | null,
+  business: Pick<Business, "name" | "city" | "country" | "email" | "houseNumber" | "phone" | "region" | "wereda"> | null,
   credential?: Pick<MorCredential, "tin" | "vatNumber"> | null
 ) {
   return {
@@ -109,11 +109,11 @@ export function sellerSnapshotFromBusiness(
     sellerCountry: business?.country || null,
     sellerEmail: business?.email || null,
     sellerHouseNumber: business?.houseNumber ?? null,
-    sellerLegalName: business?.legalName || business?.name || null,
-    sellerLocality: business?.locality ?? null,
+    sellerLegalName: business?.name || null,
+    sellerLocality: null,
     sellerPhone: business?.phone || null,
     sellerRegion: business?.region || null,
-    sellerSubCity: business?.subCity ?? null,
+    sellerSubCity: null,
     sellerTin: credential?.tin || null,
     sellerVatNumber: credential?.vatNumber || null,
     sellerWereda: business?.wereda || null,

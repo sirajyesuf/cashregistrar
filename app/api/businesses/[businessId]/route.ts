@@ -27,19 +27,32 @@ const updateBusinessSchema = z.object({
   currency: z.string().trim().length(3).toUpperCase().optional(),
   active: z.boolean().optional(),
   city: positiveInteger("City").max(120).optional(),
-  email: z.string().trim().email("Enter a valid email address").max(160).nullable().optional(),
+  email: z
+    .string()
+    .trim()
+    .email("Enter a valid email address")
+    .max(160)
+    .nullable()
+    .optional(),
   phone: z.string().trim().max(40).nullable().optional(),
-  region: z.enum([...REGION_CODES, ""]).nullable().optional(),
+  region: z
+    .enum([...REGION_CODES, ""])
+    .nullable()
+    .optional(),
   wereda: positiveInteger("Wereda").max(120).nullable().optional(),
+  country: z.string().trim().max(120).optional(),
+  houseNumber: z.string().trim().max(120).nullable().optional(),
 })
 
 export async function GET(_request: Request, { params }: Context) {
   const user = await getSessionUser()
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  if (!user)
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
 
   const { businessId } = await params
   const access = await getBusinessAccess(user.id, businessId)
-  if (!access) return NextResponse.json({ error: "Business not found" }, { status: 404 })
+  if (!access)
+    return NextResponse.json({ error: "Business not found" }, { status: 404 })
 
   const business = await prisma.business.findUnique({
     where: { id: businessId },
@@ -54,6 +67,8 @@ export async function GET(_request: Request, { params }: Context) {
       phone: true,
       region: true,
       wereda: true,
+      country: true,
+      houseNumber: true,
       createdAt: true,
       morCredential: {
         select: {
@@ -101,12 +116,16 @@ export async function GET(_request: Request, { params }: Context) {
 
 export async function PATCH(request: Request, { params }: Context) {
   const user = await getSessionUser()
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  if (!user)
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
 
   const { businessId } = await params
   const access = await getBusinessAccess(user.id, businessId)
   if (!access || !canManageBusiness(access.role)) {
-    return NextResponse.json({ error: "Business owner access required" }, { status: 403 })
+    return NextResponse.json(
+      { error: "Business owner access required" },
+      { status: 403 }
+    )
   }
 
   let body: unknown

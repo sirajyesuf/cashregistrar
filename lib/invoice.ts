@@ -108,9 +108,17 @@ export type SellerInfo = {
 export type RegistrationStatus =
   "PENDING" | "PROCESSING" | "REGISTERED" | "CANCELLED" | "FAILED"
 
+export type CancellationErrorDetails = {
+  statusCode?: number | null
+  message?: string | null
+  issues?: { portion: string; messages: string[] }[]
+  raw?: unknown
+}
+
 export type PreviewInvoice = {
   id: string
   number: string
+  businessId: string
   date: string
   taxCode?: string | null
   taxRate: number
@@ -120,6 +128,10 @@ export type PreviewInvoice = {
   seller: SellerInfo
   irn?: string | null
   registrationStatus?: RegistrationStatus | null
+  cancellationReason?: string | null
+  cancellationRemark?: string | null
+  cancellationError?: CancellationErrorDetails | null
+  cancelledAt?: string | null
   receipt?: {
     number: string | null
     rrn: string | null
@@ -182,6 +194,7 @@ type ApiLine = {
 type ApiInvoice = {
   id: string
   number: string
+  businessId: string
   date: string
   taxCode?: string | null
   taxRate: ApiMoney
@@ -194,6 +207,10 @@ type ApiInvoice = {
   buyerTin?: string | null
   irn?: string | null
   registrationStatus?: string | null
+  cancellationReason?: string | null
+  cancellationRemark?: string | null
+  cancellationError?: CancellationErrorDetails | null
+  cancelledAt?: string | null
   receipt?: {
     number: string | null
     rrn: string | null
@@ -228,6 +245,7 @@ export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
   return {
     id: invoice.id,
     number: invoice.number,
+    businessId: invoice.businessId,
     date: invoice.date.slice(0, 10),
     taxCode: invoice.taxCode ?? undefined,
     taxRate: Number(invoice.taxRate),
@@ -261,6 +279,10 @@ export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
     irn: invoice.irn ?? null,
     registrationStatus: invoice.registrationStatus as
       RegistrationStatus | null | undefined,
+    cancellationReason: invoice.cancellationReason ?? null,
+    cancellationRemark: invoice.cancellationRemark ?? null,
+    cancellationError: invoice.cancellationError ?? null,
+    cancelledAt: invoice.cancelledAt ?? null,
     receipt: invoice.receipt
       ? {
           number: invoice.receipt.number ?? null,

@@ -8,7 +8,11 @@ import { useQuery } from "@tanstack/react-query"
 import { Pencil, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { InvoicePreview } from "@/components/invoice/invoice-preview"
 import { RegisterButton } from "@/components/invoice/register-button"
 import { CancelButton } from "@/components/invoice/cancel-button"
@@ -17,10 +21,12 @@ import { HashField } from "@/components/invoice/hash-field"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { formatCents, hasIssuedReceipt, invoiceFromApi } from "@/lib/invoice"
+import { cancellationReasonLabel } from "@/lib/einvoice/cancellation-reason"
 
 type ApiInvoice = {
   id: string
   number: string
+  businessId: string
   date: string
   taxCode?: string | null
   taxRate: string
@@ -92,7 +98,9 @@ export default function InvoiceDetailPage() {
         </Link>
       </div>
 
-      {errorMessage && <p className="text-sm text-destructive">{errorMessage}</p>}
+      {errorMessage && (
+        <p className="text-sm text-destructive">{errorMessage}</p>
+      )}
 
       {!errorMessage && notFound && (
         <p className="text-sm text-muted-foreground">Invoice not found.</p>
@@ -108,11 +116,15 @@ export default function InvoiceDetailPage() {
       {invoice && (
         <div className="flex flex-col gap-4">
           <div className="rounded-lg border bg-muted/30 print:hidden">
-            <Collapsible open={panelOpen} onOpenChange={setPanelOpen} className="group">
+            <Collapsible
+              open={panelOpen}
+              onOpenChange={setPanelOpen}
+              className="group"
+            >
               <CollapsibleTrigger className="flex w-full items-center gap-3 p-4 text-left outline-none">
                 <ChevronDown
                   className={cn(
-                    "size-4 shrink-0 text-muted-foreground transition-transform group-data-[open]:rotate-0 -rotate-90"
+                    "size-4 shrink-0 -rotate-90 text-muted-foreground transition-transform group-data-[open]:rotate-0"
                   )}
                 />
                 <span className="text-sm font-semibold">EIMS Registration</span>
@@ -127,13 +139,59 @@ export default function InvoiceDetailPage() {
                 ) : (
                   <Badge variant="outline">Unregistered</Badge>
                 )}
-                {receiptIssued && <Badge variant="outline">Receipt issued</Badge>}
+                {receiptIssued && (
+                  <Badge variant="outline">Receipt issued</Badge>
+                )}
               </CollapsibleTrigger>
 
               <CollapsibleContent>
                 <div className="flex flex-col gap-3 border-t p-4">
                   {invoice.irn && (
                     <HashField label="Invoice IRN" value={invoice.irn} />
+                  )}
+
+                  {invoice.registrationStatus === "CANCELLED" && (
+                    <div className="flex flex-col gap-2">
+                      {invoice.cancellationReason && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            Cancellation reason
+                          </span>
+                          <span className="text-sm font-medium">
+                            {cancellationReasonLabel(
+                              invoice.cancellationReason
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      {invoice.cancellationRemark && (
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            Remark
+                          </span>
+                          <span className="text-right text-sm font-medium">
+                            {invoice.cancellationRemark}
+                          </span>
+                        </div>
+                      )}
+                      {invoice.cancelledAt && (
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            Cancelled at
+                          </span>
+                          <span className="text-sm font-medium">
+                            {new Date(invoice.cancelledAt).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {invoice.cancellationError && (
+                    <p className="text-sm text-destructive">
+                      {invoice.cancellationError.message ??
+                        "EIMS rejected the cancellation."}
+                    </p>
                   )}
 
                   {receiptIssued && (
@@ -192,6 +250,7 @@ export default function InvoiceDetailPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <RegisterButton
                       invoiceId={invoice.id}
+                      businessId={invoice.businessId}
                       size="sm"
                       disabled={cannotRegister}
                     />
@@ -200,6 +259,7 @@ export default function InvoiceDetailPage() {
                         <CancelButton
                           invoiceId={invoice.id}
                           invoiceNumber={invoice.number}
+                          businessId={invoice.businessId}
                           size="sm"
                         />
                       )}
@@ -208,6 +268,7 @@ export default function InvoiceDetailPage() {
                         <ReceiptButton
                           invoiceId={invoice.id}
                           invoiceNumber={invoice.number}
+                          businessId={invoice.businessId}
                           size="sm"
                         />
                       )}
