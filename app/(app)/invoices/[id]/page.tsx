@@ -107,9 +107,33 @@ export default function InvoiceDetailPage() {
       )}
 
       {!errorMessage && !notFound && isLoading && (
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-64 w-full" />
+        <div className="flex flex-col gap-4">
+          <div className="rounded-lg border bg-muted/30 p-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-5 w-5 rounded" />
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-5 w-24" />
+            </div>
+            <Skeleton className="mt-4 h-8 w-full" />
+          </div>
+          <div className="rounded-lg border bg-white p-5 sm:p-8">
+            <div className="flex items-start justify-between">
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-8 w-40" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col gap-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+            <Skeleton className="mt-6 h-24 w-64 self-end" />
+          </div>
         </div>
       )}
 

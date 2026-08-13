@@ -141,6 +141,23 @@ export default function InvoicesPage() {
   const stats = data?.stats ?? null
   const errorMessage = error instanceof Error ? error.message : null
 
+  const loadingSkeleton = (
+    <div className="flex flex-col gap-6">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-24" />
+        ))}
+      </section>
+      <div className="rounded-md border">
+        <div className="space-y-3 p-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+
   const invalidateScoped = () => {
     queryClient.invalidateQueries({ queryKey: ["invoices", businessId] })
     queryClient.invalidateQueries({ queryKey: ["invoice"] })
@@ -280,10 +297,7 @@ export default function InvoicesPage() {
       )}
 
       {workspacePending ? (
-        <div className="flex flex-col gap-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
+        loadingSkeleton
       ) : !workspace ? (
         <Empty className="rounded-xl border border-dashed p-10">
           <EmptyContent>
@@ -299,10 +313,7 @@ export default function InvoicesPage() {
       ) : errorMessage ? (
         <p className="mb-4 text-sm text-destructive">{errorMessage}</p>
       ) : invoices === null ? (
-        <div className="flex flex-col gap-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
+        loadingSkeleton
       ) : invoices.length === 0 ? (
         <Empty className="rounded-xl border border-dashed p-10">
           <EmptyContent>
