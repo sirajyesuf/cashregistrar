@@ -16,4 +16,5 @@ export const TEST_SELLER_FIELDS = {
   phone: "+251976524241",
   region: "1",
   wereda: "13",
+  houseNumber: "101",
 }

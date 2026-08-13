@@ -156,6 +156,10 @@ export default function AddBusinessPage() {
                   form.setFieldValue("phone", TEST_SELLER_FIELDS.phone)
                   form.setFieldValue("region", TEST_SELLER_FIELDS.region)
                   form.setFieldValue("wereda", TEST_SELLER_FIELDS.wereda)
+                  form.setFieldValue(
+                    "houseNumber",
+                    TEST_SELLER_FIELDS.houseNumber
+                  )
                 }}
               >
                 Test business
