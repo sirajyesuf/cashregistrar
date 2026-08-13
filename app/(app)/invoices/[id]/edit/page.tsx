@@ -92,7 +92,7 @@ export default function EditInvoicePage() {
     error,
     isLoading,
   } = useQuery({
-    queryKey: ["invoice", id],
+    queryKey: ["invoice", id, "edit"],
     queryFn: async () => {
       const res = await fetch(`/api/invoices/${id}`)
       if (res.status === 404) throw new Error("NOT_FOUND")
