@@ -199,6 +199,53 @@ export default function ProductsPage() {
   const products = data ?? []
   const loadError = error instanceof Error ? error.message : null
 
+  const loadingSkeleton = (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableHead>
+              <Skeleton className="h-4 w-24" />
+            </TableHead>
+            <TableHead className="w-28">
+              <Skeleton className="h-4 w-16" />
+            </TableHead>
+            <TableHead className="w-20">
+              <Skeleton className="h-4 w-10" />
+            </TableHead>
+            <TableHead className="w-40 text-right">
+              <Skeleton className="ml-auto h-4 w-20" />
+            </TableHead>
+            <TableHead className="w-24 text-right">
+              <Skeleton className="ml-auto h-4 w-16" />
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                <Skeleton className="h-4 w-32" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-16" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-10" />
+              </TableCell>
+              <TableCell className="text-right">
+                <Skeleton className="ml-auto h-4 w-20" />
+              </TableCell>
+              <TableCell className="text-right">
+                <Skeleton className="ml-auto h-4 w-16" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["products", businessId] })
   }
@@ -283,10 +330,7 @@ export default function ProductsPage() {
       </div>
 
       {workspacePending ? (
-        <div className="flex flex-col gap-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
+        loadingSkeleton
       ) : !workspace ? (
         <Empty className="rounded-xl border border-dashed p-10">
           <EmptyContent>
@@ -300,10 +344,7 @@ export default function ProductsPage() {
           </EmptyContent>
         </Empty>
       ) : isPending ? (
-        <div className="flex flex-col gap-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
+        loadingSkeleton
       ) : loadError ? (
         <p className="text-sm text-destructive">{loadError}</p>
       ) : products.length === 0 ? (
