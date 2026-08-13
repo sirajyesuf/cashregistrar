@@ -1,6 +1,7 @@
 "use client"
 
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import Link from "next/link"
 import { Receipt as ReceiptIcon } from "lucide-react"
 import {
   AlertDialog,
@@ -19,6 +20,7 @@ import { Spinner } from "@/components/ui/spinner"
 type ReceiptButtonProps = {
   invoiceId: string
   invoiceNumber: string
+  businessId?: string
   size?: "default" | "sm" | "lg"
   onIssued?: (receipt: {
     rrn: string | null
@@ -39,9 +41,10 @@ async function issueReceipt(invoiceId: string) {
     qr?: string | null
     status?: string | null
     error?: string
+    code?: string
   }
   if (!res.ok || !body.ok) {
-    throw new Error(body.error ?? `Receipt failed (${res.status})`)
+    throw body
   }
   return body
 }
@@ -49,6 +52,7 @@ async function issueReceipt(invoiceId: string) {
 export function ReceiptButton({
   invoiceId,
   invoiceNumber,
+  businessId,
   size,
   onIssued,
 }: ReceiptButtonProps) {
@@ -71,11 +75,28 @@ export function ReceiptButton({
       })
     },
     onError: (err) => {
-      const message =
-        err instanceof Error ? err.message : "Could not issue receipt"
+      const body = err as { error?: string; code?: string } | null
+      const message = body?.error ?? "Could not issue receipt"
+      const authError = body?.code === "EIMS_AUTH"
       toast.add({
-        title: "Could not issue receipt",
-        description: message,
+        title: authError
+          ? "Check your MOR credentials"
+          : "Could not issue receipt",
+        description: authError ? (
+          <>
+            {message}{" "}
+            {businessId && (
+              <Link
+                href={`/businesses/${businessId}/edit`}
+                className="font-medium underline underline-offset-2"
+              >
+                Fix credentials
+              </Link>
+            )}
+          </>
+        ) : (
+          message
+        ),
         type: "destructive",
       })
     },

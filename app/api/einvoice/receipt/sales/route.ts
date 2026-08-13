@@ -7,6 +7,7 @@ import { getConfig, type EimsConfig } from "@/lib/einvoice/config"
 import { buildSalesReceiptPayload } from "@/lib/einvoice/receipt"
 import {
   extractErrorMessage,
+  isEimsAuthError,
   isSequenceError,
   parseExpectedCounter,
 } from "@/lib/einvoice/eims-error"
@@ -128,30 +129,41 @@ export async function POST(request: Request) {
     update: {},
   })
 
-  const cfg = await getConfig(businessId)
-  let { result, receiptNumber } = await attemptReceipt(
-    cfg,
-    businessId,
-    invoice,
-    counter.value
-  )
+  let result: EimsCallResult
+  let receiptNumber = ""
+  try {
+    const cfg = await getConfig(businessId)
+    const first = await attemptReceipt(cfg, businessId, invoice, counter.value)
+    result = first.result
+    receiptNumber = first.receiptNumber
 
-  // Self-heal: realign the receipt counter to EIMS's expected value and retry once.
-  if (!result.ok) {
-    const message = extractErrorMessage(result.data)
-    const expected = parseExpectedCounter(message)
-    if (isSequenceError(message) && expected !== null) {
-      await prisma.counter.update({
-        where: { businessId_branchId_name: counterKey },
-        data: { value: expected },
-      })
-      ;({ result, receiptNumber } = await attemptReceipt(
-        cfg,
-        businessId,
-        invoice,
-        expected
-      ))
+    // Self-heal: realign the receipt counter to EIMS's expected value and retry once.
+    if (!result.ok) {
+      const message = extractErrorMessage(result.data)
+      const expected = parseExpectedCounter(message)
+      if (isSequenceError(message) && expected !== null) {
+        await prisma.counter.update({
+          where: { businessId_branchId_name: counterKey },
+          data: { value: expected },
+        })
+        const retried = await attemptReceipt(cfg, businessId, invoice, expected)
+        result = retried.result
+        receiptNumber = retried.receiptNumber
+      }
     }
+  } catch (err) {
+    if (isEimsAuthError(err)) {
+      return NextResponse.json(
+        {
+          error: err.message,
+          code: err.code,
+          statusCode: 502,
+          detail: { eimsStatusCode: err.eimsStatusCode },
+        },
+        { status: 502 }
+      )
+    }
+    throw err
   }
 
   const data = result.data as

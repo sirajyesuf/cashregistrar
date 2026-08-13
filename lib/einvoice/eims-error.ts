@@ -5,6 +5,48 @@
  * counter self-heal behaves identically everywhere.
  */
 
+/** Discriminator used to identify EIMS credential/config failures. */
+export const EIMS_AUTH_CODE = "EIMS_AUTH"
+
+/**
+ * Raised when EIMS rejects our credentials (401 "Invalid Credentials") or when
+ * a business has no MOR credentials configured at all. Distinct from EIMS
+ * validation errors so routes and the UI can tell "fix your config" apart from
+ * "fix the invoice".
+ */
+export class EimsAuthError extends Error {
+  readonly code = EIMS_AUTH_CODE
+  readonly eimsStatusCode: number | null
+
+  constructor(message: string, eimsStatusCode: number | null = null) {
+    super(message)
+    this.name = "EimsAuthError"
+    this.eimsStatusCode = eimsStatusCode
+  }
+}
+
+export function isEimsAuthError(err: unknown): err is EimsAuthError {
+  return (
+    err instanceof EimsAuthError ||
+    (Boolean(err) &&
+      typeof err === "object" &&
+      (err as { code?: unknown }).code === EIMS_AUTH_CODE)
+  )
+}
+
+/**
+ * Builds a clean, user-facing message for a credential failure, folding in the
+ * EIMS reason (e.g. "Invalid Credentials") when it is known.
+ */
+export function eimsAuthMessage(reason?: string | null): string {
+  const detail = reason && reason.trim() ? ` (${reason.trim()})` : ""
+  return (
+    "EIMS rejected your MOR credentials" +
+    detail +
+    ". Check the TIN, system number, API key, client ID and secret and try again."
+  )
+}
+
 /** Flattens an EIMS error body into a readable message string. */
 function flattenErrorMessage(item: unknown): string {
   if (typeof item === "string") return item
@@ -98,8 +140,7 @@ export function parseEimsError(data: unknown): EimsError {
         })
       : {}
 
-  const statusCode =
-    typeof d.statusCode === "number" ? d.statusCode : null
+  const statusCode = typeof d.statusCode === "number" ? d.statusCode : null
   const message =
     typeof d.message === "string" ? d.message : "EIMS request failed"
 
@@ -159,4 +200,33 @@ export function isSequenceError(message: string): boolean {
 export function parseExpectedCounter(message: string): number | null {
   const match = message.match(/expected\s*:\s*(\d+)/i)
   return match ? Number(match[1]) : null
+}
+
+/**
+ * Builds a user-facing message for an EIMS 429 rate-limit response, honouring
+ * the `retry-after` header when it holds a number of seconds.
+ */
+export function rateLimitMessage(retryAfter: string | null): string {
+  const seconds = retryAfterSeconds(retryAfter)
+  const wait =
+    seconds !== null
+      ? `Try again in ${seconds} second${seconds === 1 ? "" : "s"}.`
+      : "Wait a moment and try again."
+  return `EIMS rate limit reached (too many requests). ${wait}`
+}
+
+/**
+ * Parses a `retry-after` value into a whole number of seconds to wait, or
+ * `null` when the header is absent/unparseable. Accepts both a plain number of
+ * seconds and an HTTP date.
+ */
+export function retryAfterSeconds(retryAfter: string | null): number | null {
+  if (!retryAfter) return null
+  const seconds = Number(retryAfter)
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds)
+  const date = Date.parse(retryAfter)
+  if (Number.isFinite(date)) {
+    return Math.max(0, Math.ceil((date - Date.now()) / 1000))
+  }
+  return null
 }

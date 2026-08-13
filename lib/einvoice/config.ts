@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db"
+import { EimsAuthError } from "./eims-error"
 
 const DEFAULT_BASE_URL = "https://core.mor.gov.et"
 
@@ -23,9 +24,9 @@ export async function getConfig(businessId: string): Promise<EimsConfig> {
     where: { businessId },
   })
   if (!credential) {
-    throw new Error(
-      "Missing MOR credentials for this business. " +
-        "Configure system number, API key, client ID and client secret " +
+    throw new EimsAuthError(
+      "This business hasn't configured its EIMS (MOR) credentials yet. " +
+        "Add the system number, API key, client ID and client secret " +
         "under the business's MOR credentials before using EIMS."
     )
   }

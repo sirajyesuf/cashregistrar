@@ -12,9 +12,12 @@ import {
 import { validateLineTotals } from "@/lib/einvoice/validate"
 import {
   extractErrorMessage,
+  isEimsAuthError,
   isSequenceError,
   parseEimsError,
   parseExpectedCounter,
+  rateLimitMessage,
+  retryAfterSeconds,
 } from "@/lib/einvoice/eims-error"
 import { canAccessInvoice, eimsCounterKey, getWorkspace } from "@/lib/workspace"
 
@@ -143,7 +146,6 @@ export async function POST(request: Request) {
   }
 
   const businessId = workspace.businessId
-  const cfg = await getConfig(businessId)
   const counterKey = { ...eimsCounterKey(businessId), name: "eims" }
   const counter = await prisma.counter.upsert({
     where: { businessId_branchId_name: counterKey },
@@ -162,35 +164,69 @@ export async function POST(request: Request) {
   })
   const previousIrn = previous?.irn ?? null
 
-  let result = await attemptRegister(
-    cfg,
-    businessId,
-    invoice,
-    counter.value,
-    previousIrn
-  )
+  let result: EimsCallResult
+  try {
+    const cfg = await getConfig(businessId)
+    result = await attemptRegister(
+      cfg,
+      businessId,
+      invoice,
+      counter.value,
+      previousIrn
+    )
 
-  // Self-heal: realign the counter to EIMS's expected next number and retry once.
-  if (!result.ok) {
-    const message = extractErrorMessage(result.data)
-    const expected = parseExpectedCounter(message)
-    if (isSequenceError(message) && expected !== null) {
-      await prisma.counter.update({
-        where: { businessId_branchId_name: counterKey },
-        data: { value: expected },
-      })
-      result = await attemptRegister(
-        cfg,
-        businessId,
-        invoice,
-        expected,
-        previousIrn
+    // Self-heal: realign the counter to EIMS's expected next number and retry once.
+    if (!result.ok) {
+      const message = extractErrorMessage(result.data)
+      const expected = parseExpectedCounter(message)
+      if (isSequenceError(message) && expected !== null) {
+        await prisma.counter.update({
+          where: { businessId_branchId_name: counterKey },
+          data: { value: expected },
+        })
+        result = await attemptRegister(
+          cfg,
+          businessId,
+          invoice,
+          expected,
+          previousIrn
+        )
+      }
+    }
+  } catch (err) {
+    // A credential/config failure is not the invoice's fault: keep it retryable
+    // and tell the user to fix their MOR credentials instead of a generic 500.
+    if (isEimsAuthError(err)) {
+      return NextResponse.json(
+        {
+          error: err.message,
+          code: err.code,
+          statusCode: 502,
+          detail: { eimsStatusCode: err.eimsStatusCode },
+        },
+        { status: 502 }
       )
     }
+    throw err
   }
 
   const data = result.data as { body?: { irn?: unknown } } | undefined
   const irn = typeof data?.body?.irn === "string" ? data.body.irn : null
+
+  // EIMS rate limits requests per TIN/system number. A 429 is transient, not a
+  // validation failure: keep the invoice retryable and tell the caller how long
+  // to wait instead of marking it FAILED.
+  if (result.status === 429) {
+    return NextResponse.json(
+      {
+        error: rateLimitMessage(result.retryAfter),
+        statusCode: 429,
+        retryAfter: result.retryAfter,
+        retryAfterSeconds: retryAfterSeconds(result.retryAfter),
+      },
+      { status: 429 }
+    )
+  }
 
   if (result.ok && irn) {
     await prisma.invoice.update({

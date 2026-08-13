@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db"
 import { getConfig } from "./config"
 import { loadKeys } from "./keys"
 import { signAndWrap } from "./sign"
+import { EimsAuthError, eimsAuthMessage } from "./eims-error"
 
 const DEFAULT_EXPIRY_SECONDS = 60 * 60
 const SAFETY_MARGIN_MS = 60 * 1000
@@ -76,6 +77,9 @@ async function login(businessId: string): Promise<TokenInfo> {
   })
   const text = await res.text()
   if (!res.ok) {
+    if (res.status === 401) {
+      throw new EimsAuthError(eimsAuthMessage(loginErrorReason(text)), 401)
+    }
     throw new Error(`EIMS login failed (${res.status}): ${truncate(text)}`)
   }
   const token = parseTokenResponse(text)
@@ -139,4 +143,30 @@ export function maskToken(token: string): string {
 function truncate(text: string, max = 200): string {
   const clean = text.replace(/\s+/g, " ").trim()
   return clean.length > max ? `${clean.slice(0, max)}…` : clean
+}
+
+/**
+ * Pulls a human-readable reason out of a login error body, e.g.
+ * `{ details: [{ errorMessage: "Invalid Credentials" }] }` -> "Invalid Credentials".
+ */
+function loginErrorReason(text: string): string | null {
+  try {
+    const parsed = JSON.parse(text) as {
+      details?: { errorMessage?: unknown; message?: unknown }[]
+      message?: unknown
+    }
+    if (Array.isArray(parsed.details)) {
+      for (const detail of parsed.details) {
+        if (typeof detail?.errorMessage === "string" && detail.errorMessage) {
+          return detail.errorMessage
+        }
+      }
+    }
+    if (typeof parsed.message === "string" && parsed.message) {
+      return parsed.message
+    }
+  } catch {
+    // not JSON; fall through
+  }
+  return null
 }

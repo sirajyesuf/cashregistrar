@@ -2,28 +2,28 @@
 
 import * as React from "react"
 import * as ToastPrimitive from "@base-ui/react/toast"
-import { CheckCircle2, X, XCircle } from "lucide-react"
+import { CheckCircle2, Info, X, XCircle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
 type ToastVariant = "default" | "success" | "destructive"
 
-const variantClasses: Record<ToastVariant, string> = {
-  default: "border-border bg-background text-foreground",
-  success:
-    "border-success/50 bg-success/10 text-foreground",
-  destructive:
-    "border-destructive/60 bg-destructive text-destructive-foreground",
+const iconClasses: Record<ToastVariant, string> = {
+  default: "text-muted-foreground",
+  success: "text-success",
+  destructive: "text-destructive",
 }
 
-function ToastIcon({ variant }: { variant: ToastVariant }) {
-  if (variant === "success") {
-    return <CheckCircle2 className="size-4 shrink-0 text-success" />
-  }
-  if (variant === "destructive") {
-    return <XCircle className="size-4 shrink-0" />
-  }
-  return null
+function ToastIcon({
+  variant,
+  className,
+}: {
+  variant: ToastVariant
+  className?: string
+}) {
+  if (variant === "success") return <CheckCircle2 className={className} />
+  if (variant === "destructive") return <XCircle className={className} />
+  return <Info className={className} />
 }
 
 export const toast = ToastPrimitive.Toast.createToastManager()
@@ -49,19 +49,21 @@ function ToastViewport() {
             key={item.id}
             toast={item}
             className={cn(
-              "pointer-events-auto flex w-full items-start justify-between gap-3 rounded-lg border p-4 shadow-lg transition-[opacity,transform] duration-200",
-              "data-[ending]:data-[ending]:animate-out data-[starting]:data-[starting]:animate-in",
-              variantClasses[variant]
+              "pointer-events-auto flex w-full items-start justify-between gap-3 rounded-lg border bg-background p-4 shadow-lg transition-[opacity,transform] duration-200",
+              "data-[ending]:animate-out data-[starting]:animate-in"
             )}
           >
-            <div className="flex items-start gap-3">
-              <ToastIcon variant={variant} />
-              <div className="flex flex-col gap-1">
+            <div className="flex items-start gap-2.5">
+              <ToastIcon
+                variant={variant}
+                className={cn("size-4 shrink-0", iconClasses[variant])}
+              />
+              <div className="flex flex-col gap-0.5">
                 <ToastPrimitive.Toast.Title className="text-sm font-semibold">
                   {item.title}
                 </ToastPrimitive.Toast.Title>
                 {item.description && (
-                  <ToastPrimitive.Toast.Description className="text-sm opacity-90">
+                  <ToastPrimitive.Toast.Description className="text-sm text-muted-foreground">
                     {item.description}
                   </ToastPrimitive.Toast.Description>
                 )}
@@ -69,7 +71,7 @@ function ToastViewport() {
             </div>
             <ToastPrimitive.Toast.Close
               aria-label="Close notification"
-              className="rounded-md p-0.5 opacity-60 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:outline-none"
+              className="rounded-md p-0.5 text-muted-foreground opacity-60 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <X className="size-4" />
             </ToastPrimitive.Toast.Close>

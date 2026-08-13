@@ -2,14 +2,20 @@ import { NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
-import { callEims } from "@/lib/einvoice/client"
-import { getConfig } from "@/lib/einvoice/config"
-import { buildRegisterPayload, buildSellerDetailsFromInvoice } from "@/lib/einvoice/payload"
+import { callEims, type EimsCallResult } from "@/lib/einvoice/client"
+import { getConfig, type EimsConfig } from "@/lib/einvoice/config"
+import {
+  buildRegisterPayload,
+  buildSellerDetailsFromInvoice,
+} from "@/lib/einvoice/payload"
 import { validateLineTotals } from "@/lib/einvoice/validate"
 import {
   extractErrorMessage,
+  isEimsAuthError,
   isSequenceError,
   parseExpectedCounter,
+  rateLimitMessage,
+  retryAfterSeconds,
 } from "@/lib/einvoice/eims-error"
 import {
   eimsCounterKey,
@@ -110,7 +116,18 @@ export async function POST(request: Request) {
   const byId = new Map(invoices.map((invoice) => [invoice.id, invoice]))
   const orderedInvoices = invoiceIds.map((id) => byId.get(id)!)
   const businessId = workspace.businessId
-  const cfg = await getConfig(businessId)
+  let cfg: EimsConfig
+  try {
+    cfg = await getConfig(businessId)
+  } catch (err) {
+    if (isEimsAuthError(err)) {
+      return NextResponse.json(
+        { error: err.message, code: err.code, statusCode: 502 },
+        { status: 502 }
+      )
+    }
+    throw err
+  }
   const previous = await prisma.invoice.findFirst({
     where: { irn: { not: null }, registrationStatus: "REGISTERED", businessId },
     orderBy: { registeredAt: "desc" },
@@ -153,34 +170,55 @@ export async function POST(request: Request) {
     return counter.value
   }
 
-  let startCounter = await prisma.$transaction(reserveRange)
-  let result = await attemptBulk(startCounter)
+  let startCounter = 0
+  let result: EimsCallResult
+  try {
+    startCounter = await prisma.$transaction(reserveRange)
+    result = await attemptBulk(startCounter)
 
-  // Self-heal: realign the counter to EIMS's expected next number and retry
-  // once (mirrors single registration). On the retry we consume the same range
-  // again, so the counter must end at expected + batch length.
-  if (!result.ok) {
-    const message = extractErrorMessage(result.data)
-    const expected = parseExpectedCounter(message)
-    if (isSequenceError(message) && expected !== null) {
-      await prisma.counter.update({
-        where: { businessId_branchId_name: counterKey },
-        data: { value: expected + orderedInvoices.length },
-      })
-      startCounter = expected
-      result = await attemptBulk(expected)
+    // Self-heal: realign the counter to EIMS's expected next number and retry
+    // once (mirrors single registration). On the retry we consume the same range
+    // again, so the counter must end at expected + batch length.
+    if (!result.ok) {
+      const message = extractErrorMessage(result.data)
+      const expected = parseExpectedCounter(message)
+      if (isSequenceError(message) && expected !== null) {
+        await prisma.counter.update({
+          where: { businessId_branchId_name: counterKey },
+          data: { value: expected + orderedInvoices.length },
+        })
+        startCounter = expected
+        result = await attemptBulk(expected)
+      }
     }
+  } catch (err) {
+    if (isEimsAuthError(err)) {
+      return NextResponse.json(
+        {
+          error: err.message,
+          code: err.code,
+          statusCode: 502,
+          detail: { eimsStatusCode: err.eimsStatusCode },
+        },
+        { status: 502 }
+      )
+    }
+    throw err
   }
 
   try {
     const operationResponse = parseBulkOperationResponse(result.data)
     if (!result.ok) {
-      const message = extractErrorMessage(result.data)
+      const message =
+        result.status === 429
+          ? rateLimitMessage(result.retryAfter)
+          : extractErrorMessage(result.data)
       return NextResponse.json(
         {
           error: message,
           statusCode: result.status,
           retryAfter: result.retryAfter,
+          retryAfterSeconds: retryAfterSeconds(result.retryAfter),
           detail: result.data,
         },
         { status: result.status }

@@ -2,6 +2,7 @@ import { getConfig } from "./config"
 import { loadKeys } from "./keys"
 import { signAndWrap } from "./sign"
 import { forceLogin, forceRefresh, getValidToken } from "./token"
+import { isEimsAuthError } from "./eims-error"
 
 export async function eimsRouteHandler(
   path: string,
@@ -44,6 +45,9 @@ export async function callEims(
   try {
     accessToken = await getValidToken(businessId)
   } catch (err) {
+    // Credential failures can't be fixed by forcing a refresh/login — surface
+    // them immediately instead of retrying into the same error.
+    if (isEimsAuthError(err)) throw err
     if (!retried) {
       await forceRefresh(businessId)
       return callEims(path, payload, businessId, extraHeaders, true)
