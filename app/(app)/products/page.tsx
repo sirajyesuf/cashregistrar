@@ -178,7 +178,7 @@ function ProductFormDialog({
 }
 
 export default function ProductsPage() {
-  const { workspace } = useWorkspace()
+  const { workspace, isPending: workspacePending } = useWorkspace()
   const queryClient = useQueryClient()
   const businessId = workspace?.businessId ?? ""
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -282,7 +282,12 @@ export default function ProductsPage() {
         </Button>
       </div>
 
-      {!workspace ? (
+      {workspacePending ? (
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : !workspace ? (
         <Empty className="rounded-xl border border-dashed p-10">
           <EmptyContent>
             <EmptyTitle>No business selected</EmptyTitle>

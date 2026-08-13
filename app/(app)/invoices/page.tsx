@@ -95,7 +95,7 @@ function StatusBadge({
 }
 
 export default function InvoicesPage() {
-  const { workspace } = useWorkspace()
+  const { workspace, isPending: workspacePending } = useWorkspace()
   const queryClient = useQueryClient()
   const businessId = workspace?.businessId ?? ""
   const branchId = workspace?.branchId ?? ""
@@ -279,7 +279,12 @@ export default function InvoicesPage() {
         </section>
       )}
 
-      {!workspace ? (
+      {workspacePending ? (
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      ) : !workspace ? (
         <Empty className="rounded-xl border border-dashed p-10">
           <EmptyContent>
             <EmptyTitle>No business selected</EmptyTitle>

@@ -126,7 +126,7 @@ function StatCard({
 
 export default function DashboardPage() {
   const { user } = useUser()
-  const { workspace } = useWorkspace()
+  const { workspace, isPending: workspacePending } = useWorkspace()
   const businessId = workspace?.businessId ?? ""
   const branchId = workspace?.branchId ?? ""
 
@@ -150,9 +150,26 @@ export default function DashboardPage() {
 
   const stats = data?.stats
 
+  const loadingSkeleton = (
+    <div className="flex flex-col gap-6">
+      <Skeleton className="h-16 w-2/3" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-28" />
+        ))}
+      </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Skeleton className="h-64 lg:col-span-2" />
+        <Skeleton className="h-64" />
+      </div>
+    </div>
+  )
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-      {!workspace ? (
+      {workspacePending ? (
+        loadingSkeleton
+      ) : !workspace ? (
         <Empty className="rounded-xl border border-dashed p-10">
           <EmptyContent>
             <EmptyTitle>No business selected</EmptyTitle>
@@ -165,18 +182,7 @@ export default function DashboardPage() {
           </EmptyContent>
         </Empty>
       ) : !data ? (
-        <div className="flex flex-col gap-6">
-          <Skeleton className="h-16 w-2/3" />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-28" />
-            ))}
-          </div>
-          <div className="grid gap-6 lg:grid-cols-3">
-            <Skeleton className="h-64 lg:col-span-2" />
-            <Skeleton className="h-64" />
-          </div>
-        </div>
+        loadingSkeleton
       ) : (
         <>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
