@@ -8,8 +8,10 @@ import {
   Building2,
   Check,
   ChevronDown,
+  GitBranch,
   Plus,
   Settings,
+  Settings2,
   Store,
   Users,
 } from "lucide-react"
@@ -126,7 +128,7 @@ export function WorkspaceSwitcher() {
                     onClick={() => setOpen(false)}
                     className="p-1.5"
                   >
-                    <Settings className="size-4 text-muted-foreground" />
+                    <Settings2 className="size-4 text-muted-foreground" />
                   </DropdownMenuLinkItem>
                 )}
               </div>
@@ -228,7 +230,7 @@ export function WorkspaceSwitcher() {
                   onClick={() => setOpen(false)}
                   className="gap-2.5 px-2.5 py-2"
                 >
-                  <Plus className="size-4 text-muted-foreground" />
+                  <GitBranch className="size-4 text-muted-foreground" />
                   Add branch
                 </DropdownMenuLinkItem>
               )}
@@ -237,7 +239,7 @@ export function WorkspaceSwitcher() {
                 onClick={() => setOpen(false)}
                 className="gap-2.5 px-2.5 py-2"
               >
-                <Plus className="size-4 text-muted-foreground" />
+                <Store className="size-4 text-muted-foreground" />
                 Add business
               </DropdownMenuLinkItem>
             </div>
