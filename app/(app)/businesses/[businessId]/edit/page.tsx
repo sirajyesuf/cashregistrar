@@ -688,7 +688,73 @@ export default function EditBusinessPage() {
   }, [businessId])
 
   if (!loaded) {
-    return <Skeleton className="h-24 w-full" />
+    return (
+      <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <Skeleton className="h-8 w-32" />
+        </div>
+
+        <div className="mt-6 rounded-xl border bg-card">
+          <div className="flex flex-col gap-5 px-5 py-5 sm:px-6">
+            <div className="flex justify-end">
+              <Skeleton className="h-6 w-24" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-4" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <Skeleton className="size-4" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <Skeleton className="size-4" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 border-t bg-muted/20 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-32" />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!business || role !== "OWNER") {
