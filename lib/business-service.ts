@@ -7,16 +7,13 @@ import {
   getBusinessAccess,
   isPrismaUniqueError,
 } from "@/lib/business"
+import { forbidden, notFound, type ServiceResult } from "@/lib/service"
 import type {
   BranchCreateValues,
   BranchUpdateValues,
   BusinessUpdateValues,
   CreateBusinessApiValues,
 } from "@/lib/business-schema"
-
-export type ServiceResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; status: number; error: string }
 
 type BranchSummary = {
   id: string
@@ -35,14 +32,6 @@ export type ListedBusiness = {
   role: Role | null
   branchId: string | null
   branches: BranchSummary[]
-}
-
-function notFound(error: string): ServiceResult<never> {
-  return { ok: false, status: 404, error }
-}
-
-function forbidden(error: string): ServiceResult<never> {
-  return { ok: false, status: 403, error }
 }
 
 export async function createBusiness(

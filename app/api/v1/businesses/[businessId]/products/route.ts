@@ -1,45 +1,39 @@
 import { NextResponse } from "next/server"
-import { getSessionUser } from "@/lib/auth/user"
+import { authenticateApiKey } from "@/lib/api-key"
 import { productInputSchema } from "@/lib/product-schema"
-import { getWorkspace } from "@/lib/workspace"
 import { createProduct, listProducts } from "@/lib/product-service"
 
 export const runtime = "nodejs"
 
-export async function GET(request: Request) {
-  const user = await getSessionUser()
-  if (!user)
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+type Context = { params: Promise<{ businessId: string }> }
 
-  const workspace = await getWorkspace(user.id)
-  if (!workspace) {
+export async function GET(request: Request, { params }: Context) {
+  const auth = await authenticateApiKey(request)
+  if (!auth)
     return NextResponse.json(
-      { error: "No active workspace. Select a business and branch first." },
-      { status: 409 }
+      { error: "Invalid or missing API key" },
+      { status: 401 }
     )
-  }
 
+  const { businessId } = await params
   const url = new URL(request.url)
   const query = url.searchParams.get("q")?.trim() ?? ""
 
-  const result = await listProducts(user.id, workspace.businessId, query)
+  const result = await listProducts(auth.userId, businessId, query)
   if (!result.ok)
     return NextResponse.json({ error: result.error }, { status: result.status })
   return NextResponse.json({ products: result.data })
 }
 
-export async function POST(request: Request) {
-  const user = await getSessionUser()
-  if (!user)
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-
-  const workspace = await getWorkspace(user.id)
-  if (!workspace) {
+export async function POST(request: Request, { params }: Context) {
+  const auth = await authenticateApiKey(request)
+  if (!auth)
     return NextResponse.json(
-      { error: "No active workspace. Select a business and branch first." },
-      { status: 409 }
+      { error: "Invalid or missing API key" },
+      { status: 401 }
     )
-  }
+
+  const { businessId } = await params
 
   let body: unknown
   try {
@@ -56,7 +50,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const result = await createProduct(user.id, workspace.businessId, parsed.data)
+  const result = await createProduct(auth.userId, businessId, parsed.data)
   if (!result.ok)
     return NextResponse.json({ error: result.error }, { status: result.status })
   return NextResponse.json({ product: result.data }, { status: 201 })
