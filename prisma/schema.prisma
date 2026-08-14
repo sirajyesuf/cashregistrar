@@ -398,6 +398,7 @@ model EimsOperation {
   businessId     String
   type           EimsOperationType
   status         EimsOperationStatus @default(PROCESSING)
+  retryCount     Int                 @default(0)
   rawResponse    Json?
   submittedAt    DateTime            @default(now())
   completedAt    DateTime?

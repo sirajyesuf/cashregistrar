@@ -1,31 +1,18 @@
 import { NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
 import { prisma } from "@/lib/db"
-import { callEims, type EimsCallResult } from "@/lib/einvoice/client"
 import { getConfig, type EimsConfig } from "@/lib/einvoice/config"
-import {
-  buildRegisterPayload,
-  buildSellerDetailsFromInvoice,
-} from "@/lib/einvoice/payload"
 import { validateLineTotals } from "@/lib/einvoice/validate"
 import {
-  extractErrorMessage,
   isEimsAuthError,
-  isSequenceError,
-  parseExpectedCounter,
   rateLimitMessage,
   retryAfterSeconds,
 } from "@/lib/einvoice/eims-error"
+import { getWorkspace, workspaceInvoiceScope } from "@/lib/workspace"
 import {
-  eimsCounterKey,
-  getWorkspace,
-  workspaceInvoiceScope,
-} from "@/lib/workspace"
-import {
-  getCallbackHeaders,
-  parseBulkOperationResponse,
-} from "@/lib/einvoice/operation"
+  submitBulkRegistration,
+  type SubmitBulkOutcome,
+} from "@/lib/einvoice/bulk-submit"
 
 export const runtime = "nodejs"
 
@@ -116,6 +103,7 @@ export async function POST(request: Request) {
   const byId = new Map(invoices.map((invoice) => [invoice.id, invoice]))
   const orderedInvoices = invoiceIds.map((id) => byId.get(id)!)
   const businessId = workspace.businessId
+
   let cfg: EimsConfig
   try {
     cfg = await getConfig(businessId)
@@ -128,69 +116,22 @@ export async function POST(request: Request) {
     }
     throw err
   }
+
   const previous = await prisma.invoice.findFirst({
     where: { irn: { not: null }, registrationStatus: "REGISTERED", businessId },
     orderBy: { registeredAt: "desc" },
     select: { irn: true },
   })
-  const counterKey = { ...eimsCounterKey(businessId), name: "eims" }
 
-  // Builds the bulk payload for a given counter start and submits it. Extracted
-  // so the self-heal path can re-run the same request with the corrected
-  // document numbers.
-  const attemptBulk = async (startCounter: number) => {
-    const payload = orderedInvoices.map((invoice, index) =>
-      buildRegisterPayload({
-        invoice,
-        sellerDetails: buildSellerDetailsFromInvoice(invoice, cfg),
-        invoiceCounter: startCounter + index,
-        previousIrn: index === 0 ? (previous?.irn ?? null) : null,
-        cfg,
-      })
-    )
-    return callEims("/v1/bulkRegister", payload, businessId, {
-      TIN: cfg.tin,
-      SYSTEM_NUMBER: cfg.systemNumber,
-      ...getCallbackHeaders(),
-    })
-  }
-
-  // Reserve the document-number range atomically so concurrent bulk submissions
-  // never reuse numbers. Returns the first number of the batch.
-  const reserveRange = async (tx: Prisma.TransactionClient) => {
-    const counter = await tx.counter.upsert({
-      where: { businessId_branchId_name: counterKey },
-      create: { ...counterKey, value: 1 },
-      update: {},
-    })
-    await tx.counter.update({
-      where: { businessId_branchId_name: counterKey },
-      data: { value: { increment: orderedInvoices.length } },
-    })
-    return counter.value
-  }
-
-  let startCounter = 0
-  let result: EimsCallResult
+  let outcome: SubmitBulkOutcome
   try {
-    startCounter = await prisma.$transaction(reserveRange)
-    result = await attemptBulk(startCounter)
-
-    // Self-heal: realign the counter to EIMS's expected next number and retry
-    // once (mirrors single registration). On the retry we consume the same range
-    // again, so the counter must end at expected + batch length.
-    if (!result.ok) {
-      const message = extractErrorMessage(result.data)
-      const expected = parseExpectedCounter(message)
-      if (isSequenceError(message) && expected !== null) {
-        await prisma.counter.update({
-          where: { businessId_branchId_name: counterKey },
-          data: { value: expected + orderedInvoices.length },
-        })
-        startCounter = expected
-        result = await attemptBulk(expected)
-      }
-    }
+    outcome = await submitBulkRegistration({
+      businessId,
+      invoices: orderedInvoices,
+      cfg,
+      previousIrn: previous?.irn ?? null,
+      retryCount: 0,
+    })
   } catch (err) {
     if (isEimsAuthError(err)) {
       return NextResponse.json(
@@ -206,63 +147,30 @@ export async function POST(request: Request) {
     throw err
   }
 
-  try {
-    const operationResponse = parseBulkOperationResponse(result.data)
-    if (!result.ok) {
-      const message =
-        result.status === 429
-          ? rateLimitMessage(result.retryAfter)
-          : extractErrorMessage(result.data)
-      return NextResponse.json(
-        {
-          error: message,
-          statusCode: result.status,
-          retryAfter: result.retryAfter,
-          retryAfterSeconds: retryAfterSeconds(result.retryAfter),
-          detail: result.data,
-        },
-        { status: result.status }
-      )
-    }
-    if (!operationResponse) {
-      return NextResponse.json(
-        {
-          error: "EIMS response did not include a conversationId",
-          detail: result.data,
-        },
-        { status: 502 }
-      )
-    }
-
-    const operation = await prisma.eimsOperation.create({
-      data: {
-        conversationId: operationResponse.conversationId,
-        businessId,
-        type: "REGISTER",
-        items: {
-          create: orderedInvoices.map((invoice, index) => ({
-            invoiceId: invoice.id,
-            documentNumber: String(startCounter + index),
-          })),
-        },
-      },
-    })
-    await prisma.invoice.updateMany({
-      where: { id: { in: invoiceIds }, userId: user.id },
-      data: { registrationStatus: "PROCESSING" },
-    })
+  if (!outcome.ok) {
+    const message =
+      outcome.status === 429
+        ? rateLimitMessage(outcome.retryAfter)
+        : outcome.error
     return NextResponse.json(
       {
-        ok: true,
-        operationId: operation.id,
-        conversationId: operation.conversationId,
-        count: orderedInvoices.length,
+        error: message,
+        statusCode: outcome.status,
+        retryAfter: outcome.retryAfter,
+        retryAfterSeconds: retryAfterSeconds(outcome.retryAfter),
+        detail: outcome.detail,
       },
-      { status: 202 }
+      { status: outcome.status }
     )
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Bulk registration failed"
-    return NextResponse.json({ error: message }, { status: 500 })
   }
+
+  return NextResponse.json(
+    {
+      ok: true,
+      operationId: outcome.operationId,
+      conversationId: outcome.conversationId,
+      count: outcome.count,
+    },
+    { status: 202 }
+  )
 }
