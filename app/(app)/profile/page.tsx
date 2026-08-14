@@ -1,21 +1,52 @@
 "use client"
 
 import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { authClient } from "@/lib/auth-client"
 import { toast } from "@/components/toast"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useWorkspace } from "@/components/workspace-provider"
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Admin",
+  OWNER: "Owner",
+  MANAGER: "Manager",
+  CASHIER: "Cashier",
+}
+
+type Membership = {
+  id: string
+  name: string
+  role: string | null
+  branchId: string | null
+  branches: { id: string; name: string }[]
+}
 
 export default function ProfilePage() {
   const { data: session, isPending } = authClient.useSession()
+  const { isPending: workspacePending } = useWorkspace()
+
+  const { data: businesses, isPending: businessesPending } = useQuery({
+    queryKey: ["businesses"],
+    queryFn: async () => {
+      const res = await fetch("/api/businesses")
+      if (!res.ok) throw new Error("Could not load businesses")
+      const body = (await res.json()) as { businesses: Membership[] }
+      return body.businesses
+    },
+  })
+
   const [name, setName] = useState<string | null>(null)
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const memberships = businesses ?? []
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (saving) return
@@ -81,6 +112,51 @@ export default function ProfilePage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Update your account details and password.
         </p>
+      </div>
+
+      <div className="mb-4 flex flex-col gap-4 rounded-xl border bg-card p-5">
+        <div>
+          <p className="text-sm font-semibold">Memberships</p>
+          <div className="mt-3 flex flex-col gap-3">
+            {workspacePending || businessesPending ? (
+              <Skeleton className="h-10 w-full" />
+            ) : memberships.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                You don&apos;t belong to any business yet.
+              </p>
+            ) : (
+              memberships.map((business) => {
+                const branch = business.branches.find(
+                  (b) => b.id === business.branchId
+                )
+                return (
+                  <div
+                    key={business.id}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {business.name}
+                      </p>
+                      {branch && (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {branch.name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {business.role && (
+                        <Badge variant="outline">
+                          {ROLE_LABELS[business.role] ?? business.role}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
       </div>
 
       <form
