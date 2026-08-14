@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "crypto"
 import { z } from "zod"
+import { prisma } from "@/lib/db"
 
 export const API_KEY_PREFIX = "cr_live_"
 
@@ -18,4 +19,29 @@ export function hashApiKey(raw: string): string {
 
 export function maskApiKey(prefix: string): string {
   return `${prefix}…`
+}
+
+export async function authenticateApiKey(
+  request: Request
+): Promise<{ userId: string; keyId: string } | null> {
+  const header = request.headers.get("authorization")
+  if (!header) return null
+
+  const [scheme, token] = header.split(" ")
+  if (scheme !== "Bearer" || !token) return null
+
+  const apiKey = await prisma.apiKey.findUnique({
+    where: { tokenHash: hashApiKey(token) },
+    select: { id: true, userId: true },
+  })
+  if (!apiKey) return null
+
+  await prisma.apiKey
+    .update({
+      where: { id: apiKey.id },
+      data: { lastUsedAt: new Date() },
+    })
+    .catch(() => {})
+
+  return { userId: apiKey.userId, keyId: apiKey.id }
 }

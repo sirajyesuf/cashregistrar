@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getSessionUser } from "@/lib/auth/user"
+import { authenticateApiKey } from "@/lib/api-key"
 import { businessUpdateApiSchema } from "@/lib/business-schema"
 import {
   deleteBusiness,
@@ -11,22 +11,28 @@ export const runtime = "nodejs"
 
 type Context = { params: Promise<{ businessId: string }> }
 
-export async function GET(_request: Request, { params }: Context) {
-  const user = await getSessionUser()
-  if (!user)
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+export async function GET(request: Request, { params }: Context) {
+  const auth = await authenticateApiKey(request)
+  if (!auth)
+    return NextResponse.json(
+      { error: "Invalid or missing API key" },
+      { status: 401 }
+    )
 
   const { businessId } = await params
-  const result = await getBusinessDetail(user.id, businessId)
+  const result = await getBusinessDetail(auth.userId, businessId)
   if (!result.ok)
     return NextResponse.json({ error: result.error }, { status: result.status })
   return NextResponse.json(result.data)
 }
 
 export async function PATCH(request: Request, { params }: Context) {
-  const user = await getSessionUser()
-  if (!user)
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await authenticateApiKey(request)
+  if (!auth)
+    return NextResponse.json(
+      { error: "Invalid or missing API key" },
+      { status: 401 }
+    )
 
   const { businessId } = await params
 
@@ -45,19 +51,22 @@ export async function PATCH(request: Request, { params }: Context) {
     )
   }
 
-  const result = await updateBusiness(user.id, businessId, parsed.data)
+  const result = await updateBusiness(auth.userId, businessId, parsed.data)
   if (!result.ok)
     return NextResponse.json({ error: result.error }, { status: result.status })
   return NextResponse.json({ business: result.data })
 }
 
-export async function DELETE(_request: Request, { params }: Context) {
-  const user = await getSessionUser()
-  if (!user)
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+export async function DELETE(request: Request, { params }: Context) {
+  const auth = await authenticateApiKey(request)
+  if (!auth)
+    return NextResponse.json(
+      { error: "Invalid or missing API key" },
+      { status: 401 }
+    )
 
   const { businessId } = await params
-  const result = await deleteBusiness(user.id, businessId)
+  const result = await deleteBusiness(auth.userId, businessId)
   if (!result.ok)
     return NextResponse.json({ error: result.error }, { status: result.status })
   return NextResponse.json({ ok: true })

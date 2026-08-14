@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getSessionUser } from "@/lib/auth/user"
+import { authenticateApiKey } from "@/lib/api-key"
 import { branchCreateSchema } from "@/lib/business-schema"
 import { createBranch, listBranches } from "@/lib/business-service"
 
@@ -7,22 +7,28 @@ export const runtime = "nodejs"
 
 type Context = { params: Promise<{ businessId: string }> }
 
-export async function GET(_request: Request, { params }: Context) {
-  const user = await getSessionUser()
-  if (!user)
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+export async function GET(request: Request, { params }: Context) {
+  const auth = await authenticateApiKey(request)
+  if (!auth)
+    return NextResponse.json(
+      { error: "Invalid or missing API key" },
+      { status: 401 }
+    )
 
   const { businessId } = await params
-  const result = await listBranches(user.id, businessId)
+  const result = await listBranches(auth.userId, businessId)
   if (!result.ok)
     return NextResponse.json({ error: result.error }, { status: result.status })
   return NextResponse.json({ branches: result.data })
 }
 
 export async function POST(request: Request, { params }: Context) {
-  const user = await getSessionUser()
-  if (!user)
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await authenticateApiKey(request)
+  if (!auth)
+    return NextResponse.json(
+      { error: "Invalid or missing API key" },
+      { status: 401 }
+    )
 
   const { businessId } = await params
 
@@ -41,7 +47,7 @@ export async function POST(request: Request, { params }: Context) {
     )
   }
 
-  const result = await createBranch(user.id, businessId, parsed.data)
+  const result = await createBranch(auth.userId, businessId, parsed.data)
   if (!result.ok)
     return NextResponse.json({ error: result.error }, { status: result.status })
   return NextResponse.json({ branch: result.data }, { status: 201 })
