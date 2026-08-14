@@ -132,6 +132,10 @@ export function InviteMemberDialog({
                   onValueChange={(value) =>
                     setRole(value === "MANAGER" ? "MANAGER" : "CASHIER")
                   }
+                  items={[
+                    { value: "MANAGER", label: "Manager" },
+                    { value: "CASHIER", label: "Cashier" },
+                  ]}
                 >
                   <SelectTrigger id="invite-role" aria-label="Role">
                     <SelectValue placeholder="Select role" />
@@ -147,6 +151,10 @@ export function InviteMemberDialog({
                 <Select
                   value={branchId}
                   onValueChange={(value) => setBranchId(value)}
+                  items={branches.map((branch) => ({
+                    value: branch.id,
+                    label: branch.name,
+                  }))}
                 >
                   <SelectTrigger id="invite-branch" aria-label="Branch">
                     <SelectValue placeholder="Select branch" />
