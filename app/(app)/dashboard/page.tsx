@@ -289,6 +289,7 @@ export default function DashboardPage() {
       return (await res.json()) as DashboardData
     },
     enabled: Boolean(workspace),
+    placeholderData: (previousData) => previousData,
   })
 
   const now = new Date()
