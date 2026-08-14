@@ -9,8 +9,27 @@ function toCents(value: unknown): number {
   return Math.round(Number(value) * 100)
 }
 
-function monthKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+function parseDateKey(key: string): Date {
+  return new Date(`${key}T00:00:00Z`)
+}
+
+function formatDateKey(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date)
+  next.setUTCDate(next.getUTCDate() + days)
+  return next
+}
+
+type Bucket = { revenueCents: number; count: number }
+
+type TrendPoint = {
+  key: string
+  label: string
+  revenueCents: number
+  count: number
 }
 
 export async function GET(request: Request) {
@@ -22,6 +41,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const businessId = url.searchParams.get("businessId")
   const branchId = url.searchParams.get("branchId")
+  const from = url.searchParams.get("from") ?? undefined
+  const to = url.searchParams.get("to") ?? undefined
 
   const workspace =
     businessId && branchId
@@ -31,96 +52,128 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "No workspace selected" }, { status: 409 })
   }
 
+  const dateFilter = from && to ? { date: { gte: from, lte: to } } : {}
+
   const invoices = await prisma.invoice.findMany({
-    where: workspaceInvoiceScope(workspace),
+    where: { ...workspaceInvoiceScope(workspace), ...dateFilter },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
       number: true,
       date: true,
       buyerLegalName: true,
-      taxRate: true,
       taxAmount: true,
       grandTotal: true,
-      createdAt: true,
+      transactionType: true,
       _count: { select: { lines: true } },
     },
   })
 
-  const now = new Date()
-  const thisMonth = monthKey(now)
+  let revenueCents = 0
+  let taxCents = 0
   const customers = new Set<string>()
-  const monthlyMap = new Map<string, { revenueCents: number; count: number }>()
+  const byTypeMap = new Map<string, Bucket>()
+  const dailyMap = new Map<string, Bucket>()
+  const monthlyMap = new Map<string, Bucket>()
 
   for (const inv of invoices) {
     if (inv.buyerLegalName) customers.add(inv.buyerLegalName)
-    const key = inv.date.slice(0, 7)
-    const bucket = monthlyMap.get(key) ?? { revenueCents: 0, count: 0 }
-    bucket.revenueCents += toCents(inv.grandTotal)
-    bucket.count += 1
-    monthlyMap.set(key, bucket)
+    revenueCents += toCents(inv.grandTotal)
+    taxCents += toCents(inv.taxAmount)
+
+    const type = inv.transactionType
+    const typeBucket = byTypeMap.get(type) ?? { revenueCents: 0, count: 0 }
+    typeBucket.revenueCents += toCents(inv.grandTotal)
+    typeBucket.count += 1
+    byTypeMap.set(type, typeBucket)
+
+    const day = inv.date.slice(0, 10)
+    const dayBucket = dailyMap.get(day) ?? { revenueCents: 0, count: 0 }
+    dayBucket.revenueCents += toCents(inv.grandTotal)
+    dayBucket.count += 1
+    dailyMap.set(day, dayBucket)
+
+    const month = inv.date.slice(0, 7)
+    const monthBucket = monthlyMap.get(month) ?? { revenueCents: 0, count: 0 }
+    monthBucket.revenueCents += toCents(inv.grandTotal)
+    monthBucket.count += 1
+    monthlyMap.set(month, monthBucket)
   }
 
-  let totalRevenueCents = 0
-  let totalTaxCents = 0
-  let monthRevenueCents = 0
-  let monthTaxCents = 0
-  let monthCount = 0
-
-  for (const bucket of monthlyMap.values()) {
-    totalRevenueCents += bucket.revenueCents
-  }
-  for (const inv of invoices) {
-    totalTaxCents += toCents(inv.taxAmount)
-  }
-
-  const monthly: {
-    key: string
-    label: string
-    revenueCents: number
-    count: number
-  }[] = []
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const key = monthKey(d)
-    const bucket = monthlyMap.get(key) ?? { revenueCents: 0, count: 0 }
-    monthly.push({
-      key,
-      label: d.toLocaleDateString("en", { month: "short" }),
-      revenueCents: bucket.revenueCents,
-      count: bucket.count,
-    })
-    if (key === thisMonth) {
-      monthRevenueCents = bucket.revenueCents
-      monthCount = bucket.count
+  const trend: TrendPoint[] = []
+  if (from && to) {
+    // "Today" collapses to a single day, so show the last 7 days for context.
+    const startKey =
+      from === to ? formatDateKey(addDays(parseDateKey(to), -6)) : from
+    const end = parseDateKey(to)
+    for (let d = parseDateKey(startKey); d <= end; d = addDays(d, 1)) {
+      const key = formatDateKey(d)
+      const bucket = dailyMap.get(key) ?? { revenueCents: 0, count: 0 }
+      trend.push({
+        key,
+        label: d.toLocaleDateString("en", {
+          month: "short",
+          day: "numeric",
+          timeZone: "UTC",
+        }),
+        revenueCents: bucket.revenueCents,
+        count: bucket.count,
+      })
+    }
+  } else {
+    const now = new Date()
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      const bucket = monthlyMap.get(key) ?? { revenueCents: 0, count: 0 }
+      trend.push({
+        key,
+        label: d.toLocaleDateString("en", { month: "short" }),
+        revenueCents: bucket.revenueCents,
+        count: bucket.count,
+      })
     }
   }
 
-  for (const inv of invoices) {
-    if (inv.date.slice(0, 7) === thisMonth) {
-      monthTaxCents += toCents(inv.taxAmount)
+  const lineGroups = await prisma.invoiceLine.groupBy({
+    by: ["description"],
+    where: { invoice: { ...workspaceInvoiceScope(workspace), ...dateFilter } },
+    _sum: { quantity: true, total: true },
+    orderBy: { _sum: { quantity: "desc" } },
+    take: 5,
+  })
+  const topProducts = lineGroups.map((group) => ({
+    name: group.description,
+    quantity: Number(group._sum.quantity ?? 0),
+    revenueCents: toCents(group._sum.total ?? 0),
+  }))
+
+  const byType = (["B2B", "B2C"] as const).map((type) => {
+    const bucket = byTypeMap.get(type)
+    return {
+      type,
+      count: bucket?.count ?? 0,
+      revenueCents: bucket?.revenueCents ?? 0,
     }
-  }
+  })
 
   return NextResponse.json({
     stats: {
-      totalInvoices: invoices.length,
-      totalRevenueCents,
-      totalTaxCents,
-      monthRevenueCents,
-      monthTaxCents,
-      monthCount,
+      invoiceCount: invoices.length,
+      revenueCents,
+      taxCents,
       customerCount: customers.size,
     },
+    trend,
+    topProducts,
+    byType,
     recent: invoices.slice(0, 6).map((inv) => ({
       id: inv.id,
       number: inv.number,
       date: inv.date,
       customerName: inv.buyerLegalName,
       grandTotal: inv.grandTotal,
-      createdAt: inv.createdAt,
       _count: inv._count,
     })),
-    monthly,
   })
 }
