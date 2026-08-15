@@ -244,9 +244,11 @@ export default function DashboardPage() {
   const [preset, setPreset] = useState<Preset>("today")
   const [from, setFrom] = useState(todayKey())
   const [to, setTo] = useState(todayKey())
+  const [pendingRange, setPendingRange] = useState<DateRange | undefined>()
 
   function applyPreset(next: Preset) {
     setPreset(next)
+    setPendingRange(undefined)
     const today = todayKey()
     switch (next) {
       case "today":
@@ -260,15 +262,26 @@ export default function DashboardPage() {
 
   function handleRangeChange(range: DateRange | undefined) {
     setPreset("custom")
-    const nextFrom = range?.from ? format(range.from, "yyyy-MM-dd") : ""
-    setFrom(nextFrom)
-    setTo(range?.to ? format(range.to, "yyyy-MM-dd") : nextFrom)
+    if (!range?.from) {
+      setPendingRange(undefined)
+      setFrom("")
+      setTo("")
+      return
+    }
+    if (!range.to) {
+      setPendingRange(range)
+      return
+    }
+    setPendingRange(undefined)
+    setFrom(format(range.from, "yyyy-MM-dd"))
+    setTo(format(range.to, "yyyy-MM-dd"))
   }
 
-  const selectedRange: DateRange | undefined =
+  const appliedRange: DateRange | undefined =
     from || to
       ? { from: from ? parseISO(from) : undefined, to: to ? parseISO(to) : undefined }
       : undefined
+  const selectedRange = pendingRange ?? appliedRange
 
   const range = useMemo(
     () => ({ from: from || null, to: to || null }),
@@ -297,7 +310,9 @@ export default function DashboardPage() {
   const firstName = user?.name?.trim().split(/\s+/)[0] || "there"
   const presetLabel =
     preset === "custom"
-      ? `${from || "…"} – ${to || "…"}`
+      ? from || to
+        ? `${from} – ${to}`
+        : "All time"
       : (PRESETS.find((p) => p.value === preset)?.label ?? "All time")
 
   const stats = data?.stats
