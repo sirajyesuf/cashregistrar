@@ -130,6 +130,14 @@ export const invoiceInputSchema = z
 
 export type InvoiceInput = z.infer<typeof invoiceInputSchema>
 
+export const invoiceCreateApiSchema = invoiceInputSchema.and(
+  z.object({
+    branchId: z.string().trim().min(1, "Branch is required"),
+  })
+)
+
+export type InvoiceCreateApiValues = z.infer<typeof invoiceCreateApiSchema>
+
 export function isFutureDate(date: string): boolean {
   const now = new Date()
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(

@@ -1,95 +1,53 @@
 import { NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
-import { prisma } from "@/lib/db"
-import { invoiceInputSchema, type BuyerDetails } from "@/lib/invoice-schema"
-import { sellerSnapshotFromBusiness } from "@/lib/einvoice/payload"
-import { canAccessInvoice, getWorkspace } from "@/lib/workspace"
+import { invoiceInputSchema } from "@/lib/invoice-schema"
+import { getWorkspace } from "@/lib/workspace"
+import {
+  deleteInvoice,
+  getInvoice,
+  updateInvoice,
+} from "@/lib/invoice-service"
 
 export const runtime = "nodejs"
 
-function centsToDecimal(cents: number) {
-  return new Prisma.Decimal(Math.round(cents)).div(100)
-}
-
-function buyerData(buyer: BuyerDetails) {
-  return {
-    buyerVatNumber: buyer.vatNumber,
-    buyerIdType: buyer.idType,
-    buyerIdNumber: buyer.idNumber,
-    buyerEmail: buyer.email,
-    buyerPhone: buyer.phone,
-    buyerCity: buyer.city,
-    buyerRegion: buyer.region,
-    buyerCountry: buyer.country,
-    buyerZone: buyer.zone,
-    buyerKebele: buyer.kebele,
-    buyerWereda: buyer.wereda,
-    buyerHouseNumber: buyer.houseNumber,
-  }
-}
+type Context = { params: Promise<{ id: string }> }
 
 export async function GET(
   _request: Request,
-  context: { params: Promise<{ id: string }> }
+  context: Context
 ) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const { id } = await context.params
-
-  const invoice = await prisma.invoice.findUnique({
-    where: { id },
-    include: {
-      lines: { orderBy: { lineNumber: "asc" } },
-      receipt: true,
-    },
-  })
-
   const workspace = await getWorkspace(user.id)
-  if (!workspace || !invoice || !canAccessInvoice(workspace, invoice)) {
+  if (!workspace) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   }
 
-  return NextResponse.json({ invoice })
+  const { id } = await context.params
+  const result = await getInvoice(user.id, workspace.businessId, id, workspace.branchId)
+  if (!result.ok)
+    return NextResponse.json({ error: result.error }, { status: result.status })
+  return NextResponse.json({ invoice: result.data })
 }
 
 export async function PUT(
   request: Request,
-  context: { params: Promise<{ id: string }> }
+  context: Context
 ) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const { id } = await context.params
-
-  const existing = await prisma.invoice.findUnique({
-    where: { id },
-    select: {
-      userId: true,
-      businessId: true,
-      branchId: true,
-      registrationStatus: true,
-    },
-  })
-
   const workspace = await getWorkspace(user.id)
-  if (!workspace || !existing || !canAccessInvoice(workspace, existing)) {
+  if (!workspace) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   }
 
-  if (existing.registrationStatus === "REGISTERED") {
-    return NextResponse.json(
-      {
-        error: "Registered invoices cannot be edited",
-      },
-      { status: 409 }
-    )
-  }
+  const { id } = await context.params
 
   let body: unknown
   try {
@@ -105,115 +63,41 @@ export async function PUT(
       { status: 400 }
     )
   }
-  const data = parsed.data
 
-  const lines = data.lines.map((line) => ({
-    ...line,
-    unitPriceCents: Math.round(line.unitPriceCents),
-  }))
-
-  const subtotalCents = lines.reduce(
-    (sum, line) => sum + Math.round(line.quantity * line.unitPriceCents),
-    0
+  const result = await updateInvoice(
+    user.id,
+    workspace.businessId,
+    id,
+    parsed.data,
+    workspace.branchId
   )
-  const taxAmountCents = Math.round(subtotalCents * data.taxRate)
-  const grandTotalCents = subtotalCents + taxAmountCents
-
-  const [business, credential] = await Promise.all([
-    prisma.business.findUnique({ where: { id: existing.businessId } }),
-    prisma.morCredential.findUnique({ where: { businessId: existing.businessId } }),
-  ])
-  const sellerSnapshot = sellerSnapshotFromBusiness(business, credential)
-
-  const invoice = await prisma.$transaction(async (tx) => {
-    await tx.invoiceLine.deleteMany({ where: { invoiceId: id } })
-    return tx.invoice.update({
-      where: { id },
-      data: {
-        date: data.date,
-        ...sellerSnapshot,
-        buyerLegalName: data.buyer.legalName,
-        taxCode: data.taxCode,
-        taxRate: new Prisma.Decimal(data.taxRate),
-        subtotal: centsToDecimal(subtotalCents),
-        taxAmount: centsToDecimal(taxAmountCents),
-        grandTotal: centsToDecimal(grandTotalCents),
-        transactionType: data.transactionType,
-        incomeWithholdRate: new Prisma.Decimal(data.incomeWithholdRate),
-        cashierName: data.cashierName || "AAA",
-        salesPersonName: data.salesPersonName || "AAA",
-        buyerTin: data.buyer.tin,
-        ...buyerData(data.buyer),
-        irn: null,
-        registrationStatus: null,
-        registrationError: Prisma.JsonNull,
-        registeredAt: null,
-        cancellationReason: null,
-        cancellationRemark: null,
-        cancellationError: Prisma.JsonNull,
-        cancelledAt: null,
-        lines: {
-          create: lines.map((line, index) => ({
-            lineNumber: index + 1,
-            description: line.description,
-            quantity: new Prisma.Decimal(line.quantity),
-            unitPrice: centsToDecimal(line.unitPriceCents),
-            total: centsToDecimal(
-              Math.round(line.quantity * line.unitPriceCents)
-            ),
-            itemCode: line.itemCode,
-            unit: line.unit || "PCS",
-          })),
-        },
-      },
-      include: { lines: true },
-    })
-  })
-
-  return NextResponse.json({ invoice })
+  if (!result.ok)
+    return NextResponse.json({ error: result.error }, { status: result.status })
+  return NextResponse.json({ invoice: result.data })
 }
 
 export async function DELETE(
   _request: Request,
-  context: { params: Promise<{ id: string }> }
+  context: Context
 ) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const { id } = await context.params
-
-  const invoice = await prisma.invoice.findUnique({
-    where: { id },
-    select: {
-      userId: true,
-      businessId: true,
-      branchId: true,
-      registrationStatus: true,
-      receipt: { select: { status: true } },
-    },
-  })
-
   const workspace = await getWorkspace(user.id)
-  if (!workspace || !invoice || !canAccessInvoice(workspace, invoice)) {
+  if (!workspace) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   }
 
-  if (
-    invoice.registrationStatus === "REGISTERED" ||
-    invoice.receipt?.status === "ISSUED"
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "Registered invoices with issued receipts cannot be deleted",
-      },
-      { status: 409 }
-    )
-  }
-
-  await prisma.invoice.delete({ where: { id } })
-
+  const { id } = await context.params
+  const result = await deleteInvoice(
+    user.id,
+    workspace.businessId,
+    id,
+    workspace.branchId
+  )
+  if (!result.ok)
+    return NextResponse.json({ error: result.error }, { status: result.status })
   return NextResponse.json({ ok: true })
 }

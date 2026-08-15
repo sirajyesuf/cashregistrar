@@ -1,35 +1,13 @@
 import { NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
-import { prisma } from "@/lib/db"
 import { invoiceInputSchema } from "@/lib/invoice-schema"
-import { sellerSnapshotFromBusiness } from "@/lib/einvoice/payload"
-import {
-  getWorkspace,
-  getWorkspaceAccess,
-  workspaceInvoiceScope,
-} from "@/lib/workspace"
+import { getWorkspace, getWorkspaceAccess } from "@/lib/workspace"
+import { createInvoice, listInvoices } from "@/lib/invoice-service"
 
 export const runtime = "nodejs"
 
-function centsToDecimal(cents: number) {
-  return new Prisma.Decimal(Math.round(cents)).div(100)
-}
-
-async function requireUser() {
-  const user = await getSessionUser()
-  if (!user) return null
-  return user
-}
-
-async function requireWorkspace(userId: string) {
-  const workspace = await getWorkspace(userId)
-  if (!workspace) return null
-  return workspace
-}
-
 export async function GET(request: Request) {
-  const user = await requireUser()
+  const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
@@ -55,54 +33,23 @@ export async function GET(request: Request) {
     Math.max(1, Number(url.searchParams.get("pageSize")) || 10)
   )
 
-  const where = workspaceInvoiceScope(workspace)
-  const [invoices, total, failed, cancelled, issuedReceipts] =
-    await Promise.all([
-    prisma.invoice.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        number: true,
-        date: true,
-        buyerLegalName: true,
-        taxRate: true,
-        grandTotal: true,
-        irn: true,
-        registrationStatus: true,
-        createdAt: true,
-        receipt: { select: { status: true } },
-        _count: { select: { lines: true } },
-      },
-    }),
-    prisma.invoice.count({ where }),
-    prisma.invoice.count({ where: { ...where, registrationStatus: "FAILED" } }),
-    prisma.invoice.count({
-      where: { ...where, registrationStatus: "CANCELLED" },
-    }),
-    prisma.receipt.count({
-      where: { status: "ISSUED", invoice: { businessId: workspace.businessId } },
-    }),
-  ])
-
-  return NextResponse.json({
-    invoices,
-    total,
+  const result = await listInvoices(user.id, workspace.businessId, {
     page,
     pageSize,
-    stats: { totalInvoices: total, failed, cancelled, issuedReceipts },
+    branchId: workspace.branchId,
   })
+  if (!result.ok)
+    return NextResponse.json({ error: result.error }, { status: result.status })
+  return NextResponse.json(result.data)
 }
 
 export async function POST(request: Request) {
-  const user = await requireUser()
+  const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const workspace = await requireWorkspace(user.id)
+  const workspace = await getWorkspace(user.id)
   if (!workspace) {
     return NextResponse.json(
       { error: "No active workspace. Select a business and branch." },
@@ -125,103 +72,13 @@ export async function POST(request: Request) {
     )
   }
 
-  const {
-    date,
-    taxCode,
-    taxRate,
-    transactionType,
-    buyer,
-    cashierName,
-    salesPersonName,
-    incomeWithholdRate,
-    lines,
-  } = parsed.data
-
-  const parsedLines = lines.map((line) => ({
-    ...line,
-    unitPriceCents: Math.round(line.unitPriceCents),
-  }))
-
-  const subtotalCents = parsedLines.reduce(
-    (sum, line) => sum + Math.round(line.quantity * line.unitPriceCents),
-    0
+  const result = await createInvoice(
+    user.id,
+    workspace.businessId,
+    workspace.branchId,
+    parsed.data
   )
-  const taxAmountCents = Math.round(subtotalCents * taxRate)
-  const grandTotalCents = subtotalCents + taxAmountCents
-
-  const counter = await prisma.counter.upsert({
-    where: {
-      businessId_branchId_name: {
-        businessId: workspace.businessId,
-        branchId: workspace.branchId,
-        name: "invoice",
-      },
-    },
-    create: {
-      businessId: workspace.businessId,
-      branchId: workspace.branchId,
-      name: "invoice",
-      value: 1,
-    },
-    update: { value: { increment: 1 } },
-  })
-  const number = `INV-${String(counter.value).padStart(4, "0")}`
-
-  const [business, credential] = await Promise.all([
-    prisma.business.findUnique({ where: { id: workspace.businessId } }),
-    prisma.morCredential.findUnique({
-      where: { businessId: workspace.businessId },
-    }),
-  ])
-  const sellerSnapshot = sellerSnapshotFromBusiness(business, credential)
-
-  const invoice = await prisma.invoice.create({
-    data: {
-      number,
-      date,
-      businessId: workspace.businessId,
-      branchId: workspace.branchId,
-      ...sellerSnapshot,
-      buyerLegalName: buyer.legalName,
-      taxCode,
-      taxRate: new Prisma.Decimal(taxRate),
-      subtotal: centsToDecimal(subtotalCents),
-      taxAmount: centsToDecimal(taxAmountCents),
-      grandTotal: centsToDecimal(grandTotalCents),
-      transactionType,
-      incomeWithholdRate: new Prisma.Decimal(incomeWithholdRate),
-      cashierName: cashierName || "AAA",
-      salesPersonName: salesPersonName || "AAA",
-      buyerTin: buyer.tin,
-      buyerVatNumber: buyer.vatNumber,
-      buyerIdType: buyer.idType,
-      buyerIdNumber: buyer.idNumber,
-      buyerEmail: buyer.email,
-      buyerPhone: buyer.phone,
-      buyerCity: buyer.city,
-      buyerRegion: buyer.region,
-      buyerCountry: buyer.country,
-      buyerZone: buyer.zone,
-      buyerKebele: buyer.kebele,
-      buyerWereda: buyer.wereda,
-      buyerHouseNumber: buyer.houseNumber,
-      userId: user.id,
-      lines: {
-        create: parsedLines.map((line, index) => ({
-          lineNumber: index + 1,
-          description: line.description,
-          quantity: new Prisma.Decimal(line.quantity),
-          unitPrice: centsToDecimal(line.unitPriceCents),
-          total: centsToDecimal(
-            Math.round(line.quantity * line.unitPriceCents)
-          ),
-          itemCode: line.itemCode,
-          unit: line.unit || "PCS",
-        })),
-      },
-    },
-    include: { lines: true },
-  })
-
-  return NextResponse.json({ invoice }, { status: 201 })
+  if (!result.ok)
+    return NextResponse.json({ error: result.error }, { status: result.status })
+  return NextResponse.json({ invoice: result.data }, { status: 201 })
 }
