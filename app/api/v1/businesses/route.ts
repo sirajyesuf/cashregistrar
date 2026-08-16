@@ -1,17 +1,13 @@
 import { NextResponse } from "next/server"
-import { authenticateApiKey } from "@/lib/api-key"
+import { requireApiKey } from "@/lib/api-key"
 import { createBusinessApiSchema } from "@/lib/business-schema"
 import { createBusiness, listUserBusinesses } from "@/lib/business-service"
 
 export const runtime = "nodejs"
 
 export async function GET(request: Request) {
-  const auth = await authenticateApiKey(request)
-  if (!auth)
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 }
-    )
+  const auth = await requireApiKey(request)
+  if (!auth.ok) return auth.response
 
   const result = await listUserBusinesses(auth.userId)
   if (!result.ok)
@@ -20,12 +16,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await authenticateApiKey(request)
-  if (!auth)
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 }
-    )
+  const auth = await requireApiKey(request)
+  if (!auth.ok) return auth.response
 
   let body: unknown
   try {

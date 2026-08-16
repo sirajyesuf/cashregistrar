@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { authenticateApiKey } from "@/lib/api-key"
+import { requireApiKey } from "@/lib/api-key"
 import { branchCreateSchema } from "@/lib/business-schema"
 import { createBranch, listBranches } from "@/lib/business-service"
 
@@ -8,12 +8,8 @@ export const runtime = "nodejs"
 type Context = { params: Promise<{ businessId: string }> }
 
 export async function GET(request: Request, { params }: Context) {
-  const auth = await authenticateApiKey(request)
-  if (!auth)
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 }
-    )
+  const auth = await requireApiKey(request)
+  if (!auth.ok) return auth.response
 
   const { businessId } = await params
   const result = await listBranches(auth.userId, businessId)
@@ -23,12 +19,8 @@ export async function GET(request: Request, { params }: Context) {
 }
 
 export async function POST(request: Request, { params }: Context) {
-  const auth = await authenticateApiKey(request)
-  if (!auth)
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 }
-    )
+  const auth = await requireApiKey(request)
+  if (!auth.ok) return auth.response
 
   const { businessId } = await params
 

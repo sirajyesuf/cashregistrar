@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { authenticateApiKey } from "@/lib/api-key"
+import { requireApiKey } from "@/lib/api-key"
 import { productInputSchema } from "@/lib/product-schema"
 import { createProduct, listProducts } from "@/lib/product-service"
 
@@ -8,12 +8,8 @@ export const runtime = "nodejs"
 type Context = { params: Promise<{ businessId: string }> }
 
 export async function GET(request: Request, { params }: Context) {
-  const auth = await authenticateApiKey(request)
-  if (!auth)
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 }
-    )
+  const auth = await requireApiKey(request)
+  if (!auth.ok) return auth.response
 
   const { businessId } = await params
   const url = new URL(request.url)
@@ -26,12 +22,8 @@ export async function GET(request: Request, { params }: Context) {
 }
 
 export async function POST(request: Request, { params }: Context) {
-  const auth = await authenticateApiKey(request)
-  if (!auth)
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 }
-    )
+  const auth = await requireApiKey(request)
+  if (!auth.ok) return auth.response
 
   const { businessId } = await params
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { authenticateApiKey } from "@/lib/api-key"
+import { requireApiKey } from "@/lib/api-key"
 import { businessUpdateApiSchema } from "@/lib/business-schema"
 import {
   deleteBusiness,
@@ -12,12 +12,8 @@ export const runtime = "nodejs"
 type Context = { params: Promise<{ businessId: string }> }
 
 export async function GET(request: Request, { params }: Context) {
-  const auth = await authenticateApiKey(request)
-  if (!auth)
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 }
-    )
+  const auth = await requireApiKey(request)
+  if (!auth.ok) return auth.response
 
   const { businessId } = await params
   const result = await getBusinessDetail(auth.userId, businessId)
@@ -27,12 +23,8 @@ export async function GET(request: Request, { params }: Context) {
 }
 
 export async function PATCH(request: Request, { params }: Context) {
-  const auth = await authenticateApiKey(request)
-  if (!auth)
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 }
-    )
+  const auth = await requireApiKey(request)
+  if (!auth.ok) return auth.response
 
   const { businessId } = await params
 
@@ -58,12 +50,8 @@ export async function PATCH(request: Request, { params }: Context) {
 }
 
 export async function DELETE(request: Request, { params }: Context) {
-  const auth = await authenticateApiKey(request)
-  if (!auth)
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 }
-    )
+  const auth = await requireApiKey(request)
+  if (!auth.ok) return auth.response
 
   const { businessId } = await params
   const result = await deleteBusiness(auth.userId, businessId)

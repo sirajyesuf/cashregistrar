@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { authenticateApiKey } from "@/lib/api-key"
+import { requireApiKey } from "@/lib/api-key"
 import { invoiceCreateApiSchema } from "@/lib/invoice-schema"
 import { createInvoice, listInvoices } from "@/lib/invoice-service"
 
@@ -8,12 +8,8 @@ export const runtime = "nodejs"
 type Context = { params: Promise<{ businessId: string }> }
 
 export async function GET(request: Request, { params }: Context) {
-  const auth = await authenticateApiKey(request)
-  if (!auth)
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 }
-    )
+  const auth = await requireApiKey(request)
+  if (!auth.ok) return auth.response
 
   const { businessId } = await params
   const url = new URL(request.url)
@@ -35,12 +31,8 @@ export async function GET(request: Request, { params }: Context) {
 }
 
 export async function POST(request: Request, { params }: Context) {
-  const auth = await authenticateApiKey(request)
-  if (!auth)
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 }
-    )
+  const auth = await requireApiKey(request)
+  if (!auth.ok) return auth.response
 
   const { businessId } = await params
 
@@ -60,7 +52,11 @@ export async function POST(request: Request, { params }: Context) {
   }
 
   const { branchId, ...input } = parsed.data
-  const result = await createInvoice(auth.userId, businessId, branchId, input)
+  const idempotencyKey =
+    request.headers.get("idempotency-key")?.trim() || undefined
+  const result = await createInvoice(auth.userId, businessId, branchId, input, {
+    idempotencyKey,
+  })
   if (!result.ok)
     return NextResponse.json({ error: result.error }, { status: result.status })
   return NextResponse.json({ invoice: result.data }, { status: 201 })

@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "crypto"
+import { NextResponse } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/db"
 
@@ -44,4 +45,27 @@ export async function authenticateApiKey(
     .catch(() => {})
 
   return { userId: apiKey.userId, keyId: apiKey.id }
+}
+
+export type ApiKeyGuard =
+  | { ok: true; userId: string; keyId: string }
+  | { ok: false; response: NextResponse }
+
+/**
+ * Route guard for public v1 endpoints. Authenticates the API key and returns
+ * either the resolved identity or a ready-to-return 401 response, collapsing
+ * the boilerplate every v1 route used to repeat.
+ */
+export async function requireApiKey(request: Request): Promise<ApiKeyGuard> {
+  const auth = await authenticateApiKey(request)
+  if (!auth) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Invalid or missing API key" },
+        { status: 401 }
+      ),
+    }
+  }
+  return { ok: true, ...auth }
 }
