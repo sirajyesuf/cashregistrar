@@ -1,69 +1,9 @@
 import { NextResponse } from "next/server"
-import type { Invoice, InvoiceLine } from "@prisma/client"
-import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
-import { prisma } from "@/lib/db"
-import { callEims, type EimsCallResult } from "@/lib/einvoice/client"
-import { getConfig, type EimsConfig } from "@/lib/einvoice/config"
-import {
-  buildRegisterPayload,
-  buildSellerDetailsFromInvoice,
-} from "@/lib/einvoice/payload"
-import { validateLineTotals } from "@/lib/einvoice/validate"
-import {
-  extractErrorMessage,
-  isEimsAuthError,
-  isSequenceError,
-  parseEimsError,
-  parseExpectedCounter,
-  rateLimitMessage,
-  retryAfterSeconds,
-} from "@/lib/einvoice/eims-error"
-import { canAccessInvoice, eimsCounterKey, getWorkspace } from "@/lib/workspace"
+import { getWorkspace } from "@/lib/workspace"
+import { registerInvoice } from "@/lib/einvoice/register-service"
 
 export const runtime = "nodejs"
-
-/**
- * EIMS requires every invoice registered from a source system (TIN +
- * SYSTEM_NUMBER) to carry a strictly sequential DocumentNumber / InvoiceCounter
- * starting at 1. That sequence is tracked locally by the "eims" Counter row.
- *
- * The counter can drift BEHIND EIMS's real count when EIMS accepts a document
- * but the app never records it (network/parse edge cases after acceptance,
- * external registrations on the same source system, etc.). When that happens
- * EIMS rejects the out-of-sequence number with a 7001/7015 error that states
- * the expected next number ("...expected : 11").
- *
- * Self-heal: on a 7001/7015 sequence error we parse EIMS's expected number,
- * realign the "eims" counter to it (EIMS is the source of truth), and
- * auto-retry the registration once. The retry is capped at one attempt so a
- * persistent failure surfaces normally instead of looping.
- */
-
-/**
- * Builds the register payload for a given counter value and sends it to EIMS.
- * Extracted so the self-heal path can re-run the same request with the
- * corrected document number.
- */
-async function attemptRegister(
-  cfg: EimsConfig,
-  businessId: string,
-  invoice: Invoice & { lines: InvoiceLine[] },
-  counterValue: number,
-  previousIrn: string | null
-): Promise<EimsCallResult> {
-  const payload = buildRegisterPayload({
-    invoice,
-    sellerDetails: buildSellerDetailsFromInvoice(invoice, cfg),
-    invoiceCounter: counterValue,
-    previousIrn,
-    cfg,
-  })
-  return callEims("/v1/register", payload, businessId, {
-    TIN: cfg.tin,
-    SYSTEM_NUMBER: cfg.systemNumber,
-  })
-}
 
 export async function POST(request: Request) {
   const user = await getSessionUser()
@@ -87,184 +27,16 @@ export async function POST(request: Request) {
     )
   }
 
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
-    include: { lines: true },
-  })
-  if (!invoice) {
-    return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
-  }
-
   const workspace = await getWorkspace(user.id)
-  if (!workspace || !canAccessInvoice(workspace, invoice)) {
+  if (!workspace) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   }
 
-  if (invoice.registrationStatus === "REGISTERED") {
-    return NextResponse.json({ ok: true, irn: invoice.irn })
-  }
-
-  if (invoice.transactionType === "B2B" && !invoice.buyerTin) {
-    return NextResponse.json(
-      { error: "B2B invoices require a buyer TIN" },
-      { status: 400 }
-    )
-  }
-
-  if (invoice.lines.some((line) => line.description.trim().length < 3)) {
-    return NextResponse.json(
-      {
-        error:
-          "Every line item description must be at least 3 characters (required by EIMS)",
-      },
-      { status: 400 }
-    )
-  }
-
-  const lineTotalIssues = validateLineTotals({
-    lines: invoice.lines,
-    taxCode: invoice.taxCode,
-    taxRate: Number(invoice.taxRate),
-  })
-  if (lineTotalIssues.length > 0) {
-    return NextResponse.json(
-      {
-        error:
-          lineTotalIssues
-            .map(
-              (issue) =>
-                `Line ${issue.lineNumber}: TotalLineAmount should be ${issue.expected.toFixed(
-                  2
-                )} but is ${issue.received.toFixed(2)}`
-            )
-            .join("; ") +
-          ". This usually means the invoice tax rate does not match the selected tax code. " +
-          "Edit the invoice and set the tax rate to match the tax code, or fix the line totals.",
-      },
-      { status: 400 }
-    )
-  }
-
-  const businessId = workspace.businessId
-  const counterKey = { ...eimsCounterKey(businessId), name: "eims" }
-  const counter = await prisma.counter.upsert({
-    where: { businessId_branchId_name: counterKey },
-    create: { ...counterKey, value: 1 },
-    update: {},
-  })
-  const previous = await prisma.invoice.findFirst({
-    where: {
-      irn: { not: null },
-      registrationStatus: "REGISTERED",
-      id: { not: invoice.id },
-      businessId,
-    },
-    orderBy: { createdAt: "desc" },
-    select: { irn: true },
-  })
-  const previousIrn = previous?.irn ?? null
-
-  let result: EimsCallResult
-  try {
-    const cfg = await getConfig(businessId)
-    result = await attemptRegister(
-      cfg,
-      businessId,
-      invoice,
-      counter.value,
-      previousIrn
-    )
-
-    // Self-heal: realign the counter to EIMS's expected next number and retry once.
-    if (!result.ok) {
-      const message = extractErrorMessage(result.data)
-      const expected = parseExpectedCounter(message)
-      if (isSequenceError(message) && expected !== null) {
-        await prisma.counter.update({
-          where: { businessId_branchId_name: counterKey },
-          data: { value: expected },
-        })
-        result = await attemptRegister(
-          cfg,
-          businessId,
-          invoice,
-          expected,
-          previousIrn
-        )
-      }
-    }
-  } catch (err) {
-    // A credential/config failure is not the invoice's fault: keep it retryable
-    // and tell the user to fix their MOR credentials instead of a generic 500.
-    if (isEimsAuthError(err)) {
-      return NextResponse.json(
-        {
-          error: err.message,
-          code: err.code,
-          statusCode: 502,
-          detail: { eimsStatusCode: err.eimsStatusCode },
-        },
-        { status: 502 }
-      )
-    }
-    throw err
-  }
-
-  const data = result.data as { body?: { irn?: unknown } } | undefined
-  const irn = typeof data?.body?.irn === "string" ? data.body.irn : null
-
-  // EIMS rate limits requests per TIN/system number. A 429 is transient, not a
-  // validation failure: keep the invoice retryable and tell the caller how long
-  // to wait instead of marking it FAILED.
-  if (result.status === 429) {
-    return NextResponse.json(
-      {
-        error: rateLimitMessage(result.retryAfter),
-        statusCode: 429,
-        retryAfter: result.retryAfter,
-        retryAfterSeconds: retryAfterSeconds(result.retryAfter),
-      },
-      { status: 429 }
-    )
-  }
-
-  if (result.ok && irn) {
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: {
-        irn,
-        registrationStatus: "REGISTERED",
-        registrationError: Prisma.DbNull,
-        registeredAt: new Date(),
-      },
-    })
-    await prisma.counter.update({
-      where: { businessId_branchId_name: counterKey },
-      data: { value: { increment: 1 } },
-    })
-    return NextResponse.json({ ok: true, irn })
-  }
-
-  const eims = parseEimsError(data)
-  await prisma.invoice.update({
-    where: { id: invoice.id },
-    data: {
-      registrationStatus: "FAILED",
-      registrationError: {
-        statusCode: eims.statusCode,
-        message: eims.message,
-        issues: eims.issues,
-      },
-    },
-  })
-  return NextResponse.json(
-    {
-      error: eims.raw,
-      statusCode: eims.statusCode,
-      message: eims.message,
-      issues: eims.issues,
-      detail: eims.raw,
-    },
-    { status: result.ok ? 500 : result.status }
+  const result = await registerInvoice(
+    user.id,
+    workspace.businessId,
+    invoiceId,
+    workspace.branchId
   )
+  return NextResponse.json(result.body, { status: result.status })
 }
