@@ -5,8 +5,13 @@ import {
   canAccessBranch,
   getBusinessAccess,
 } from "@/lib/business"
-import { notFound, type ServiceResult } from "@/lib/service"
+import { conflict, notFound, type ServiceResult } from "@/lib/service"
 import { sellerSnapshotFromBusiness } from "@/lib/einvoice/payload"
+import {
+  claimIdempotencyKey,
+  clearIdempotencyKey,
+  settleIdempotencyKey,
+} from "@/lib/idempotency"
 import type { InvoiceInput } from "@/lib/invoice-schema"
 
 function centsToDecimal(cents: number) {
@@ -40,11 +45,16 @@ function normalizeLines(lines: InvoiceInput["lines"]) {
 }
 
 function computeTotals(lines: ReturnType<typeof normalizeLines>, taxRate: number) {
-  const subtotalCents = lines.reduce(
-    (sum, line) => sum + Math.round(line.quantity * line.unitPriceCents),
-    0
-  )
-  const taxAmountCents = Math.round(subtotalCents * taxRate)
+  // Tax is computed per line then summed, mirroring EIMS's per-line rule
+  // (round2(preTax * rate)). Computing tax once on the summed subtotal can
+  // drift by a cent from EIMS's totals, so we match it line-by-line.
+  let subtotalCents = 0
+  let taxAmountCents = 0
+  for (const line of lines) {
+    const preTaxCents = Math.round(line.quantity * line.unitPriceCents)
+    subtotalCents += preTaxCents
+    taxAmountCents += Math.round(preTaxCents * taxRate)
+  }
   const grandTotalCents = subtotalCents + taxAmountCents
   return { subtotalCents, taxAmountCents, grandTotalCents }
 }
@@ -166,7 +176,8 @@ export async function createInvoice(
   userId: string,
   businessId: string,
   branchId: string,
-  input: InvoiceInput
+  input: InvoiceInput,
+  opts?: { idempotencyKey?: string }
 ): Promise<ServiceResult<Invoice & { lines: InvoiceLine[] }>> {
   const access = await getBusinessAccess(userId, businessId)
   if (!access) return notFound("Business not found")
@@ -177,42 +188,77 @@ export async function createInvoice(
     lines,
     input.taxRate
   )
-
-  const counter = await prisma.counter.upsert({
-    where: {
-      businessId_branchId_name: { businessId, branchId, name: "invoice" },
-    },
-    create: { businessId, branchId, name: "invoice", value: 1 },
-    update: { value: { increment: 1 } },
-  })
-  const number = `INV-${String(counter.value).padStart(4, "0")}`
-
   const snapshot = await sellerSnapshot(businessId)
 
-  const invoice = await prisma.invoice.create({
-    data: {
-      number,
-      date: input.date,
-      businessId,
-      branchId,
-      ...snapshot,
-      taxCode: input.taxCode,
-      taxRate: new Prisma.Decimal(input.taxRate),
-      subtotal: centsToDecimal(subtotalCents),
-      taxAmount: centsToDecimal(taxAmountCents),
-      grandTotal: centsToDecimal(grandTotalCents),
-      transactionType: input.transactionType,
-      incomeWithholdRate: new Prisma.Decimal(input.incomeWithholdRate),
-      cashierName: input.cashierName || "AAA",
-      salesPersonName: input.salesPersonName || "AAA",
-      ...buyerData(input.buyer),
+  let claimedKey: string | null = null
+  if (opts?.idempotencyKey) {
+    const claim = await claimIdempotencyKey(
+      opts.idempotencyKey,
       userId,
-      lines: { create: lineCreateData(lines) },
-    },
-    include: { lines: true },
-  })
+      businessId
+    )
+    if (claim.kind === "replay") {
+      const invoice = await prisma.invoice.findFirst({
+        where: { id: claim.invoiceId, businessId },
+        include: { lines: true },
+      })
+      if (!invoice) return notFound("Invoice not found")
+      return { ok: true, data: invoice }
+    }
+    if (claim.kind === "busy") {
+      return conflict(
+        "A request with this idempotency key is already in progress"
+      )
+    }
+    claimedKey = claim.keyHash
+  }
 
-  return { ok: true, data: invoice }
+  try {
+    // Number reservation and invoice insert share a transaction so concurrent
+    // creates can never produce the same INV-XXXX number (which would trip the
+    // [businessId, branchId, number] unique constraint).
+    const invoice = await prisma.$transaction(async (tx) => {
+      const counter = await tx.counter.upsert({
+        where: {
+          businessId_branchId_name: { businessId, branchId, name: "invoice" },
+        },
+        create: { businessId, branchId, name: "invoice", value: 1 },
+        update: { value: { increment: 1 } },
+      })
+      const number = `INV-${String(counter.value).padStart(4, "0")}`
+
+      return tx.invoice.create({
+        data: {
+          number,
+          date: input.date,
+          businessId,
+          branchId,
+          ...snapshot,
+          taxCode: input.taxCode,
+          taxRate: new Prisma.Decimal(input.taxRate),
+          subtotal: centsToDecimal(subtotalCents),
+          taxAmount: centsToDecimal(taxAmountCents),
+          grandTotal: centsToDecimal(grandTotalCents),
+          transactionType: input.transactionType,
+          incomeWithholdRate: new Prisma.Decimal(input.incomeWithholdRate),
+          cashierName: input.cashierName || "AAA",
+          salesPersonName: input.salesPersonName || "AAA",
+          ...buyerData(input.buyer),
+          userId,
+          lines: { create: lineCreateData(lines) },
+        },
+        include: { lines: true },
+      })
+    })
+
+    if (claimedKey) await settleIdempotencyKey(claimedKey, invoice.id)
+    return { ok: true, data: invoice }
+  } catch (error) {
+    if (claimedKey) {
+      await clearIdempotencyKey(claimedKey).catch(() => {})
+    }
+    throw error
+  }
 }
 
 export async function getInvoice(

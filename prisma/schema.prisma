@@ -28,6 +28,7 @@ model User {
   invitationsSent Invitation[]  @relation("InvitationInvitedBy")
   invitationsAccepted Invitation[] @relation("InvitationAcceptedBy")
   apiKeys         ApiKey[]
+  idempotencyKeys IdempotencyKey[]
 }
 
 model UserPreference {
@@ -216,6 +217,19 @@ model ApiKey {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model IdempotencyKey {
+  id         String    @id @default(cuid())
+  keyHash    String    @unique
+  userId     String
+  businessId String
+  invoiceId  String?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, businessId])
 }
 
 model EimsToken {
