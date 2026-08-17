@@ -16,22 +16,25 @@ export type BranchSummary = {
   active: boolean
 }
 
+export type MorCredentialSummary = {
+  tin: string
+  vatNumber: string
+  systemNumber: string
+  systemType: string
+  clientId: string
+  clientSecret: string
+  apiKey: string
+}
+
 export type MemberBusiness = Business & {
   _count: { branches: number; members: number }
   members: { role: Role; branchId: string | null }[]
   branches: BranchSummary[]
+  morCredential: MorCredentialSummary | null
 }
 
 export type BusinessDetail = Business & {
-  morCredential: {
-    tin: string
-    vatNumber: string
-    systemNumber: string
-    systemType: string
-    clientId: string
-    clientSecret: string
-    apiKey: string
-  } | null
+  morCredential: MorCredentialSummary | null
   branches: Branch[]
 }
 
@@ -113,6 +116,17 @@ export async function listUserBusinesses(
       houseNumber: true,
       createdAt: true,
       updatedAt: true,
+      morCredential: {
+        select: {
+          tin: true,
+          vatNumber: true,
+          systemNumber: true,
+          systemType: true,
+          clientId: true,
+          clientSecret: true,
+          apiKey: true,
+        },
+      },
       _count: { select: { branches: true, members: true } },
       members: {
         where: { userId },

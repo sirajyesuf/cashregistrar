@@ -24,7 +24,8 @@ export type InternalListedBusiness = {
 export function toInternalBusinessList(
   business: MemberBusiness
 ): InternalListedBusiness {
-  const { members, ...rest } = business
+  const { members, morCredential: _morCredential, ...rest } = business
+  void _morCredential
   return {
     ...rest,
     role: members[0]?.role ?? null,

@@ -1,4 +1,8 @@
-import type { MemberBusiness, BusinessDetail } from "@/lib/services/business.service"
+import type {
+  MemberBusiness,
+  BusinessDetail,
+  MorCredentialSummary,
+} from "@/lib/services/business.service"
 
 export type PublicBusiness = {
   id: string
@@ -16,6 +20,7 @@ export type PublicBusiness = {
   houseNumber: string | null
   createdAt: Date
   updatedAt: Date
+  morCredential: MorCredentialSummary | null
 }
 
 export function toPublicBusiness(business: MemberBusiness): PublicBusiness {
@@ -35,6 +40,7 @@ export function toPublicBusiness(business: MemberBusiness): PublicBusiness {
     houseNumber: business.houseNumber,
     createdAt: business.createdAt,
     updatedAt: business.updatedAt,
+    morCredential: business.morCredential,
   }
 }
 
