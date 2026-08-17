@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth/user"
-import { branchCreateSchema } from "@/lib/business-schema"
-import { createBranch, listBranches } from "@/lib/business-service"
+import { branchInternalCreateSchema } from "@/lib/validation/internal/business"
+import { canManageBusiness, getBusinessAccess } from "@/lib/business"
+import { withService } from "@/lib/api-error"
+import { createBranch, listBranches } from "@/lib/services/business.service"
+import { toInternalBranch } from "@/lib/dto/internal/branch.dto"
 
 export const runtime = "nodejs"
 
@@ -13,10 +16,14 @@ export async function GET(_request: Request, { params }: Context) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
 
   const { businessId } = await params
-  const result = await listBranches(user.id, businessId)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ branches: result.data })
+  const access = await getBusinessAccess(user.id, businessId)
+  if (!access)
+    return NextResponse.json({ error: "Business not found" }, { status: 404 })
+
+  const scopedBranchId =
+    access.role === "OWNER" ? undefined : access.branchId
+  const branches = await listBranches(businessId, scopedBranchId)
+  return NextResponse.json({ branches: branches.map(toInternalBranch) })
 }
 
 export async function POST(request: Request, { params }: Context) {
@@ -25,6 +32,15 @@ export async function POST(request: Request, { params }: Context) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
 
   const { businessId } = await params
+  const access = await getBusinessAccess(user.id, businessId)
+  if (!access)
+    return NextResponse.json({ error: "Business not found" }, { status: 404 })
+  if (!canManageBusiness(access.role)) {
+    return NextResponse.json(
+      { error: "Business owner access required" },
+      { status: 403 }
+    )
+  }
 
   let body: unknown
   try {
@@ -33,7 +49,7 @@ export async function POST(request: Request, { params }: Context) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const parsed = branchCreateSchema.safeParse(body)
+  const parsed = branchInternalCreateSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
@@ -41,8 +57,9 @@ export async function POST(request: Request, { params }: Context) {
     )
   }
 
-  const result = await createBranch(user.id, businessId, parsed.data)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ branch: result.data }, { status: 201 })
+  const result = await withService(() =>
+    createBranch(businessId, parsed.data)
+  )
+  if ("error" in result) return result.error
+  return NextResponse.json({ branch: toInternalBranch(result.data) }, { status: 201 })
 }

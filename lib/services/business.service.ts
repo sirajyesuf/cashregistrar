@@ -1,13 +1,7 @@
-import type { Business, Branch, Role } from "@prisma/client"
+import type { Branch, Business, Role } from "@prisma/client"
 import { prisma } from "@/lib/db"
-import {
-  canAccessBranch,
-  canManageBranch,
-  canManageBusiness,
-  getBusinessAccess,
-  isPrismaUniqueError,
-} from "@/lib/business"
-import { forbidden, notFound, type ServiceResult } from "@/lib/service"
+import { isPrismaUniqueError } from "@/lib/business"
+import { ConflictError } from "@/lib/api-error"
 import type {
   BranchCreateValues,
   BranchUpdateValues,
@@ -15,31 +9,38 @@ import type {
   CreateBusinessApiValues,
 } from "@/lib/business-schema"
 
-type BranchSummary = {
+export type BranchSummary = {
   id: string
   name: string
   businessId: string
   active: boolean
 }
 
-export type ListedBusiness = {
-  id: string
-  name: string
-  currency: string
-  active: boolean
-  createdAt: Date
+export type MemberBusiness = Business & {
   _count: { branches: number; members: number }
-  role: Role | null
-  branchId: string | null
+  members: { role: Role; branchId: string | null }[]
   branches: BranchSummary[]
+}
+
+export type BusinessDetail = Business & {
+  morCredential: {
+    tin: string
+    vatNumber: string
+    systemNumber: string
+    systemType: string
+    clientId: string
+    clientSecret: string
+    apiKey: string
+  } | null
+  branches: Branch[]
 }
 
 export async function createBusiness(
   userId: string,
   input: CreateBusinessApiValues
-): Promise<ServiceResult<Business & { branches: Branch[] }>> {
+): Promise<Business & { branches: Branch[] }> {
   try {
-    const business = await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx) => {
       const createdBusiness = await tx.business.create({
         data: {
           name: input.name,
@@ -77,32 +78,41 @@ export async function createBusiness(
 
       return { ...createdBusiness, branches: [branch] }
     })
-
-    return { ok: true, data: business }
   } catch (error) {
     if (isPrismaUniqueError(error)) {
-      return {
-        ok: false,
-        status: 409,
-        error: "A business with this information already exists",
-      }
+      throw new ConflictError("A business with this information already exists")
     }
     throw error
   }
 }
 
 export async function listUserBusinesses(
-  userId: string
-): Promise<ServiceResult<ListedBusiness[]>> {
+  userId: string,
+  opts: { ownerOnly?: boolean } = {}
+): Promise<MemberBusiness[]> {
   const businesses = await prisma.business.findMany({
-    where: { members: { some: { userId } } },
+    where: {
+      ...(opts.ownerOnly
+        ? { ownerId: userId }
+        : { members: { some: { userId } } }),
+    },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
+      ownerId: true,
       name: true,
+      address: true,
       currency: true,
       active: true,
+      city: true,
+      country: true,
+      email: true,
+      phone: true,
+      region: true,
+      wereda: true,
+      houseNumber: true,
       createdAt: true,
+      updatedAt: true,
       _count: { select: { branches: true, members: true } },
       members: {
         where: { userId },
@@ -129,37 +139,34 @@ export async function listUserBusinesses(
     branchesByBusiness.set(branch.businessId, list)
   }
 
-  return {
-    ok: true as const,
-    data: businesses.map(({ members, ...business }) => ({
-      ...business,
-      role: members[0]?.role ?? null,
-      branchId: members[0]?.branchId ?? null,
-      branches: branchesByBusiness.get(business.id) ?? [],
-    })),
-  }
+  return businesses.map((business) => ({
+    ...business,
+    branches: branchesByBusiness.get(business.id) ?? [],
+  }))
 }
 
-export async function getBusinessDetail(userId: string, businessId: string) {
-  const access = await getBusinessAccess(userId, businessId)
-  if (!access) return notFound("Business not found")
-
-  const business = await prisma.business.findUnique({
+export async function getBusinessDetail(
+  businessId: string,
+  scopedBranchId?: string | null
+): Promise<BusinessDetail | null> {
+  return prisma.business.findUnique({
     where: { id: businessId },
     select: {
       id: true,
+      ownerId: true,
       name: true,
       address: true,
       currency: true,
       active: true,
       city: true,
+      country: true,
       email: true,
       phone: true,
       region: true,
       wereda: true,
-      country: true,
       houseNumber: true,
       createdAt: true,
+      updatedAt: true,
       morCredential: {
         select: {
           tin: true,
@@ -172,51 +179,19 @@ export async function getBusinessDetail(userId: string, businessId: string) {
         },
       },
       branches: {
-        where:
-          access.role === "OWNER"
-            ? undefined
-            : { id: access.branchId ?? "__no_branch_access__" },
+        where: scopedBranchId ? { id: scopedBranchId } : undefined,
         orderBy: { name: "asc" },
       },
     },
   })
-
-  if (!business) return notFound("Business not found")
-
-  const { morCredential, ...rest } = business
-  const revealSecrets = access.role === "OWNER"
-  return {
-    ok: true as const,
-    data: {
-      business: {
-        ...rest,
-        morCredential: morCredential
-          ? {
-              ...morCredential,
-              clientId: revealSecrets ? morCredential.clientId : "",
-              clientSecret: revealSecrets ? morCredential.clientSecret : "",
-              apiKey: revealSecrets ? morCredential.apiKey : "",
-            }
-          : null,
-      },
-      role: access.role,
-      branchId: access.branchId,
-    },
-  }
 }
 
 export async function updateBusiness(
-  userId: string,
   businessId: string,
   input: BusinessUpdateValues
-): Promise<ServiceResult<Business>> {
-  const access = await getBusinessAccess(userId, businessId)
-  if (!access || !canManageBusiness(access.role)) {
-    return forbidden("Business owner access required")
-  }
-
+): Promise<Business> {
   const { morCredential, ...businessData } = input
-  const business = await prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const updated = await tx.business.update({
       where: { id: businessId },
       data: businessData,
@@ -233,144 +208,97 @@ export async function updateBusiness(
     }
     return updated
   })
-  return { ok: true, data: business }
 }
 
-export async function deleteBusiness(userId: string, businessId: string) {
-  const access = await getBusinessAccess(userId, businessId)
-  if (!access || !canManageBusiness(access.role)) {
-    return forbidden("Business owner access required")
-  }
-
+export async function deleteBusiness(businessId: string): Promise<{ id: string }> {
   await prisma.business.update({
     where: { id: businessId },
     data: { active: false },
   })
-  return { ok: true as const, data: { id: businessId } }
+  return { id: businessId }
 }
 
-export async function listBranches(userId: string, businessId: string) {
-  const access = await getBusinessAccess(userId, businessId)
-  if (!access) return notFound("Business not found")
-
-  const branches = await prisma.branch.findMany({
+export async function listBranches(
+  businessId: string,
+  scopedBranchId?: string | null
+): Promise<Branch[]> {
+  return prisma.branch.findMany({
     where: {
       businessId,
-      ...(access.role === "OWNER"
-        ? {}
-        : { id: access.branchId ?? "__no_branch_access__" }),
+      ...(scopedBranchId ? { id: scopedBranchId } : {}),
     },
     orderBy: { name: "asc" },
   })
-
-  return { ok: true as const, data: branches }
 }
 
 export async function createBranch(
-  userId: string,
   businessId: string,
   input: BranchCreateValues
-): Promise<ServiceResult<Branch>> {
-  const access = await getBusinessAccess(userId, businessId)
-  if (!access || !canManageBusiness(access.role)) {
-    return forbidden("Business owner access required")
-  }
-
+): Promise<Branch> {
   try {
-    const branch = await prisma.branch.create({
+    return await prisma.branch.create({
       data: {
         name: input.name,
         address: input.address || null,
         businessId,
       },
     })
-    return { ok: true, data: branch }
   } catch (error) {
     if (isPrismaUniqueError(error)) {
-      return {
-        ok: false,
-        status: 409,
-        error: "A branch with this name already exists in the business",
-      }
+      throw new ConflictError(
+        "A branch with this name already exists in the business"
+      )
     }
     throw error
   }
 }
 
 export async function getBranch(
-  userId: string,
   businessId: string,
   branchId: string
-) {
-  const access = await getBusinessAccess(userId, businessId)
-  if (!access || !canAccessBranch(access, branchId)) {
-    return notFound("Branch not found")
-  }
-
-  const branch = await prisma.branch.findFirst({
+): Promise<Branch | null> {
+  return prisma.branch.findFirst({
     where: { id: branchId, businessId },
   })
-  if (!branch) return notFound("Branch not found")
-
-  return { ok: true as const, data: branch }
 }
 
 export async function updateBranch(
-  userId: string,
   businessId: string,
   branchId: string,
   input: BranchUpdateValues
-): Promise<ServiceResult<Branch>> {
-  const access = await getBusinessAccess(userId, businessId)
-  if (
-    !access ||
-    !canManageBranch(access.role) ||
-    !canAccessBranch(access, branchId)
-  ) {
-    return forbidden("Branch management access required")
-  }
-
+): Promise<Branch | null> {
   const branch = await prisma.branch.findFirst({
     where: { id: branchId, businessId },
   })
-  if (!branch) return notFound("Branch not found")
+  if (!branch) return null
 
   try {
-    const updatedBranch = await prisma.branch.update({
+    return await prisma.branch.update({
       where: { id: branchId },
       data: input,
     })
-    return { ok: true, data: updatedBranch }
   } catch (error) {
     if (isPrismaUniqueError(error)) {
-      return {
-        ok: false,
-        status: 409,
-        error: "A branch with this name already exists in the business",
-      }
+      throw new ConflictError(
+        "A branch with this name already exists in the business"
+      )
     }
     throw error
   }
 }
 
 export async function deleteBranch(
-  userId: string,
   businessId: string,
   branchId: string
-) {
-  const access = await getBusinessAccess(userId, businessId)
-  if (!access || !canManageBusiness(access.role)) {
-    return forbidden("Business owner access required")
-  }
-
+): Promise<{ id: string } | null> {
   const branch = await prisma.branch.findFirst({
     where: { id: branchId, businessId },
   })
-  if (!branch) return notFound("Branch not found")
+  if (!branch) return null
 
   await prisma.branch.update({
     where: { id: branchId },
     data: { active: false },
   })
-  return { ok: true as const, data: { id: branchId } }
+  return { id: branchId }
 }

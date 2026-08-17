@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server"
 import { requireApiKey } from "@/lib/api-key"
-import { createBusinessApiSchema } from "@/lib/business-schema"
-import { createBusiness, listUserBusinesses } from "@/lib/business-service"
+import { businessPublicCreateSchema } from "@/lib/validation/public/business"
+import { publicError, publicErrorResponse, withService } from "@/lib/api-error"
+import {
+  createBusiness,
+  listUserBusinesses,
+} from "@/lib/services/business.service"
+import {
+  toPublicBusiness,
+  toPublicCreatedBusiness,
+} from "@/lib/dto/public/business.dto"
 
 export const runtime = "nodejs"
 
@@ -9,10 +17,10 @@ export async function GET(request: Request) {
   const auth = await requireApiKey(request)
   if (!auth.ok) return auth.response
 
-  const result = await listUserBusinesses(auth.userId)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ businesses: result.data })
+  const businesses = await listUserBusinesses(auth.userId, { ownerOnly: true })
+  return NextResponse.json({
+    businesses: businesses.map(toPublicBusiness),
+  })
 }
 
 export async function POST(request: Request) {
@@ -23,19 +31,25 @@ export async function POST(request: Request) {
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+    return publicError(400, "BAD_REQUEST", "Invalid JSON body")
   }
 
-  const parsed = createBusinessApiSchema.safeParse(body)
+  const parsed = businessPublicCreateSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
-      { status: 400 }
+    return publicError(
+      422,
+      "VALIDATION_ERROR",
+      parsed.error.issues.map((issue) => issue.message).join("; ")
     )
   }
 
-  const result = await createBusiness(auth.userId, parsed.data)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ business: result.data }, { status: 201 })
+  const result = await withService(
+    () => createBusiness(auth.userId, parsed.data),
+    publicErrorResponse
+  )
+  if ("error" in result) return result.error
+  return NextResponse.json(
+    { business: toPublicCreatedBusiness(result.data) },
+    { status: 201 }
+  )
 }

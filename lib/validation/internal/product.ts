@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { UNIT_CODES } from "@/lib/units"
 
-export const productInputSchema = z.object({
+export const productInternalSchema = z.object({
   name: z.string().trim().min(1, "Product name is required"),
   itemCode: z.string().trim(),
   unit: z.enum(UNIT_CODES),
@@ -11,4 +11,4 @@ export const productInputSchema = z.object({
     .nonnegative("Selling price cannot be negative"),
 })
 
-export type ProductInput = z.infer<typeof productInputSchema>
+export type ProductInternalInput = z.infer<typeof productInternalSchema>

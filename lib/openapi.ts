@@ -1,12 +1,12 @@
 import { OpenAPIRegistry, OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi"
 import { z } from "zod"
+import { productPublicSchema } from "@/lib/validation/public/product"
 import {
-  branchCreateSchema,
-  businessUpdateApiSchema,
-  createBusinessApiSchema,
-  updateBranchSchema,
-} from "@/lib/business-schema"
-import { productInputSchema } from "@/lib/product-schema"
+  branchPublicCreateSchema,
+  branchPublicUpdateSchema,
+  businessPublicCreateSchema,
+  businessPublicUpdateSchema,
+} from "@/lib/validation/public/business"
 import { invoiceCreateApiSchema, invoiceInputSchema } from "@/lib/invoice-schema"
 import {
   bulkCancelSchema,
@@ -24,7 +24,17 @@ registry.registerComponent("securitySchemes", "ApiKeyAuth", {
 
 registry.registerComponent("schemas", "Error", {
   type: "object",
-  properties: { error: { type: "string" } },
+  properties: {
+    error: {
+      type: "object",
+      properties: {
+        code: { type: "string" },
+        message: { type: "string" },
+      },
+      required: ["code", "message"],
+    },
+  },
+  required: ["error"],
 })
 
 function ref(name: string) {
@@ -41,8 +51,10 @@ function errorResponse(description: string) {
 }
 
 const unauthorized = errorResponse("Missing or invalid API key")
+const forbidden = errorResponse("Forbidden")
 const notFound = errorResponse("Resource not found")
 const badRequest = errorResponse("Invalid request body")
+const validationError = errorResponse("Validation failed")
 const conflict = errorResponse("Conflict")
 
 function pathParam(name: string, description?: string) {
@@ -81,7 +93,9 @@ registry.registerComponent("schemas", "Business", {
   type: "object",
   properties: {
     id: { type: "string" },
+    ownerId: { type: "string" },
     name: { type: "string" },
+    address: { type: "string" },
     currency: { type: "string" },
     active: { type: "boolean" },
     city: { type: "string" },
@@ -92,6 +106,19 @@ registry.registerComponent("schemas", "Business", {
     wereda: { type: "string" },
     houseNumber: { type: "string" },
     createdAt: { type: "string" },
+    updatedAt: { type: "string" },
+    morCredential: {
+      type: "object",
+      properties: {
+        tin: { type: "string" },
+        vatNumber: { type: "string" },
+        systemNumber: { type: "string" },
+        systemType: { type: "string" },
+        clientId: { type: "string" },
+        clientSecret: { type: "string" },
+        apiKey: { type: "string" },
+      },
+    },
   },
 })
 
@@ -104,6 +131,7 @@ registry.registerComponent("schemas", "Branch", {
     address: { type: "string" },
     active: { type: "boolean" },
     createdAt: { type: "string" },
+    updatedAt: { type: "string" },
   },
 })
 
@@ -111,12 +139,10 @@ registry.registerComponent("schemas", "Product", {
   type: "object",
   properties: {
     id: { type: "string" },
-    businessId: { type: "string" },
     name: { type: "string" },
     itemCode: { type: "string" },
     unit: { type: "string" },
-    sellingPrice: { type: "string" },
-    createdAt: { type: "string" },
+    price: { type: "string", description: "Selling price in ETB" },
   },
 })
 
@@ -194,7 +220,7 @@ registry.registerPath({
   path: "/api/v1/businesses",
   tags: ["Businesses"],
   summary: "Create a business (with MOR credentials and a branch)",
-  request: { body: jsonBody(createBusinessApiSchema) },
+  request: { body: jsonBody(businessPublicCreateSchema) },
   responses: {
     201: { description: "Created", content: json({ type: "object", properties: { business: ref("Business") } }) },
     400: badRequest,
@@ -212,6 +238,7 @@ registry.registerPath({
   responses: {
     200: { description: "OK", content: json({ type: "object", properties: { business: ref("Business") } }) },
     401: unauthorized,
+    403: forbidden,
     404: notFound,
   },
 })
@@ -222,7 +249,7 @@ registry.registerPath({
   tags: ["Businesses"],
   summary: "Update a business",
   parameters: [businessId],
-  request: { body: jsonBody(businessUpdateApiSchema) },
+  request: { body: jsonBody(businessPublicUpdateSchema) },
   responses: {
     200: { description: "OK", content: json({ type: "object", properties: { business: ref("Business") } }) },
     400: badRequest,
@@ -258,6 +285,7 @@ registry.registerPath({
   responses: {
     200: { description: "OK", content: json({ type: "object", properties: { branches: { type: "array", items: ref("Branch") } } }) },
     401: unauthorized,
+    403: forbidden,
     404: notFound,
   },
 })
@@ -268,7 +296,7 @@ registry.registerPath({
   tags: ["Branches"],
   summary: "Create a branch",
   parameters: [businessId],
-  request: { body: jsonBody(branchCreateSchema) },
+  request: { body: jsonBody(branchPublicCreateSchema) },
   responses: {
     201: { description: "Created", content: json({ type: "object", properties: { branch: ref("Branch") } }) },
     400: badRequest,
@@ -288,6 +316,7 @@ registry.registerPath({
   responses: {
     200: { description: "OK", content: json({ type: "object", properties: { branch: ref("Branch") } }) },
     401: unauthorized,
+    403: forbidden,
     404: notFound,
   },
 })
@@ -298,7 +327,7 @@ registry.registerPath({
   tags: ["Branches"],
   summary: "Update a branch",
   parameters: [businessId, branchId],
-  request: { body: jsonBody(updateBranchSchema) },
+  request: { body: jsonBody(branchPublicUpdateSchema) },
   responses: {
     200: { description: "OK", content: json({ type: "object", properties: { branch: ref("Branch") } }) },
     400: badRequest,
@@ -347,13 +376,15 @@ registry.registerPath({
   tags: ["Products"],
   summary: "Create a product",
   parameters: [businessId],
-  request: { body: jsonBody(productInputSchema) },
+  request: { body: jsonBody(productPublicSchema) },
   responses: {
     201: { description: "Created", content: json({ type: "object", properties: { product: ref("Product") } }) },
     400: badRequest,
     401: unauthorized,
+    403: forbidden,
     404: notFound,
     409: conflict,
+    422: validationError,
   },
 })
 
@@ -376,13 +407,15 @@ registry.registerPath({
   tags: ["Products"],
   summary: "Update a product",
   parameters: [businessId, productId],
-  request: { body: jsonBody(productInputSchema) },
+  request: { body: jsonBody(productPublicSchema) },
   responses: {
     200: { description: "OK", content: json({ type: "object", properties: { product: ref("Product") } }) },
     400: badRequest,
     401: unauthorized,
+    403: forbidden,
     404: notFound,
     409: conflict,
+    422: validationError,
   },
 })
 

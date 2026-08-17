@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "crypto"
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/db"
+import { UnauthorizedError, publicErrorResponse } from "@/lib/api-error"
 
 export const API_KEY_PREFIX = "cr_live_"
 
@@ -61,10 +62,9 @@ export async function requireApiKey(request: Request): Promise<ApiKeyGuard> {
   if (!auth) {
     return {
       ok: false,
-      response: NextResponse.json(
-        { error: "Invalid or missing API key" },
-        { status: 401 }
-      ),
+      response:
+        publicErrorResponse(new UnauthorizedError("Invalid or missing API key")) ??
+        NextResponse.json({ error: "Invalid or missing API key" }, { status: 401 }),
     }
   }
   return { ok: true, ...auth }

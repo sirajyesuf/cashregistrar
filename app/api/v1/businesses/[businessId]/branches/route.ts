@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
 import { requireApiKey } from "@/lib/api-key"
-import { branchCreateSchema } from "@/lib/business-schema"
-import { createBranch, listBranches } from "@/lib/business-service"
+import { branchPublicCreateSchema } from "@/lib/validation/public/business"
+import { canManageBusiness, getBusinessAccess } from "@/lib/business"
+import { publicError, publicErrorResponse, withService } from "@/lib/api-error"
+import { createBranch, listBranches } from "@/lib/services/business.service"
+import { toPublicBranch } from "@/lib/dto/public/branch.dto"
 
 export const runtime = "nodejs"
 
@@ -12,10 +15,14 @@ export async function GET(request: Request, { params }: Context) {
   if (!auth.ok) return auth.response
 
   const { businessId } = await params
-  const result = await listBranches(auth.userId, businessId)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ branches: result.data })
+  const access = await getBusinessAccess(auth.userId, businessId)
+  if (!access) return publicError(404, "NOT_FOUND", "Business not found")
+  if (!canManageBusiness(access.role)) {
+    return publicError(403, "FORBIDDEN", "Business owner access required")
+  }
+
+  const branches = await listBranches(businessId)
+  return NextResponse.json({ branches: branches.map(toPublicBranch) })
 }
 
 export async function POST(request: Request, { params }: Context) {
@@ -23,24 +30,32 @@ export async function POST(request: Request, { params }: Context) {
   if (!auth.ok) return auth.response
 
   const { businessId } = await params
+  const access = await getBusinessAccess(auth.userId, businessId)
+  if (!access) return publicError(404, "NOT_FOUND", "Business not found")
+  if (!canManageBusiness(access.role)) {
+    return publicError(403, "FORBIDDEN", "Business owner access required")
+  }
 
   let body: unknown
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+    return publicError(400, "BAD_REQUEST", "Invalid JSON body")
   }
 
-  const parsed = branchCreateSchema.safeParse(body)
+  const parsed = branchPublicCreateSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
-      { status: 400 }
+    return publicError(
+      422,
+      "VALIDATION_ERROR",
+      parsed.error.issues.map((issue) => issue.message).join("; ")
     )
   }
 
-  const result = await createBranch(auth.userId, businessId, parsed.data)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ branch: result.data }, { status: 201 })
+  const result = await withService(
+    () => createBranch(businessId, parsed.data),
+    publicErrorResponse
+  )
+  if ("error" in result) return result.error
+  return NextResponse.json({ branch: toPublicBranch(result.data) }, { status: 201 })
 }

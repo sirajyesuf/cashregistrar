@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server"
 import { requireApiKey } from "@/lib/api-key"
-import { businessUpdateApiSchema } from "@/lib/business-schema"
+import { businessPublicUpdateSchema } from "@/lib/validation/public/business"
+import { canManageBusiness, getBusinessAccess } from "@/lib/business"
+import { publicError, publicErrorResponse, withService } from "@/lib/api-error"
 import {
   deleteBusiness,
   getBusinessDetail,
   updateBusiness,
-} from "@/lib/business-service"
+} from "@/lib/services/business.service"
+import { toPublicBusinessDetail } from "@/lib/dto/public/business.dto"
 
 export const runtime = "nodejs"
 
@@ -16,10 +19,15 @@ export async function GET(request: Request, { params }: Context) {
   if (!auth.ok) return auth.response
 
   const { businessId } = await params
-  const result = await getBusinessDetail(auth.userId, businessId)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json(result.data)
+  const access = await getBusinessAccess(auth.userId, businessId)
+  if (!access) return publicError(404, "NOT_FOUND", "Business not found")
+  if (!canManageBusiness(access.role)) {
+    return publicError(403, "FORBIDDEN", "Business owner access required")
+  }
+
+  const detail = await getBusinessDetail(businessId)
+  if (!detail) return publicError(404, "NOT_FOUND", "Business not found")
+  return NextResponse.json(toPublicBusinessDetail(detail))
 }
 
 export async function PATCH(request: Request, { params }: Context) {
@@ -27,25 +35,33 @@ export async function PATCH(request: Request, { params }: Context) {
   if (!auth.ok) return auth.response
 
   const { businessId } = await params
+  const access = await getBusinessAccess(auth.userId, businessId)
+  if (!access) return publicError(404, "NOT_FOUND", "Business not found")
+  if (!canManageBusiness(access.role)) {
+    return publicError(403, "FORBIDDEN", "Business owner access required")
+  }
 
   let body: unknown
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+    return publicError(400, "BAD_REQUEST", "Invalid JSON body")
   }
 
-  const parsed = businessUpdateApiSchema.safeParse(body)
+  const parsed = businessPublicUpdateSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
-      { status: 400 }
+    return publicError(
+      422,
+      "VALIDATION_ERROR",
+      parsed.error.issues.map((issue) => issue.message).join("; ")
     )
   }
 
-  const result = await updateBusiness(auth.userId, businessId, parsed.data)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
+  const result = await withService(
+    () => updateBusiness(businessId, parsed.data),
+    publicErrorResponse
+  )
+  if ("error" in result) return result.error
   return NextResponse.json({ business: result.data })
 }
 
@@ -54,8 +70,12 @@ export async function DELETE(request: Request, { params }: Context) {
   if (!auth.ok) return auth.response
 
   const { businessId } = await params
-  const result = await deleteBusiness(auth.userId, businessId)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
+  const access = await getBusinessAccess(auth.userId, businessId)
+  if (!access) return publicError(404, "NOT_FOUND", "Business not found")
+  if (!canManageBusiness(access.role)) {
+    return publicError(403, "FORBIDDEN", "Business owner access required")
+  }
+
+  await deleteBusiness(businessId)
   return NextResponse.json({ ok: true })
 }

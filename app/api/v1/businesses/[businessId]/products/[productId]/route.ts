@@ -1,25 +1,40 @@
 import { NextResponse } from "next/server"
 import { requireApiKey } from "@/lib/api-key"
-import { productInputSchema } from "@/lib/product-schema"
+import { canManageBusiness, getBusinessAccess } from "@/lib/business"
+import { publicErrorResponse, withService } from "@/lib/api-error"
+import { productPublicSchema } from "@/lib/validation/public/product"
 import {
   deleteProduct,
   getProduct,
   updateProduct,
-} from "@/lib/product-service"
+} from "@/lib/services/product.service"
+import { toPublicProduct } from "@/lib/dto/public/product.dto"
 
 export const runtime = "nodejs"
 
 type Context = { params: Promise<{ businessId: string; productId: string }> }
+
+const notFound = () =>
+  NextResponse.json(
+    { error: { code: "NOT_FOUND", message: "Product not found" } },
+    { status: 404 }
+  )
 
 export async function GET(request: Request, { params }: Context) {
   const auth = await requireApiKey(request)
   if (!auth.ok) return auth.response
 
   const { businessId, productId } = await params
-  const result = await getProduct(auth.userId, businessId, productId)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ product: result.data })
+  const access = await getBusinessAccess(auth.userId, businessId)
+  if (!access)
+    return NextResponse.json(
+      { error: { code: "NOT_FOUND", message: "Business not found" } },
+      { status: 404 }
+    )
+
+  const product = await getProduct(productId, businessId)
+  if (!product) return notFound()
+  return NextResponse.json({ product: toPublicProduct(product) })
 }
 
 export async function PUT(request: Request, { params }: Context) {
@@ -27,31 +42,50 @@ export async function PUT(request: Request, { params }: Context) {
   if (!auth.ok) return auth.response
 
   const { businessId, productId } = await params
+  const access = await getBusinessAccess(auth.userId, businessId)
+  if (!access)
+    return NextResponse.json(
+      { error: { code: "NOT_FOUND", message: "Business not found" } },
+      { status: 404 }
+    )
+  if (!canManageBusiness(access.role)) {
+    return NextResponse.json(
+      { error: { code: "FORBIDDEN", message: "Business owner access required" } },
+      { status: 403 }
+    )
+  }
 
   let body: unknown
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
-  }
-
-  const parsed = productInputSchema.safeParse(body)
-  if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
+      { error: { code: "BAD_REQUEST", message: "Invalid JSON body" } },
       { status: 400 }
     )
   }
 
-  const result = await updateProduct(
-    auth.userId,
-    businessId,
-    productId,
-    parsed.data
+  const parsed = productPublicSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "VALIDATION_ERROR",
+          message: parsed.error.issues.map((issue) => issue.message).join("; "),
+        },
+      },
+      { status: 422 }
+    )
+  }
+
+  const { price, ...input } = parsed.data
+  const result = await withService(
+    () => updateProduct(productId, businessId, { ...input, sellingPrice: price }),
+    publicErrorResponse
   )
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ product: result.data })
+  if ("error" in result) return result.error
+  if (!result.data) return notFound()
+  return NextResponse.json({ product: toPublicProduct(result.data) })
 }
 
 export async function DELETE(request: Request, { params }: Context) {
@@ -59,8 +93,20 @@ export async function DELETE(request: Request, { params }: Context) {
   if (!auth.ok) return auth.response
 
   const { businessId, productId } = await params
-  const result = await deleteProduct(auth.userId, businessId, productId)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
+  const access = await getBusinessAccess(auth.userId, businessId)
+  if (!access)
+    return NextResponse.json(
+      { error: { code: "NOT_FOUND", message: "Business not found" } },
+      { status: 404 }
+    )
+  if (!canManageBusiness(access.role)) {
+    return NextResponse.json(
+      { error: { code: "FORBIDDEN", message: "Business owner access required" } },
+      { status: 403 }
+    )
+  }
+
+  const deleted = await deleteProduct(productId, businessId)
+  if (!deleted) return notFound()
   return NextResponse.json({ ok: true })
 }

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth/user"
-import { businessUpdateApiSchema } from "@/lib/business-schema"
+import { businessInternalUpdateSchema } from "@/lib/validation/internal/business"
+import { canManageBusiness, getBusinessAccess } from "@/lib/business"
+import { withService } from "@/lib/api-error"
 import {
   deleteBusiness,
   getBusinessDetail,
   updateBusiness,
-} from "@/lib/business-service"
+} from "@/lib/services/business.service"
+import { toInternalBusinessDetail } from "@/lib/dto/internal/business.dto"
 
 export const runtime = "nodejs"
 
@@ -17,10 +20,16 @@ export async function GET(_request: Request, { params }: Context) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
 
   const { businessId } = await params
-  const result = await getBusinessDetail(user.id, businessId)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json(result.data)
+  const access = await getBusinessAccess(user.id, businessId)
+  if (!access)
+    return NextResponse.json({ error: "Business not found" }, { status: 404 })
+
+  const scopedBranchId =
+    access.role === "OWNER" ? undefined : access.branchId
+  const detail = await getBusinessDetail(businessId, scopedBranchId)
+  if (!detail)
+    return NextResponse.json({ error: "Business not found" }, { status: 404 })
+  return NextResponse.json(toInternalBusinessDetail(detail, access))
 }
 
 export async function PATCH(request: Request, { params }: Context) {
@@ -29,6 +38,15 @@ export async function PATCH(request: Request, { params }: Context) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
 
   const { businessId } = await params
+  const access = await getBusinessAccess(user.id, businessId)
+  if (!access)
+    return NextResponse.json({ error: "Business not found" }, { status: 404 })
+  if (!canManageBusiness(access.role)) {
+    return NextResponse.json(
+      { error: "Business owner access required" },
+      { status: 403 }
+    )
+  }
 
   let body: unknown
   try {
@@ -37,7 +55,7 @@ export async function PATCH(request: Request, { params }: Context) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const parsed = businessUpdateApiSchema.safeParse(body)
+  const parsed = businessInternalUpdateSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
@@ -45,9 +63,10 @@ export async function PATCH(request: Request, { params }: Context) {
     )
   }
 
-  const result = await updateBusiness(user.id, businessId, parsed.data)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
+  const result = await withService(() =>
+    updateBusiness(businessId, parsed.data)
+  )
+  if ("error" in result) return result.error
   return NextResponse.json({ business: result.data })
 }
 
@@ -57,8 +76,16 @@ export async function DELETE(_request: Request, { params }: Context) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
 
   const { businessId } = await params
-  const result = await deleteBusiness(user.id, businessId)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
+  const access = await getBusinessAccess(user.id, businessId)
+  if (!access)
+    return NextResponse.json({ error: "Business not found" }, { status: 404 })
+  if (!canManageBusiness(access.role)) {
+    return NextResponse.json(
+      { error: "Business owner access required" },
+      { status: 403 }
+    )
+  }
+
+  await deleteBusiness(businessId)
   return NextResponse.json({ ok: true })
 }

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth/user"
-import { productInputSchema } from "@/lib/product-schema"
+import { productInternalSchema } from "@/lib/validation/internal/product"
 import { getWorkspace } from "@/lib/workspace"
+import { withService } from "@/lib/api-error"
 import {
   deleteProduct,
   getProduct,
   updateProduct,
-} from "@/lib/product-service"
+} from "@/lib/services/product.service"
+import { toInternalProduct } from "@/lib/dto/internal/product.dto"
 
 export const runtime = "nodejs"
 
@@ -26,10 +28,10 @@ export async function GET(_request: Request, context: Context) {
   }
 
   const { id } = await context.params
-  const result = await getProduct(user.id, workspace.businessId, id)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ product: result.data })
+  const product = await getProduct(id, workspace.businessId)
+  if (!product)
+    return NextResponse.json({ error: "Product not found" }, { status: 404 })
+  return NextResponse.json({ product: toInternalProduct(product) })
 }
 
 export async function PUT(request: Request, context: Context) {
@@ -54,7 +56,7 @@ export async function PUT(request: Request, context: Context) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const parsed = productInputSchema.safeParse(body)
+  const parsed = productInternalSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
@@ -62,15 +64,13 @@ export async function PUT(request: Request, context: Context) {
     )
   }
 
-  const result = await updateProduct(
-    user.id,
-    workspace.businessId,
-    id,
-    parsed.data
+  const result = await withService(() =>
+    updateProduct(id, workspace.businessId, parsed.data)
   )
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ product: result.data })
+  if ("error" in result) return result.error
+  if (!result.data)
+    return NextResponse.json({ error: "Product not found" }, { status: 404 })
+  return NextResponse.json({ product: toInternalProduct(result.data) })
 }
 
 export async function DELETE(_request: Request, context: Context) {
@@ -87,8 +87,8 @@ export async function DELETE(_request: Request, context: Context) {
   }
 
   const { id } = await context.params
-  const result = await deleteProduct(user.id, workspace.businessId, id)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
+  const deleted = await deleteProduct(id, workspace.businessId)
+  if (!deleted)
+    return NextResponse.json({ error: "Product not found" }, { status: 404 })
   return NextResponse.json({ ok: true })
 }
