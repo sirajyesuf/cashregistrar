@@ -41,6 +41,21 @@ export function canAccessBranch(
   return access.role === Role.OWNER || access.branchId === branchId
 }
 
+/**
+ * Builds a branch-scoping where-clause for tenant data. Owners span all
+ * branches unless an explicit branch is requested; non-owners are always
+ * confined to their assigned branch. Callers must verify `canAccessBranch`
+ * separately when a caller-supplied branchId could be out of scope.
+ */
+export function accessibleBranchWhere(
+  access: BusinessAccess,
+  branchId?: string | null
+): { branchId?: string } {
+  if (branchId) return { branchId }
+  if (access.role === Role.OWNER) return {}
+  return { branchId: access.branchId ?? "__none__" }
+}
+
 export function isPrismaUniqueError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002"

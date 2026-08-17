@@ -189,7 +189,7 @@ export function parseEimsError(data: unknown): EimsError {
  * understands.
  */
 export function isSequenceError(message: string): boolean {
-  return /7001|7015/.test(message)
+  return /7001|7015|sequence/i.test(message)
 }
 
 /**

@@ -1,31 +1,17 @@
 import { NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
 import { getSessionUser } from "@/lib/auth/user"
-import { prisma } from "@/lib/db"
 import { productInputSchema } from "@/lib/product-schema"
 import { getWorkspace } from "@/lib/workspace"
+import { createProduct, listProducts } from "@/lib/product-service"
 
 export const runtime = "nodejs"
 
-async function requireUser() {
-  const user = await getSessionUser()
-  if (!user) return null
-  return user
-}
-
-async function requireWorkspace(userId: string) {
-  const workspace = await getWorkspace(userId)
-  if (!workspace) return null
-  return workspace
-}
-
 export async function GET(request: Request) {
-  const user = await requireUser()
-  if (!user) {
+  const user = await getSessionUser()
+  if (!user)
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
 
-  const workspace = await requireWorkspace(user.id)
+  const workspace = await getWorkspace(user.id)
   if (!workspace) {
     return NextResponse.json(
       { error: "No active workspace. Select a business and branch first." },
@@ -36,24 +22,18 @@ export async function GET(request: Request) {
   const url = new URL(request.url)
   const query = url.searchParams.get("q")?.trim() ?? ""
 
-  const products = await prisma.product.findMany({
-    where: {
-      businessId: workspace.businessId,
-      ...(query ? { name: { contains: query } } : {}),
-    },
-    orderBy: { name: "asc" },
-  })
-
-  return NextResponse.json({ products })
+  const result = await listProducts(user.id, workspace.businessId, query)
+  if (!result.ok)
+    return NextResponse.json({ error: result.error }, { status: result.status })
+  return NextResponse.json({ products: result.data })
 }
 
 export async function POST(request: Request) {
-  const user = await requireUser()
-  if (!user) {
+  const user = await getSessionUser()
+  if (!user)
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
 
-  const workspace = await requireWorkspace(user.id)
+  const workspace = await getWorkspace(user.id)
   if (!workspace) {
     return NextResponse.json(
       { error: "No active workspace. Select a business and branch first." },
@@ -76,30 +56,8 @@ export async function POST(request: Request) {
     )
   }
 
-  const { name, itemCode, unit, sellingPrice } = parsed.data
-  const price = new Prisma.Decimal(Math.round(sellingPrice * 100)).div(100)
-
-  try {
-    const product = await prisma.product.create({
-      data: {
-        businessId: workspace.businessId,
-        name,
-        itemCode: itemCode || null,
-        unit: unit || "PCS",
-        sellingPrice: price,
-      },
-    })
-    return NextResponse.json({ product }, { status: 201 })
-  } catch (err) {
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002"
-    ) {
-      return NextResponse.json(
-        { error: `A product named "${name}" already exists` },
-        { status: 400 }
-      )
-    }
-    throw err
-  }
+  const result = await createProduct(user.id, workspace.businessId, parsed.data)
+  if (!result.ok)
+    return NextResponse.json({ error: result.error }, { status: result.status })
+  return NextResponse.json({ product: result.data }, { status: 201 })
 }

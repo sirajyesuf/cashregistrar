@@ -85,7 +85,40 @@ export const createBusinessFormSchema = businessCreateSchema.extend({
 
 export const morCredentialUpdateSchema = morCredentialSchema.partial()
 
+export const updateBusinessSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  address: z.string().trim().max(240).nullable().optional(),
+  currency: z.string().trim().length(3).toUpperCase().optional(),
+  active: z.boolean().optional(),
+  city: positiveIntegerField("City", 120).optional(),
+  email: z
+    .string()
+    .trim()
+    .email("Enter a valid email address")
+    .max(160)
+    .nullable()
+    .optional(),
+  phone: z.string().trim().max(40).nullable().optional(),
+  region: z.enum([...REGION_CODES, ""]).nullable().optional(),
+  wereda: positiveIntegerField("Wereda", 120).nullable().optional(),
+  country: z.string().trim().max(120).optional(),
+  houseNumber: z.string().trim().max(120).nullable().optional(),
+})
+
+export const businessUpdateApiSchema = updateBusinessSchema.extend({
+  morCredential: morCredentialUpdateSchema.optional(),
+})
+
+export const updateBranchSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  address: z.string().trim().max(240).nullable().optional(),
+  active: z.boolean().optional(),
+})
+
 export type MorCredentialValues = z.infer<typeof morCredentialSchema>
+export type BusinessUpdateValues = z.infer<typeof businessUpdateApiSchema>
+export type BranchUpdateValues = z.infer<typeof updateBranchSchema>
+export type CreateBusinessApiValues = z.infer<typeof createBusinessApiSchema>
 export type BusinessCreateValues = z.infer<typeof businessCreateSchema>
 export type BranchCreateValues = z.infer<typeof branchCreateSchema>
 export type CreateBusinessFormValues = z.infer<typeof createBusinessFormSchema>

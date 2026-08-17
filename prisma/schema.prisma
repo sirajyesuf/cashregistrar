@@ -27,6 +27,8 @@ model User {
   preference      UserPreference?
   invitationsSent Invitation[]  @relation("InvitationInvitedBy")
   invitationsAccepted Invitation[] @relation("InvitationAcceptedBy")
+  apiKeys         ApiKey[]
+  idempotencyKeys IdempotencyKey[]
 }
 
 model UserPreference {
@@ -201,6 +203,33 @@ model Verification {
   expiresAt  DateTime
   createdAt  DateTime? @default(now())
   updatedAt  DateTime?
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  userId      String
+  tokenHash   String    @unique
+  prefix      String
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model IdempotencyKey {
+  id         String    @id @default(cuid())
+  keyHash    String    @unique
+  userId     String
+  businessId String
+  invoiceId  String?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, businessId])
 }
 
 model EimsToken {
@@ -398,6 +427,7 @@ model EimsOperation {
   businessId     String
   type           EimsOperationType
   status         EimsOperationStatus @default(PROCESSING)
+  retryCount     Int                 @default(0)
   rawResponse    Json?
   submittedAt    DateTime            @default(now())
   completedAt    DateTime?

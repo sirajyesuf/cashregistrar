@@ -2,8 +2,11 @@ import { NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { callbackResults } from "@/lib/einvoice/operation"
+import { getConfig } from "@/lib/einvoice/config"
+import { submitBulkRegistration } from "@/lib/einvoice/bulk-submit"
 import {
   extractErrorMessage,
+  isEimsAuthError,
   isSequenceError,
   parseExpectedCounter,
 } from "@/lib/einvoice/eims-error"
@@ -106,11 +109,23 @@ export async function POST(request: Request) {
     )
   }
 
+  // Idempotency: EIMS may re-deliver a callback. Once the operation is no
+  // longer PROCESSING it has already been resolved (and any auto-resubmit
+  // already triggered), so ignore the duplicate.
+  if (operation.status !== "PROCESSING") {
+    return NextResponse.json({ ok: true, processed: 0, alreadyProcessed: true })
+  }
+
   const results = callbackResults(body)
   if (results.length === 0) {
     return NextResponse.json({ ok: true, processed: 0 })
   }
 
+  const sequenceFailures: {
+    invoiceId: string
+    documentNumber: string
+    expected: number
+  }[] = []
   let processed = 0
   await prisma.$transaction(async (tx) => {
     for (const raw of results) {
@@ -177,6 +192,11 @@ export async function POST(request: Request) {
           const expected = expectedSequenceCounter(result)
           if (expected !== null) {
             await realignCounter(tx, operation.businessId, expected)
+            sequenceFailures.push({
+              invoiceId: item.invoiceId,
+              documentNumber: item.documentNumber ?? "",
+              expected,
+            })
           }
         }
       }
@@ -206,5 +226,56 @@ export async function POST(request: Request) {
     })
   })
 
-  return NextResponse.json({ ok: true, processed })
+  let resubmitted = 0
+  let resubmitError: string | null = null
+  if (sequenceFailures.length > 0 && operation.retryCount < 1) {
+    const ordered = sequenceFailures
+      .filter((f) => f.documentNumber)
+      .sort((a, b) => Number(a.documentNumber) - Number(b.documentNumber))
+    const invoiceIds = ordered.map((f) => f.invoiceId)
+    const startCounter = Math.min(...ordered.map((f) => f.expected))
+    try {
+      const cfg = await getConfig(operation.businessId)
+      const previous = await prisma.invoice.findFirst({
+        where: {
+          irn: { not: null },
+          registrationStatus: "REGISTERED",
+          businessId: operation.businessId,
+        },
+        orderBy: { registeredAt: "desc" },
+        select: { irn: true },
+      })
+      const fetched = await prisma.invoice.findMany({
+        where: { id: { in: invoiceIds } },
+        include: { lines: true },
+      })
+      const byId = new Map(fetched.map((invoice) => [invoice.id, invoice]))
+      const invoices = invoiceIds
+        .map((id) => byId.get(id))
+        .filter((invoice) => invoice !== undefined)
+      if (invoices.length > 0) {
+        const outcome = await submitBulkRegistration({
+          businessId: operation.businessId,
+          invoices,
+          cfg,
+          previousIrn: previous?.irn ?? null,
+          retryCount: operation.retryCount + 1,
+          startCounter,
+        })
+        if (outcome.ok) {
+          resubmitted = outcome.count
+        } else {
+          resubmitError = outcome.error
+        }
+      }
+    } catch (err) {
+      resubmitError = isEimsAuthError(err)
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : "Resubmit failed"
+    }
+  }
+
+  return NextResponse.json({ ok: true, processed, resubmitted, resubmitError })
 }
