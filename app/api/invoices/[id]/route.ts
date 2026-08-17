@@ -1,21 +1,20 @@
 import { NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth/user"
-import { invoiceInputSchema } from "@/lib/invoice-schema"
+import { invoiceInternalUpdateSchema } from "@/lib/validation/internal/invoice"
 import { getWorkspace } from "@/lib/workspace"
+import { withService } from "@/lib/api-error"
 import {
   deleteInvoice,
   getInvoice,
   updateInvoice,
-} from "@/lib/invoice-service"
+} from "@/lib/services/invoice.service"
+import { toInternalInvoice } from "@/lib/dto/internal/invoice.dto"
 
 export const runtime = "nodejs"
 
 type Context = { params: Promise<{ id: string }> }
 
-export async function GET(
-  _request: Request,
-  context: Context
-) {
+export async function GET(_request: Request, context: Context) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
@@ -27,16 +26,17 @@ export async function GET(
   }
 
   const { id } = await context.params
-  const result = await getInvoice(user.id, workspace.businessId, id, workspace.branchId)
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ invoice: result.data })
+  const invoice = await getInvoice(
+    workspace.businessId,
+    id,
+    workspace.branchId
+  )
+  if (!invoice)
+    return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
+  return NextResponse.json({ invoice: toInternalInvoice(invoice) })
 }
 
-export async function PUT(
-  request: Request,
-  context: Context
-) {
+export async function PUT(request: Request, context: Context) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
@@ -56,7 +56,7 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const parsed = invoiceInputSchema.safeParse(body)
+  const parsed = invoiceInternalUpdateSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
@@ -64,22 +64,16 @@ export async function PUT(
     )
   }
 
-  const result = await updateInvoice(
-    user.id,
-    workspace.businessId,
-    id,
-    parsed.data,
-    workspace.branchId
+  const result = await withService(() =>
+    updateInvoice(workspace.businessId, id, parsed.data, workspace.branchId)
   )
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ invoice: result.data })
+  if ("error" in result) return result.error
+  if (!result.data)
+    return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
+  return NextResponse.json({ invoice: toInternalInvoice(result.data) })
 }
 
-export async function DELETE(
-  _request: Request,
-  context: Context
-) {
+export async function DELETE(_request: Request, context: Context) {
   const user = await getSessionUser()
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
@@ -91,13 +85,11 @@ export async function DELETE(
   }
 
   const { id } = await context.params
-  const result = await deleteInvoice(
-    user.id,
-    workspace.businessId,
-    id,
-    workspace.branchId
+  const result = await withService(() =>
+    deleteInvoice(workspace.businessId, id, workspace.branchId)
   )
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
+  if ("error" in result) return result.error
+  if (!result.data)
+    return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
   return NextResponse.json({ ok: true })
 }

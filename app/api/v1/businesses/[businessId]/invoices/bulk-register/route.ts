@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { requireApiKey } from "@/lib/api-key"
+import { requireOwnerAccess } from "@/lib/api-owner"
+import { publicError } from "@/lib/api-error"
 import { bulkIdsSchema } from "@/lib/einvoice/operation-schema"
 import { bulkRegister } from "@/lib/einvoice/bulk-service"
 
@@ -12,19 +14,22 @@ export async function POST(request: Request, { params }: Context) {
   if (!auth.ok) return auth.response
 
   const { businessId } = await params
+  const owner = await requireOwnerAccess(auth.userId, businessId)
+  if (!owner.ok) return owner.response
 
   let body: unknown
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+    return publicError(400, "BAD_REQUEST", "Invalid JSON body")
   }
 
   const parsed = bulkIdsSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
-      { status: 400 }
+    return publicError(
+      422,
+      "VALIDATION_ERROR",
+      parsed.error.issues.map((issue) => issue.message).join("; ")
     )
   }
 

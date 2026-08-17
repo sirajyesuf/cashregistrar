@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth/user"
-import { prisma } from "@/lib/db"
-import { hasIssuedReceipt } from "@/lib/invoice"
-import { getWorkspace, workspaceInvoiceScope } from "@/lib/workspace"
+import { getWorkspace } from "@/lib/workspace"
+import { bulkDeleteInvoices } from "@/lib/services/invoice.service"
 
 export const runtime = "nodejs"
 
@@ -34,30 +33,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No invoices selected" }, { status: 400 })
   }
 
-  const invoices = await prisma.invoice.findMany({
-    where: { id: { in: ids }, ...workspaceInvoiceScope(workspace) },
-    select: {
-      id: true,
-      registrationStatus: true,
-      receipt: { select: { status: true } },
-    },
-  })
-
-  const deletableIds = invoices
-    .filter(
-      (invoice) =>
-        invoice.registrationStatus !== "REGISTERED" &&
-        !hasIssuedReceipt(invoice)
-    )
-    .map((invoice) => invoice.id)
-
-  const deleted = deletableIds.length
-    ? (
-        await prisma.invoice.deleteMany({
-          where: { id: { in: deletableIds }, ...workspaceInvoiceScope(workspace) },
-        })
-      ).count
-    : 0
-
-  return NextResponse.json({ deleted, skipped: ids.length - deleted })
+  const result = await bulkDeleteInvoices(
+    workspace.businessId,
+    workspace.branchId,
+    ids
+  )
+  return NextResponse.json(result)
 }

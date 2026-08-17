@@ -7,7 +7,10 @@ import {
   businessPublicCreateSchema,
   businessPublicUpdateSchema,
 } from "@/lib/validation/public/business"
-import { invoiceCreateApiSchema, invoiceInputSchema } from "@/lib/invoice-schema"
+import {
+  invoicePublicCreateSchema,
+  invoicePublicUpdateSchema,
+} from "@/lib/validation/public/invoice"
 import {
   bulkCancelSchema,
   bulkIdsSchema,
@@ -449,6 +452,7 @@ registry.registerPath({
   responses: {
     200: { description: "OK", content: json(ref("InvoiceList")) },
     401: unauthorized,
+    403: forbidden,
     404: notFound,
   },
 })
@@ -462,13 +466,15 @@ registry.registerPath({
     businessId,
     { name: "Idempotency-Key", in: "header", required: false, schema: { type: "string" }, description: "Optional idempotency key" },
   ],
-  request: { body: jsonBody(invoiceCreateApiSchema) },
+  request: { body: jsonBody(invoicePublicCreateSchema) },
   responses: {
     201: { description: "Created", content: json({ type: "object", properties: { invoice: ref("Invoice") } }) },
     400: badRequest,
     401: unauthorized,
+    403: forbidden,
     404: notFound,
     409: conflict,
+    422: validationError,
   },
 })
 
@@ -481,6 +487,7 @@ registry.registerPath({
   responses: {
     200: { description: "OK", content: json({ type: "object", properties: { invoice: ref("Invoice") } }) },
     401: unauthorized,
+    403: forbidden,
     404: notFound,
   },
 })
@@ -491,13 +498,15 @@ registry.registerPath({
   tags: ["Invoices"],
   summary: "Update an invoice (rejects registered invoices)",
   parameters: [businessId, invoiceId],
-  request: { body: jsonBody(invoiceInputSchema) },
+  request: { body: jsonBody(invoicePublicUpdateSchema) },
   responses: {
     200: { description: "OK", content: json({ type: "object", properties: { invoice: ref("Invoice") } }) },
     400: badRequest,
     401: unauthorized,
+    403: forbidden,
     404: notFound,
     409: conflict,
+    422: validationError,
   },
 })
 
@@ -510,6 +519,7 @@ registry.registerPath({
   responses: {
     200: okFlag(),
     401: unauthorized,
+    403: forbidden,
     404: notFound,
     409: conflict,
   },
@@ -528,6 +538,7 @@ registry.registerPath({
     200: { description: "OK", content: json({ type: "object", properties: { ok: { type: "boolean" }, irn: { type: "string" } } }) },
     400: badRequest,
     401: unauthorized,
+    403: forbidden,
     404: notFound,
     429: errorResponse("EIMS rate limit"),
     502: errorResponse("EIMS credentials error"),
@@ -545,8 +556,10 @@ registry.registerPath({
     200: { description: "OK", content: json({ type: "object", properties: { ok: { type: "boolean" }, cancelledAt: { type: "string" } } }) },
     400: badRequest,
     401: unauthorized,
+    403: forbidden,
     404: notFound,
     409: conflict,
+    422: validationError,
     502: errorResponse("EIMS credentials error"),
   },
 })
@@ -561,6 +574,7 @@ registry.registerPath({
     200: { description: "OK", content: json({ type: "object", properties: { ok: { type: "boolean" }, rrn: { type: "string" }, qr: { type: "string" }, status: { type: "string" } } }) },
     400: badRequest,
     401: unauthorized,
+    403: forbidden,
     404: notFound,
     502: errorResponse("EIMS credentials error"),
   },
@@ -577,7 +591,9 @@ registry.registerPath({
     202: { description: "Accepted", content: json({ type: "object", properties: { ok: { type: "boolean" }, operationId: { type: "string" }, conversationId: { type: "string" }, count: { type: "integer" } } }) },
     400: badRequest,
     401: unauthorized,
+    403: forbidden,
     404: notFound,
+    422: validationError,
     429: errorResponse("EIMS rate limit"),
     502: errorResponse("EIMS credentials error"),
   },
@@ -594,8 +610,10 @@ registry.registerPath({
     200: { description: "OK", content: json({ type: "object", properties: { ok: { type: "boolean" }, operationId: { type: "string" }, count: { type: "integer" }, succeeded: { type: "integer" }, failed: { type: "integer" } } }) },
     400: badRequest,
     401: unauthorized,
+    403: forbidden,
     404: notFound,
     409: conflict,
+    422: validationError,
     502: errorResponse("EIMS credentials error"),
   },
 })

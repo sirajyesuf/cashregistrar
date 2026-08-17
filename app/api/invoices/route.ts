@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server"
 import { getSessionUser } from "@/lib/auth/user"
-import { invoiceInputSchema } from "@/lib/invoice-schema"
+import { invoiceInternalCreateSchema } from "@/lib/validation/internal/invoice"
 import { getWorkspace, getWorkspaceAccess } from "@/lib/workspace"
-import { createInvoice, listInvoices } from "@/lib/invoice-service"
+import { withService } from "@/lib/api-error"
+import { createInvoice, listInvoices } from "@/lib/services/invoice.service"
+import {
+  toInternalInvoice,
+  toInternalInvoiceList,
+} from "@/lib/dto/internal/invoice.dto"
 
 export const runtime = "nodejs"
 
@@ -33,14 +38,12 @@ export async function GET(request: Request) {
     Math.max(1, Number(url.searchParams.get("pageSize")) || 10)
   )
 
-  const result = await listInvoices(user.id, workspace.businessId, {
+  const result = await listInvoices(workspace.businessId, {
     page,
     pageSize,
     branchId: workspace.branchId,
   })
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json(result.data)
+  return NextResponse.json(toInternalInvoiceList(result))
 }
 
 export async function POST(request: Request) {
@@ -64,7 +67,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  const parsed = invoiceInputSchema.safeParse(body)
+  const parsed = invoiceInternalCreateSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
@@ -72,13 +75,17 @@ export async function POST(request: Request) {
     )
   }
 
-  const result = await createInvoice(
-    user.id,
-    workspace.businessId,
-    workspace.branchId,
-    parsed.data
+  const result = await withService(() =>
+    createInvoice(
+      workspace.businessId,
+      workspace.branchId,
+      user.id,
+      parsed.data
+    )
   )
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ invoice: result.data }, { status: 201 })
+  if ("error" in result) return result.error
+  return NextResponse.json(
+    { invoice: toInternalInvoice(result.data) },
+    { status: 201 }
+  )
 }

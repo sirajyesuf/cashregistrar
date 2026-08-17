@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server"
 import { requireApiKey } from "@/lib/api-key"
-import { invoiceCreateApiSchema } from "@/lib/invoice-schema"
-import { createInvoice, listInvoices } from "@/lib/invoice-service"
+import { invoicePublicCreateSchema } from "@/lib/validation/public/invoice"
+import { canManageBusiness, getBusinessAccess } from "@/lib/business"
+import { publicError, publicErrorResponse, withService } from "@/lib/api-error"
+import { createInvoice, listInvoices } from "@/lib/services/invoice.service"
+import {
+  toPublicInvoice,
+  toPublicInvoiceList,
+} from "@/lib/dto/public/invoice.dto"
 
 export const runtime = "nodejs"
 
@@ -12,6 +18,12 @@ export async function GET(request: Request, { params }: Context) {
   if (!auth.ok) return auth.response
 
   const { businessId } = await params
+  const access = await getBusinessAccess(auth.userId, businessId)
+  if (!access) return publicError(404, "NOT_FOUND", "Business not found")
+  if (!canManageBusiness(access.role)) {
+    return publicError(403, "FORBIDDEN", "Business owner access required")
+  }
+
   const url = new URL(request.url)
   const page = Math.max(1, Number(url.searchParams.get("page")) || 1)
   const pageSize = Math.min(
@@ -20,14 +32,8 @@ export async function GET(request: Request, { params }: Context) {
   )
   const branchId = url.searchParams.get("branchId")?.trim() || undefined
 
-  const result = await listInvoices(auth.userId, businessId, {
-    page,
-    pageSize,
-    branchId,
-  })
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json(result.data)
+  const result = await listInvoices(businessId, { page, pageSize, branchId })
+  return NextResponse.json(toPublicInvoiceList(result))
 }
 
 export async function POST(request: Request, { params }: Context) {
@@ -35,29 +41,40 @@ export async function POST(request: Request, { params }: Context) {
   if (!auth.ok) return auth.response
 
   const { businessId } = await params
+  const access = await getBusinessAccess(auth.userId, businessId)
+  if (!access) return publicError(404, "NOT_FOUND", "Business not found")
+  if (!canManageBusiness(access.role)) {
+    return publicError(403, "FORBIDDEN", "Business owner access required")
+  }
 
   let body: unknown
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+    return publicError(400, "BAD_REQUEST", "Invalid JSON body")
   }
 
-  const parsed = invoiceCreateApiSchema.safeParse(body)
+  const parsed = invoicePublicCreateSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues.map((issue) => issue.message).join("; ") },
-      { status: 400 }
+    return publicError(
+      422,
+      "VALIDATION_ERROR",
+      parsed.error.issues.map((issue) => issue.message).join("; ")
     )
   }
 
   const { branchId, ...input } = parsed.data
   const idempotencyKey =
     request.headers.get("idempotency-key")?.trim() || undefined
-  const result = await createInvoice(auth.userId, businessId, branchId, input, {
-    idempotencyKey,
-  })
-  if (!result.ok)
-    return NextResponse.json({ error: result.error }, { status: result.status })
-  return NextResponse.json({ invoice: result.data }, { status: 201 })
+  const result = await withService(
+    () => createInvoice(businessId, branchId, auth.userId, input, {
+      idempotencyKey,
+    }),
+    publicErrorResponse
+  )
+  if ("error" in result) return result.error
+  return NextResponse.json(
+    { invoice: toPublicInvoice(result.data) },
+    { status: 201 }
+  )
 }
