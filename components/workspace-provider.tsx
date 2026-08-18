@@ -2,13 +2,20 @@
 
 import { createContext, useCallback, useContext } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type { Role } from "@prisma/client"
 
-export type Workspace = { businessId: string; branchId: string } | null
+export type Workspace = {
+  businessId: string
+  branchId: string
+  role: Role
+} | null
+
+export type WorkspaceSelection = { businessId: string; branchId: string }
 
 type WorkspaceContextValue = {
   workspace: Workspace
   isPending: boolean
-  setWorkspace: (workspace: Exclude<Workspace, null>) => Promise<void>
+  setWorkspace: (workspace: WorkspaceSelection) => Promise<void>
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue>({
@@ -28,7 +35,7 @@ async function fetchWorkspace(): Promise<Workspace> {
   return body.workspace
 }
 
-async function postWorkspace(next: Exclude<Workspace, null>): Promise<void> {
+async function postWorkspace(next: WorkspaceSelection): Promise<void> {
   const res = await fetch("/api/workspace", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -54,7 +61,11 @@ export function WorkspaceProvider({
     onMutate: async (next) => {
       await queryClient.cancelQueries({ queryKey: ["workspace"] })
       const previous = queryClient.getQueryData<Workspace>(["workspace"])
-      queryClient.setQueryData(["workspace"], next)
+      // The role is not known until the server confirms the new workspace;
+      // keep the previous role optimistically and let the refetch correct it.
+      queryClient.setQueryData<Workspace>(["workspace"], (old) =>
+        old ? { ...next, role: old.role } : { ...next, role: "OWNER" }
+      )
       return { previous }
     },
     onError: (_error, _next, context) => {
@@ -72,7 +83,7 @@ export function WorkspaceProvider({
   })
 
   const setWorkspace = useCallback(
-    (next: Exclude<Workspace, null>) => persistWorkspace(next),
+    (next: WorkspaceSelection) => persistWorkspace(next),
     [persistWorkspace]
   )
 

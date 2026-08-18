@@ -23,7 +23,11 @@ export async function GET() {
   const workspace = await getWorkspace(user.id)
   return NextResponse.json({
     workspace: workspace
-      ? { businessId: workspace.businessId, branchId: workspace.branchId }
+      ? {
+          businessId: workspace.businessId,
+          branchId: workspace.branchId,
+          role: workspace.role,
+        }
       : null,
   })
 }
@@ -57,5 +61,14 @@ export async function POST(request: Request) {
   }
 
   await saveWorkspace(user.id, businessId, branchId)
-  return NextResponse.json({ workspace: { businessId, branchId } })
+  const current = await getWorkspace(user.id)
+  return NextResponse.json({
+    workspace: current
+      ? {
+          businessId: current.businessId,
+          branchId: current.branchId,
+          role: current.role,
+        }
+      : null,
+  })
 }

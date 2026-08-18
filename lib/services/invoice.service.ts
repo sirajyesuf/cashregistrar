@@ -93,21 +93,35 @@ export type InvoiceListResult = {
     cancelled: number
     issuedReceipts: number
   }
+  summary: {
+    count: number
+    totalCents: number
+    taxCents: number
+  }
 }
 
 export async function listInvoices(
   businessId: string,
-  opts: { page?: number; pageSize?: number; branchId?: string | null } = {}
+  opts: {
+    page?: number
+    pageSize?: number
+    branchId?: string | null
+    userId?: string | null
+    from?: string | null
+    to?: string | null
+  } = {}
 ): Promise<InvoiceListResult> {
   const page = Math.max(1, opts.page || 1)
   const pageSize = Math.min(50, Math.max(1, opts.pageSize || 10))
 
-  const where = {
+  const where: Prisma.InvoiceWhereInput = {
     businessId,
     ...(opts.branchId ? { branchId: opts.branchId } : {}),
+    ...(opts.userId ? { userId: opts.userId } : {}),
+    ...(opts.from && opts.to ? { date: { gte: opts.from, lte: opts.to } } : {}),
   }
 
-  const [invoices, total, failed, cancelled, issuedReceipts] =
+  const [invoices, total, failed, cancelled, issuedReceipts, aggregate] =
     await Promise.all([
       prisma.invoice.findMany({
         where,
@@ -132,7 +146,19 @@ export async function listInvoices(
       prisma.invoice.count({ where: { ...where, registrationStatus: "FAILED" } }),
       prisma.invoice.count({ where: { ...where, registrationStatus: "CANCELLED" } }),
       prisma.receipt.count({
-        where: { status: "ISSUED", invoice: { businessId } },
+        where: {
+          status: "ISSUED",
+          invoice: {
+            businessId,
+            ...(opts.branchId ? { branchId: opts.branchId } : {}),
+            ...(opts.userId ? { userId: opts.userId } : {}),
+          },
+        },
+      }),
+      prisma.invoice.aggregate({
+        where,
+        _sum: { grandTotal: true, taxAmount: true },
+        _count: true,
       }),
     ])
 
@@ -142,6 +168,11 @@ export async function listInvoices(
     page,
     pageSize,
     stats: { totalInvoices: total, failed, cancelled, issuedReceipts },
+    summary: {
+      count: aggregate._count,
+      totalCents: Math.round(Number(aggregate._sum.grandTotal ?? 0) * 100),
+      taxCents: Math.round(Number(aggregate._sum.taxAmount ?? 0) * 100),
+    },
   }
 }
 
@@ -156,13 +187,15 @@ async function sellerSnapshot(businessId: string) {
 export async function getInvoice(
   businessId: string,
   invoiceId: string,
-  scopeBranchId?: string | null
+  scopeBranchId?: string | null,
+  userId?: string | null
 ): Promise<Invoice & { lines: InvoiceLine[]; receipt: Receipt | null } | null> {
   const invoice = await prisma.invoice.findFirst({
     where: {
       id: invoiceId,
       businessId,
       ...(scopeBranchId ? { branchId: scopeBranchId } : {}),
+      ...(userId ? { userId } : {}),
     },
     include: { lines: { orderBy: { lineNumber: "asc" } }, receipt: true },
   })
@@ -258,13 +291,15 @@ export async function updateInvoice(
   businessId: string,
   invoiceId: string,
   input: InvoiceInput,
-  scopeBranchId?: string | null
+  scopeBranchId?: string | null,
+  userId?: string | null
 ): Promise<Invoice & { lines: InvoiceLine[] } | null> {
   const existing = await prisma.invoice.findFirst({
     where: {
       id: invoiceId,
       businessId,
       ...(scopeBranchId ? { branchId: scopeBranchId } : {}),
+      ...(userId ? { userId } : {}),
     },
     select: { id: true, registrationStatus: true },
   })
@@ -316,13 +351,15 @@ export async function updateInvoice(
 export async function deleteInvoice(
   businessId: string,
   invoiceId: string,
-  scopeBranchId?: string | null
+  scopeBranchId?: string | null,
+  userId?: string | null
 ): Promise<{ id: string } | null> {
   const invoice = await prisma.invoice.findFirst({
     where: {
       id: invoiceId,
       businessId,
       ...(scopeBranchId ? { branchId: scopeBranchId } : {}),
+      ...(userId ? { userId } : {}),
     },
     select: {
       id: true,
@@ -347,9 +384,15 @@ export async function deleteInvoice(
 export async function bulkDeleteInvoices(
   businessId: string,
   branchId: string,
-  ids: string[]
+  ids: string[],
+  userId?: string | null
 ): Promise<{ deleted: number; skipped: number }> {
-  const where = { id: { in: ids }, businessId, branchId }
+  const where = {
+    id: { in: ids },
+    businessId,
+    branchId,
+    ...(userId ? { userId } : {}),
+  }
 
   const invoices = await prisma.invoice.findMany({
     where,

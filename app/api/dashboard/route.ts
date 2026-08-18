@@ -54,8 +54,14 @@ export async function GET(request: Request) {
 
   const dateFilter = from && to ? { date: { gte: from, lte: to } } : {}
 
+  // Cashiers see only their own sales; owners/managers see the whole branch.
+  const invoiceScope = {
+    ...workspaceInvoiceScope(workspace),
+    ...(workspace.role === "CASHIER" ? { userId: user.id } : {}),
+  }
+
   const invoices = await prisma.invoice.findMany({
-    where: { ...workspaceInvoiceScope(workspace), ...dateFilter },
+    where: { ...invoiceScope, ...dateFilter },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -137,7 +143,7 @@ export async function GET(request: Request) {
 
   const lineGroups = await prisma.invoiceLine.groupBy({
     by: ["description"],
-    where: { invoice: { ...workspaceInvoiceScope(workspace), ...dateFilter } },
+    where: { invoice: { ...invoiceScope, ...dateFilter } },
     _sum: { quantity: true, total: true },
     orderBy: { _sum: { quantity: "desc" } },
     take: 5,

@@ -3,13 +3,17 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { format, parseISO } from "date-fns"
+import type { DateRange } from "react-day-picker"
 import {
   CircleX,
   FileText,
+  Landmark,
   Pencil,
   Plus,
   ReceiptText,
   Trash2,
+  Wallet,
 } from "lucide-react"
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
@@ -27,6 +31,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Pagination } from "@/components/ui/pagination"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { DateRangePicker } from "@/components/date-range-picker"
 import { toast } from "@/components/toast"
 import { useWorkspace } from "@/components/workspace-provider"
 import { RegisterButton } from "@/components/invoice/register-button"
@@ -53,7 +59,30 @@ type InvoiceStats = {
   issuedReceipts: number
 }
 
+type InvoiceSummary = {
+  count: number
+  totalCents: number
+  taxCents: number
+}
+
 const PAGE_SIZE = 10
+const TIME_ZONE = "Africa/Addis_Ababa"
+
+type Preset = "today" | "all" | "custom"
+
+const PRESETS: { value: Preset; label: string }[] = [
+  { value: "today", label: "Today" },
+  { value: "all", label: "All time" },
+]
+
+function todayKey(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date())
+}
 
 function cannotEdit(invoice: InvoiceRow): boolean {
   return (
@@ -99,20 +128,79 @@ export default function InvoicesPage() {
   const queryClient = useQueryClient()
   const businessId = workspace?.businessId ?? ""
   const branchId = workspace?.branchId ?? ""
-  const workspaceKey = workspace ? `${businessId}:${branchId}` : "none"
+  const isCashier = workspace?.role === "CASHIER"
+  // Role is part of the key: a workspace switch optimistically keeps the old
+  // role, and the refetch then corrects it — re-running this sync block.
+  const workspaceKey = workspace
+    ? `${businessId}:${branchId}:${workspace.role}`
+    : "none"
   const [page, setPage] = useState(1)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [selected, setSelected] = useState<string[]>([])
+  const [preset, setPreset] = useState<Preset>(isCashier ? "today" : "all")
+  const [from, setFrom] = useState(isCashier ? todayKey() : "")
+  const [to, setTo] = useState(isCashier ? todayKey() : "")
+  const [pendingRange, setPendingRange] = useState<DateRange | undefined>()
 
   const [prevWorkspaceKey, setPrevWorkspaceKey] = useState(workspaceKey)
   if (prevWorkspaceKey !== workspaceKey) {
     setPrevWorkspaceKey(workspaceKey)
     setPage(1)
     setSelected([])
+    setPendingRange(undefined)
+    // Cashiers default to their own sales for today; others see all time.
+    setPreset(isCashier ? "today" : "all")
+    if (isCashier) {
+      const today = todayKey()
+      setFrom(today)
+      setTo(today)
+    } else {
+      setFrom("")
+      setTo("")
+    }
   }
 
+  function applyPreset(next: Preset) {
+    setPreset(next)
+    setPendingRange(undefined)
+    if (next === "today") {
+      const today = todayKey()
+      setFrom(today)
+      setTo(today)
+    } else {
+      setFrom("")
+      setTo("")
+    }
+  }
+
+  function handleRangeChange(range: DateRange | undefined) {
+    setPreset("custom")
+    if (!range?.from) {
+      setPendingRange(undefined)
+      setFrom("")
+      setTo("")
+      return
+    }
+    if (!range.to) {
+      setPendingRange(range)
+      return
+    }
+    setPendingRange(undefined)
+    setFrom(format(range.from, "yyyy-MM-dd"))
+    setTo(format(range.to, "yyyy-MM-dd"))
+  }
+
+  const appliedRange: DateRange | undefined =
+    from || to
+      ? {
+          from: from ? parseISO(from) : undefined,
+          to: to ? parseISO(to) : undefined,
+        }
+      : undefined
+  const selectedRange = pendingRange ?? appliedRange
+
   const { data, error } = useQuery({
-    queryKey: ["invoices", businessId, branchId, page],
+    queryKey: ["invoices", businessId, branchId, page, from, to],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
@@ -120,12 +208,15 @@ export default function InvoicesPage() {
       })
       if (businessId) params.set("businessId", businessId)
       if (branchId) params.set("branchId", branchId)
+      if (from) params.set("from", from)
+      if (to) params.set("to", to)
       const res = await fetch(`/api/invoices?${params}`)
       if (!res.ok) throw new Error("Failed to load invoices")
       return (await res.json()) as {
         invoices: InvoiceRow[]
         total: number
         stats: InvoiceStats
+        summary: InvoiceSummary
       }
     },
     enabled: Boolean(workspace),
@@ -139,6 +230,7 @@ export default function InvoicesPage() {
   const invoices = data?.invoices ?? null
   const total = data?.total ?? 0
   const stats = data?.stats ?? null
+  const summary = data?.summary ?? null
   const errorMessage = error instanceof Error ? error.message : null
 
   const loadingSkeleton = (
@@ -271,12 +363,53 @@ export default function InvoicesPage() {
         </div>
       </div>
 
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">
+          {workspace?.role === "CASHIER" ? "My sales" : "Overview"}
+        </h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <ToggleGroup
+            variant="outline"
+            size="sm"
+            value={[preset]}
+            onValueChange={(value) => {
+              if (value[0]) applyPreset(value[0] as Preset)
+            }}
+          >
+            {PRESETS.map((p) => (
+              <ToggleGroupItem key={p.value} value={p.value}>
+                {p.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <DateRangePicker
+            value={selectedRange}
+            onValueChange={handleRangeChange}
+          />
+        </div>
+      </div>
+
       {stats && (
         <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <InvoiceStat
             label="Total invoices"
             value={stats.totalInvoices}
             icon={<FileText className="size-4.5" />}
+          />
+          <InvoiceStat
+            label="Revenue"
+            value={summary ? formatCents(summary.totalCents) : "—"}
+            icon={<Wallet className="size-4.5" />}
+          />
+          <InvoiceStat
+            label="Tax"
+            value={summary ? formatCents(summary.taxCents) : "—"}
+            icon={<Landmark className="size-4.5" />}
+          />
+          <InvoiceStat
+            label="Receipts issued"
+            value={stats.issuedReceipts}
+            icon={<ReceiptText className="size-4.5" />}
           />
           <InvoiceStat
             label="Total failed"
@@ -287,11 +420,6 @@ export default function InvoicesPage() {
             label="Total cancelled"
             value={stats.cancelled}
             icon={<CircleX className="size-4.5" />}
-          />
-          <InvoiceStat
-            label="Receipts issued"
-            value={stats.issuedReceipts}
-            icon={<ReceiptText className="size-4.5" />}
           />
         </section>
       )}
@@ -509,7 +637,7 @@ function InvoiceStat({
   icon,
 }: {
   label: string
-  value: number
+  value: number | string
   icon: React.ReactNode
 }) {
   return (

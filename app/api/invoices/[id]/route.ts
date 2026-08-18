@@ -14,6 +14,12 @@ export const runtime = "nodejs"
 
 type Context = { params: Promise<{ id: string }> }
 
+// Cashiers can only view/edit/delete their own invoices; owners and managers
+// keep full access to the branch.
+function ownScope(workspace: { role: string }, userId: string) {
+  return workspace.role === "CASHIER" ? userId : undefined
+}
+
 export async function GET(_request: Request, context: Context) {
   const user = await getSessionUser()
   if (!user) {
@@ -29,7 +35,8 @@ export async function GET(_request: Request, context: Context) {
   const invoice = await getInvoice(
     workspace.businessId,
     id,
-    workspace.branchId
+    workspace.branchId,
+    ownScope(workspace, user.id)
   )
   if (!invoice)
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 })
@@ -65,7 +72,13 @@ export async function PUT(request: Request, context: Context) {
   }
 
   const result = await withService(() =>
-    updateInvoice(workspace.businessId, id, parsed.data, workspace.branchId)
+    updateInvoice(
+      workspace.businessId,
+      id,
+      parsed.data,
+      workspace.branchId,
+      ownScope(workspace, user.id)
+    )
   )
   if ("error" in result) return result.error
   if (!result.data)
@@ -86,7 +99,12 @@ export async function DELETE(_request: Request, context: Context) {
 
   const { id } = await context.params
   const result = await withService(() =>
-    deleteInvoice(workspace.businessId, id, workspace.branchId)
+    deleteInvoice(
+      workspace.businessId,
+      id,
+      workspace.branchId,
+      ownScope(workspace, user.id)
+    )
   )
   if ("error" in result) return result.error
   if (!result.data)

@@ -36,7 +36,8 @@ export async function POST(request: Request) {
   const result = await bulkDeleteInvoices(
     workspace.businessId,
     workspace.branchId,
-    ids
+    ids,
+    workspace.role === "CASHIER" ? user.id : undefined
   )
   return NextResponse.json(result)
 }

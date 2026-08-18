@@ -37,11 +37,17 @@ export async function GET(request: Request) {
     50,
     Math.max(1, Number(url.searchParams.get("pageSize")) || 10)
   )
+  const from = url.searchParams.get("from") ?? undefined
+  const to = url.searchParams.get("to") ?? undefined
 
   const result = await listInvoices(workspace.businessId, {
     page,
     pageSize,
     branchId: workspace.branchId,
+    // Cashiers only see their own sales; owners/managers see the whole branch.
+    userId: workspace.role === "CASHIER" ? user.id : undefined,
+    from,
+    to,
   })
   return NextResponse.json(toInternalInvoiceList(result))
 }
