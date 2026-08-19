@@ -4,6 +4,7 @@ import Script from "next/script"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ToastProvider } from "@/components/toast"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
@@ -37,9 +38,11 @@ export default async function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
-        <ThemeProvider>
-          <ToastProvider>{children}</ToastProvider>
-        </ThemeProvider>
+        <TooltipProvider>
+          <ThemeProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </ThemeProvider>
+        </TooltipProvider>
       </body>
     </html>
   )
