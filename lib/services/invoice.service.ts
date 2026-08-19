@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client"
-import type { Invoice, InvoiceLine, Receipt } from "@prisma/client"
+import type { Invoice, InvoiceLine, Receipt, WithholdingReceipt } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { ConflictError } from "@/lib/api-error"
 import { sellerSnapshotFromBusiness } from "@/lib/einvoice/payload"
@@ -189,7 +189,7 @@ export async function getInvoice(
   invoiceId: string,
   scopeBranchId?: string | null,
   userId?: string | null
-): Promise<Invoice & { lines: InvoiceLine[]; receipt: Receipt | null } | null> {
+): Promise<Invoice & { lines: InvoiceLine[]; receipt: Receipt | null; withholdingReceipt: WithholdingReceipt | null } | null> {
   const invoice = await prisma.invoice.findFirst({
     where: {
       id: invoiceId,
@@ -197,7 +197,7 @@ export async function getInvoice(
       ...(scopeBranchId ? { branchId: scopeBranchId } : {}),
       ...(userId ? { userId } : {}),
     },
-    include: { lines: { orderBy: { lineNumber: "asc" } }, receipt: true },
+    include: { lines: { orderBy: { lineNumber: "asc" } }, receipt: true, withholdingReceipt: true },
   })
   return invoice
 }

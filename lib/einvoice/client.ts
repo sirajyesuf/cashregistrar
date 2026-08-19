@@ -1,5 +1,6 @@
 import { getConfig } from "./config"
 import { loadKeys } from "./keys"
+import { logEims } from "./eims-logger"
 import { signAndWrap } from "./sign"
 import { forceLogin, forceRefresh, getValidToken } from "./token"
 import { isEimsAuthError } from "./eims-error"
@@ -56,6 +57,15 @@ export async function callEims(
   }
 
   const wrapped = signAndWrap(privateKey, certificate, payload)
+  const startedAt = Date.now()
+  logEims({
+    direction: "request",
+    businessId,
+    method: "POST",
+    path,
+    attempt: retried ? 2 : 1,
+    payload,
+  })
   const res = await fetch(`${cfg.baseUrl}${path}`, {
     method: "POST",
     headers: {
@@ -73,6 +83,17 @@ export async function callEims(
   } catch {
     // keep raw text
   }
+
+  logEims({
+    direction: "response",
+    businessId,
+    method: "POST",
+    path,
+    status: res.status,
+    durationMs: Date.now() - startedAt,
+    attempt: retried ? 2 : 1,
+    response: data,
+  })
 
   if (res.status === 401 && !retried) {
     await forceLogin(businessId)

@@ -356,9 +356,6 @@ export default function DashboardPage() {
               <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
                 {greeting(now)}, {firstName}
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Here’s what’s happening with your business.
-              </p>
             </div>
           </div>
 
@@ -387,7 +384,7 @@ export default function DashboardPage() {
           </div>
 
           {stats && (
-            <section className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <section className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
               <StatCard
                 label="Invoices"
                 value={formatNumber(stats.invoiceCount)}

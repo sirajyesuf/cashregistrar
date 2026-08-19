@@ -53,13 +53,22 @@ function flattenErrorMessage(item: unknown): string {
   if (!item || typeof item !== "object") return ""
   const o = item as {
     portion?: unknown
+    tag?: unknown
     errorMessage?: unknown
     message?: unknown
   }
+  const label = [o.portion, o.tag].find(
+    (x): x is string => typeof x === "string" && x.length > 0
+  )
   if (Array.isArray(o.errorMessage)) {
-    return o.errorMessage.filter((m) => typeof m === "string").join("; ")
+    const msgs = o.errorMessage
+      .filter((m) => typeof m === "string" && m)
+      .join("; ")
+    return label ? `${label}: ${msgs}` : msgs
   }
-  if (typeof o.message === "string") return o.message
+  if (typeof o.message === "string" && o.message) {
+    return label ? `${label}: ${o.message}` : o.message
+  }
   return ""
 }
 
@@ -94,9 +103,36 @@ export function extractErrorMessage(data: unknown): string {
       if (typeof d.body[0] === "object") return JSON.stringify(d.body[0])
     }
     if (d.body && typeof d.body === "object" && !Array.isArray(d.body)) {
-      const o = d.body as { message?: unknown; msg?: unknown; status?: unknown }
-      if (typeof o.message === "string" && o.message) return o.message
-      if (typeof o.msg === "string" && o.msg) return o.msg
+      const o = d.body as {
+        message?: unknown
+        msg?: unknown
+        status?: unknown
+        unknownIrn?: unknown
+        dataMissMuch?: unknown
+        ruleErrorDto?: unknown
+      }
+      const parts: string[] = []
+      if (typeof o.message === "string" && o.message) parts.push(o.message)
+      if (typeof o.msg === "string" && o.msg) parts.push(o.msg)
+      if (Array.isArray(o.unknownIrn)) {
+        const irns = o.unknownIrn.filter(
+          (x): x is string => typeof x === "string" && x.length > 0
+        )
+        if (irns.length > 0) parts.push(`Unknown IRN: ${irns.join(", ")}`)
+      }
+      if (Array.isArray(o.dataMissMuch)) {
+        for (const item of o.dataMissMuch) {
+          const msg = flattenErrorMessage(item)
+          if (msg) parts.push(msg)
+        }
+      }
+      if (Array.isArray(o.ruleErrorDto)) {
+        for (const item of o.ruleErrorDto) {
+          const msg = flattenErrorMessage(item)
+          if (msg) parts.push(msg)
+        }
+      }
+      if (parts.length > 0) return parts.join(" | ")
       if (o.status !== undefined) {
         return `${typeof d.message === "string" ? d.message : "EIMS"} (${String(o.status)})`
       }
@@ -176,6 +212,45 @@ export function parseEimsError(data: unknown): EimsError {
       const o = item as { errorMessage?: unknown }
       if (typeof o.errorMessage === "string" && o.errorMessage) {
         issues.push({ portion: "", messages: [o.errorMessage] })
+      }
+    }
+  } else if (d.body && typeof d.body === "object" && !Array.isArray(d.body)) {
+    const o = d.body as {
+      unknownIrn?: unknown
+      dataMissMuch?: unknown
+      ruleErrorDto?: unknown
+    }
+    const collect = (list: unknown, labelKey: "portion" | "tag") => {
+      if (!Array.isArray(list)) return
+      for (const item of list) {
+        if (!item || typeof item !== "object") continue
+        const it = item as {
+          portion?: unknown
+          tag?: unknown
+          errorMessage?: unknown
+          message?: unknown
+        }
+        const label = typeof it[labelKey] === "string" ? it[labelKey] : ""
+        const messages: string[] = []
+        if (Array.isArray(it.errorMessage)) {
+          for (const m of it.errorMessage) {
+            if (typeof m === "string" && m) messages.push(m)
+          }
+        }
+        if (typeof it.message === "string" && it.message) {
+          messages.push(it.message)
+        }
+        if (messages.length > 0) issues.push({ portion: label, messages })
+      }
+    }
+    collect(o.ruleErrorDto, "portion")
+    collect(o.dataMissMuch, "tag")
+    if (Array.isArray(o.unknownIrn)) {
+      const irns = o.unknownIrn.filter(
+        (x): x is string => typeof x === "string" && x.length > 0
+      )
+      if (irns.length > 0) {
+        issues.push({ portion: "Unknown IRN", messages: irns })
       }
     }
   }

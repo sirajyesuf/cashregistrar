@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Menu,
   Receipt,
+  ScrollText,
   Settings2,
   User,
   Users,
@@ -26,6 +27,7 @@ const LINKS = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/invoices", label: "Invoices", icon: Receipt },
+  { href: "/admin/logs", label: "Logs", icon: ScrollText },
   { href: "/admin/system", label: "System", icon: Settings2 },
   { href: "/admin/profile", label: "Profile", icon: User },
 ]

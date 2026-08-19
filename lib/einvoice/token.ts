@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db"
 import { getConfig } from "./config"
 import { loadKeys } from "./keys"
+import { logEims } from "./eims-logger"
 import { signAndWrap } from "./sign"
 import { EimsAuthError, eimsAuthMessage } from "./eims-error"
 
@@ -64,11 +65,19 @@ async function persistToken(
 async function login(businessId: string): Promise<TokenInfo> {
   const cfg = await getConfig(businessId)
   const { privateKey, certificate } = loadKeys()
-  const body = signAndWrap(privateKey, certificate, {
+  const credentials = {
     clientId: cfg.clientId,
     clientSecret: cfg.clientSecret,
     apikey: cfg.apiKey,
     tin: cfg.tin,
+  }
+  const body = signAndWrap(privateKey, certificate, credentials)
+  logEims({
+    direction: "request",
+    businessId,
+    method: "POST",
+    path: "/auth/login",
+    payload: credentials,
   })
   const res = await fetch(`${cfg.baseUrl}/auth/login`, {
     method: "POST",
@@ -76,6 +85,14 @@ async function login(businessId: string): Promise<TokenInfo> {
     body: JSON.stringify(body),
   })
   const text = await res.text()
+  logEims({
+    direction: "response",
+    businessId,
+    method: "POST",
+    path: "/auth/login",
+    status: res.status,
+    response: parseJsonOrRaw(text),
+  })
   if (!res.ok) {
     if (res.status === 401) {
       throw new EimsAuthError(eimsAuthMessage(loginErrorReason(text)), 401)
@@ -100,13 +117,29 @@ async function refresh(businessId: string): Promise<TokenInfo | null> {
   const body = signAndWrap(privateKey, certificate, {
     refreshToken: stored.refreshToken,
   })
+  logEims({
+    direction: "request",
+    businessId,
+    method: "POST",
+    path: "/auth/refresh-token",
+    payload: { refreshToken: stored.refreshToken },
+  })
   const res = await fetch(`${cfg.baseUrl}/auth/refresh-token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })
+  const text = await res.text()
+  logEims({
+    direction: "response",
+    businessId,
+    method: "POST",
+    path: "/auth/refresh-token",
+    status: res.status,
+    response: parseJsonOrRaw(text),
+  })
   if (!res.ok) return null
-  const token = parseTokenResponse(await res.text())
+  const token = parseTokenResponse(text)
   if (!token) return null
   return persistToken(businessId, token)
 }
@@ -143,6 +176,14 @@ export function maskToken(token: string): string {
 function truncate(text: string, max = 200): string {
   const clean = text.replace(/\s+/g, " ").trim()
   return clean.length > max ? `${clean.slice(0, max)}…` : clean
+}
+
+function parseJsonOrRaw(text: string): unknown {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return text
+  }
 }
 
 /**

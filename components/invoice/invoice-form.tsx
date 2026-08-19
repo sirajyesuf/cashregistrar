@@ -392,11 +392,6 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                     <ChevronDown className="size-4 transition-transform group-data-[open]:rotate-180" />
                   </CollapsibleTrigger>
                   <span className="ml-auto inline-flex flex-wrap items-center justify-end gap-2">
-                    {values.buyer.tin.trim() && (
-                      <span className="text-xs text-muted-foreground">
-                        TIN: {values.buyer.tin}
-                      </span>
-                    )}
                     <Button
                       type="button"
                       variant="outline"
@@ -607,7 +602,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                       </Button>
                     </div>
 
-                    <div className="rounded-md border">
+                    <div className="min-w-0 rounded-md border">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50 hover:bg-muted/50">

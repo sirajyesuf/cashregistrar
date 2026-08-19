@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuLinkItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { QueryProvider } from "@/components/query-provider"
 import { UserMenu } from "@/components/user-menu"
+import { WorkspaceGuard } from "@/components/workspace-guard"
 import { WorkspaceProvider } from "@/components/workspace-provider"
 import { WorkspaceSwitcher } from "@/components/workspace-switcher"
 import { authClient } from "@/lib/auth-client"
@@ -64,6 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <UserContext.Provider value={{ user }}>
       <QueryProvider>
         <WorkspaceProvider>
+          <WorkspaceGuard />
           <div className="flex min-h-svh flex-col">
         <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur print:hidden">
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6">

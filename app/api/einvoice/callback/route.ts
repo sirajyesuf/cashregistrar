@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { callbackResults } from "@/lib/einvoice/operation"
 import { getConfig } from "@/lib/einvoice/config"
+import { logEims } from "@/lib/einvoice/eims-logger"
 import { submitBulkRegistration } from "@/lib/einvoice/bulk-submit"
 import {
   extractErrorMessage,
@@ -77,6 +78,12 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
+
+  logEims({
+    direction: "callback",
+    path: "/api/einvoice/callback",
+    response: body,
+  })
 
   const root = objectValue(body)
   const conversationId = text(

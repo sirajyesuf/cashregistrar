@@ -28,6 +28,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# eims request/response logs
+/logs/
+
 # env files (can opt-in for committing if needed)
 .env*
 

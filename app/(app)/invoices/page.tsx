@@ -390,7 +390,7 @@ export default function InvoicesPage() {
       </div>
 
       {stats && (
-        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <InvoiceStat
             label="Total invoices"
             value={stats.totalInvoices}

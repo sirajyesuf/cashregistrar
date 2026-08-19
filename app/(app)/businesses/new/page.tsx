@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
-import { ArrowLeft, Building2 } from "lucide-react"
+import { Building2 } from "lucide-react"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
@@ -122,12 +122,6 @@ export default function AddBusinessPage() {
             Create a business and its first branch.
           </p>
         </div>
-        <Link href="/dashboard">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="size-3.5" />
-            Back to Dashboard
-          </Button>
-        </Link>
       </div>
 
       <div className="mt-6 rounded-xl border bg-card">

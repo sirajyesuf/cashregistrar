@@ -582,6 +582,22 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/api/v1/businesses/{businessId}/invoices/{invoiceId}/withholding-receipt",
+  tags: ["Invoices"],
+  summary: "Issue a withholding receipt on EIMS",
+  parameters: [businessId, invoiceId],
+  responses: {
+    200: { description: "OK", content: json({ type: "object", properties: { ok: { type: "boolean" }, rrn: { type: "string" }, qr: { type: "string" }, status: { type: "string" } } }) },
+    400: badRequest,
+    401: unauthorized,
+    403: forbidden,
+    404: notFound,
+    502: errorResponse("EIMS credentials error"),
+  },
+})
+
+registry.registerPath({
+  method: "post",
   path: "/api/v1/businesses/{businessId}/invoices/bulk-register",
   tags: ["Invoices"],
   summary: "Bulk-register invoices with EIMS",

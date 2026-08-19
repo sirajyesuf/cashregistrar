@@ -139,6 +139,13 @@ export type PreviewInvoice = {
     eimsStatus: string | null
     status: string | null
   } | null
+  withholdingReceipt?: {
+    number: string | null
+    rrn: string | null
+    qr: string | null
+    eimsStatus: string | null
+    status: string | null
+  } | null
 } & InvoiceTotalsCents
 
 export function moneyToCents(value: string | number): number {
@@ -212,6 +219,13 @@ type ApiInvoice = {
   cancellationError?: CancellationErrorDetails | null
   cancelledAt?: string | null
   receipt?: {
+    number: string | null
+    rrn: string | null
+    qr: string | null
+    eimsStatus: string | null
+    status: string | null
+  } | null
+  withholdingReceipt?: {
     number: string | null
     rrn: string | null
     qr: string | null
@@ -292,6 +306,15 @@ export function invoiceFromApi(invoice: ApiInvoice): PreviewInvoice {
           status: invoice.receipt.status ?? null,
         }
       : null,
+    withholdingReceipt: invoice.withholdingReceipt
+      ? {
+          number: invoice.withholdingReceipt.number ?? null,
+          rrn: invoice.withholdingReceipt.rrn ?? null,
+          qr: invoice.withholdingReceipt.qr ?? null,
+          eimsStatus: invoice.withholdingReceipt.eimsStatus ?? null,
+          status: invoice.withholdingReceipt.status ?? null,
+        }
+      : null,
     subtotalCents: moneyToCents(invoice.subtotal),
     taxAmountCents: moneyToCents(invoice.taxAmount),
     grandTotalCents: moneyToCents(invoice.grandTotal),
@@ -310,4 +333,10 @@ export function hasIssuedReceipt(
   invoice: { receipt?: { status?: string | null } | null } | null
 ): boolean {
   return invoice?.receipt?.status === "ISSUED"
+}
+
+export function hasIssuedWithholdingReceipt(
+  invoice: { withholdingReceipt?: { status?: string | null } | null } | null
+): boolean {
+  return invoice?.withholdingReceipt?.status === "ISSUED"
 }

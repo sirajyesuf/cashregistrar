@@ -1,4 +1,4 @@
-import type { Invoice, InvoiceLine, Receipt } from "@prisma/client"
+import type { Invoice, InvoiceLine, Receipt, WithholdingReceipt } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { canAccessBranch, getBusinessAccess, type BusinessAccess } from "@/lib/business"
 
@@ -13,6 +13,7 @@ export type EimsServiceResult = { status: number; body: unknown }
 export type InvoiceWithRelations = Invoice & {
   lines: InvoiceLine[]
   receipt: Receipt | null
+  withholdingReceipt: WithholdingReceipt | null
 }
 
 export type InvoiceAccessResult =
@@ -37,7 +38,7 @@ export async function requireInvoiceAccess(
 
   const invoice = await prisma.invoice.findFirst({
     where: { id: invoiceId, businessId },
-    include: { lines: { orderBy: { lineNumber: "asc" } }, receipt: true },
+    include: { lines: { orderBy: { lineNumber: "asc" } }, receipt: true, withholdingReceipt: true },
   })
   if (!invoice)
     return { ok: false, status: 404, body: { error: "Invoice not found" } }

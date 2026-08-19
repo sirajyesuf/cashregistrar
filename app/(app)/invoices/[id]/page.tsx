@@ -17,10 +17,16 @@ import { InvoicePreview } from "@/components/invoice/invoice-preview"
 import { RegisterButton } from "@/components/invoice/register-button"
 import { CancelButton } from "@/components/invoice/cancel-button"
 import { ReceiptButton } from "@/components/invoice/receipt-button"
+import { WithholdingReceiptButton } from "@/components/invoice/withholding-receipt-button"
 import { HashField } from "@/components/invoice/hash-field"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import { formatCents, hasIssuedReceipt, invoiceFromApi } from "@/lib/invoice"
+import {
+  formatCents,
+  hasIssuedReceipt,
+  hasIssuedWithholdingReceipt,
+  invoiceFromApi,
+} from "@/lib/invoice"
 import { cancellationReasonLabel } from "@/lib/einvoice/cancellation-reason"
 
 type ApiInvoice = {
@@ -86,6 +92,7 @@ export default function InvoiceDetailPage() {
     invoice?.registrationStatus === "REGISTERED" ||
     invoice?.registrationStatus === "PROCESSING"
   const receiptIssued = hasIssuedReceipt(invoice ?? null)
+  const withholdingIssued = hasIssuedWithholdingReceipt(invoice ?? null)
 
   return (
     <div className="mx-auto w-full max-w-6xl p-4 sm:p-6">
@@ -165,6 +172,9 @@ export default function InvoiceDetailPage() {
                 )}
                 {receiptIssued && (
                   <Badge variant="outline">Receipt issued</Badge>
+                )}
+                {withholdingIssued && (
+                  <Badge variant="outline">Withholding issued</Badge>
                 )}
               </CollapsibleTrigger>
 
@@ -271,6 +281,51 @@ export default function InvoiceDetailPage() {
                     </div>
                   )}
 
+                  {withholdingIssued && (
+                    <div className="flex flex-col gap-2">
+                      {invoice.withholdingReceipt?.qr && (
+                        <div className="flex flex-col items-center gap-2 py-1">
+                          <div className="rounded-lg bg-background p-4">
+                            <Image
+                              src={`data:image/png;base64,${invoice.withholdingReceipt.qr}`}
+                              alt="Withholding receipt QR code"
+                              width={600}
+                              height={600}
+                              unoptimized
+                              className="size-64"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Scan with the EIMS verification app to confirm the
+                            withholding receipt.
+                          </p>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          Withholding receipt
+                        </span>
+                        <span className="text-sm font-medium">
+                          {invoice.withholdingReceipt?.number ?? "—"}
+                        </span>
+                      </div>
+                      {invoice.withholdingReceipt?.rrn && (
+                        <HashField
+                          label="Withholding RRN"
+                          value={invoice.withholdingReceipt.rrn}
+                        />
+                      )}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          Status
+                        </span>
+                        <span className="text-sm font-medium">
+                          {invoice.withholdingReceipt?.eimsStatus ?? "—"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap items-center gap-2">
                     <RegisterButton
                       invoiceId={invoice.id}
@@ -290,6 +345,16 @@ export default function InvoiceDetailPage() {
                     {invoice.registrationStatus === "REGISTERED" &&
                       !receiptIssued && (
                         <ReceiptButton
+                          invoiceId={invoice.id}
+                          invoiceNumber={invoice.number}
+                          businessId={invoice.businessId}
+                          size="sm"
+                        />
+                      )}
+                    {invoice.registrationStatus === "REGISTERED" &&
+                      invoice.transactionType === "B2B" &&
+                      !withholdingIssued && (
+                        <WithholdingReceiptButton
                           invoiceId={invoice.id}
                           invoiceNumber={invoice.number}
                           businessId={invoice.businessId}
