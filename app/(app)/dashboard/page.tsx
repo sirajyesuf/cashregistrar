@@ -15,10 +15,8 @@ import {
   XAxis,
 } from "recharts"
 import {
-  FilePlus2,
   FileText,
   Landmark,
-  ReceiptText,
   Users,
   Wallet,
 } from "lucide-react"
@@ -361,20 +359,6 @@ export default function DashboardPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 Here’s what’s happening with your business.
               </p>
-            </div>
-            <div className="flex gap-2">
-              <Link href="/invoices">
-                <Button variant="outline">
-                  <ReceiptText data-icon="inline-start" />
-                  My Invoices
-                </Button>
-              </Link>
-              <Link href="/invoices/new">
-                <Button>
-                  <FilePlus2 data-icon="inline-start" />
-                  New Invoice
-                </Button>
-              </Link>
             </div>
           </div>
 

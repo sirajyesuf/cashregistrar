@@ -88,7 +88,7 @@ export default function InvoiceDetailPage() {
   const receiptIssued = hasIssuedReceipt(invoice ?? null)
 
   return (
-    <div className="mx-auto max-w-4xl p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-6xl p-4 sm:p-6">
       <div className="mb-6 flex items-center justify-end print:hidden">
         <Link href={`/invoices/${id}/edit`}>
           <Button variant="outline">

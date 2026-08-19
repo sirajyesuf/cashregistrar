@@ -49,7 +49,7 @@ export function InvoicePreview({ data, seller }: Props) {
   })
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto w-full max-w-6xl">
       <div className="mb-6 flex justify-end gap-3 print:hidden">
         <Button onClick={() => handlePrint()} disabled={isPrinting}>
           {isPrinting ? (
@@ -108,49 +108,93 @@ export function InvoicePreview({ data, seller }: Props) {
           </div>
         </div>
 
-        <div className="mt-8 overflow-x-auto">
-          <table className="w-full min-w-[480px] text-sm">
-            <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className="pb-2 text-left font-medium text-gray-500">
-                  Description
-                </th>
-                <th className="pb-2 text-right font-medium text-gray-500">
-                  Qty
-                </th>
-                <th className="pb-2 text-right font-medium text-gray-500">
-                  Unit Price
-                </th>
-                <th className="pb-2 text-right font-medium text-gray-500">
-                  Total
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.lineItems.map((item) => (
-                <tr key={item.id} className="border-b border-gray-100">
-                  <td className="py-3 text-gray-900">
-                    {item.itemCode ? (
-                      <>
-                        <span className="font-medium">{item.itemCode}</span>{" "}
-                        <span className="text-gray-500">· </span>
-                      </>
-                    ) : null}
-                    {item.description}
-                  </td>
-                  <td className="py-3 text-right text-gray-900 tabular-nums">
-                    {item.quantity} {unitLabel(item.unit)}
-                  </td>
-                  <td className="py-3 text-right text-gray-900 tabular-nums">
-                    {formatCents(item.unitPriceCents)}
-                  </td>
-                  <td className="py-3 text-right text-gray-900 tabular-nums">
-                    {formatCents(item.totalCents)}
-                  </td>
+        <div className="mt-8">
+          <ul className="space-y-3 sm:hidden">
+            {data.lineItems.map((item) => (
+              <li key={item.id} className="rounded-lg border border-gray-200 p-3">
+                <div className="text-sm font-medium break-words text-gray-900">
+                  {item.itemCode ? (
+                    <>
+                      <span>{item.itemCode}</span>{" "}
+                      <span className="text-gray-500">· </span>
+                    </>
+                  ) : null}
+                  {item.description}
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-sm text-gray-600">
+                  <div>
+                    <p className="text-xs tracking-wider text-gray-400 uppercase">
+                      Qty
+                    </p>
+                    <p className="tabular-nums">
+                      {item.quantity} {unitLabel(item.unit)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs tracking-wider text-gray-400 uppercase">
+                      Unit price
+                    </p>
+                    <p className="tabular-nums">
+                      {formatCents(item.unitPriceCents)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs tracking-wider text-gray-400 uppercase">
+                      Total
+                    </p>
+                    <p className="font-medium text-gray-900 tabular-nums">
+                      {formatCents(item.totalCents)}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto sm:block">
+            <table className="w-full min-w-[480px] text-sm">
+              <thead>
+                <tr className="border-b-2 border-gray-200">
+                  <th className="pb-2 text-left font-medium text-gray-500">
+                    Description
+                  </th>
+                  <th className="pb-2 text-right font-medium text-gray-500">
+                    Qty
+                  </th>
+                  <th className="pb-2 text-right font-medium text-gray-500">
+                    Unit Price
+                  </th>
+                  <th className="pb-2 text-right font-medium text-gray-500">
+                    Total
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.lineItems.map((item) => (
+                  <tr key={item.id} className="border-b border-gray-100">
+                    <td className="py-3 text-gray-900">
+                      {item.itemCode ? (
+                        <>
+                          <span className="font-medium">{item.itemCode}</span>{" "}
+                          <span className="text-gray-500">· </span>
+                        </>
+                      ) : null}
+                      {item.description}
+                    </td>
+                    <td className="py-3 text-right text-gray-900 tabular-nums">
+                      {item.quantity} {unitLabel(item.unit)}
+                    </td>
+                    <td className="py-3 text-right text-gray-900 tabular-nums">
+                      {formatCents(item.unitPriceCents)}
+                    </td>
+                    <td className="py-3 text-right text-gray-900 tabular-nums">
+                      {formatCents(item.totalCents)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="invoice-totals mt-4 ml-auto flex w-full max-w-64 flex-col gap-1.5 text-sm">
