@@ -58,23 +58,31 @@ export async function callEims(
 
   const wrapped = signAndWrap(privateKey, certificate, payload)
   const startedAt = Date.now()
-  logEims({
-    direction: "request",
-    businessId,
-    method: "POST",
-    path,
-    attempt: retried ? 2 : 1,
-    payload,
-  })
-  const res = await fetch(`${cfg.baseUrl}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      ...extraHeaders,
-    },
-    body: JSON.stringify(wrapped),
-  })
+
+  let res: Response
+  try {
+    res = await fetch(`${cfg.baseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        ...extraHeaders,
+      },
+      body: JSON.stringify(wrapped),
+    })
+  } catch (err) {
+    logEims({
+      direction: "exchange",
+      businessId,
+      method: "POST",
+      path,
+      durationMs: Date.now() - startedAt,
+      attempt: retried ? 2 : 1,
+      payload,
+      error: err instanceof Error ? err.message : "EIMS request failed",
+    })
+    throw err
+  }
 
   const text = await res.text()
   let data: unknown = text
@@ -85,13 +93,14 @@ export async function callEims(
   }
 
   logEims({
-    direction: "response",
+    direction: "exchange",
     businessId,
     method: "POST",
     path,
     status: res.status,
     durationMs: Date.now() - startedAt,
     attempt: retried ? 2 : 1,
+    payload,
     response: data,
   })
 

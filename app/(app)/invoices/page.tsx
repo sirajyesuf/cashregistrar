@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Pagination } from "@/components/ui/pagination"
+import { ListPagination as Pagination } from "@/components/list-pagination"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { DateRangePicker } from "@/components/date-range-picker"
 import { toast } from "@/components/toast"
@@ -106,7 +106,7 @@ function StatusBadge({
 }) {
   if (status === "REGISTERED") {
     return (
-      <Badge variant="success" title={irn ? `IRN: ${irn}` : undefined}>
+      <Badge variant="outline" className="text-success" title={irn ? `IRN: ${irn}` : undefined}>
         Registered
       </Badge>
     )

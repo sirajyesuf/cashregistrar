@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query"
 import { useForm, type DeepKeysOfType } from "@tanstack/react-form"
 import { ArrowLeft, ArrowRight, Building2, Check, Store } from "lucide-react"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
+import { toFieldErrors } from "@/lib/form-errors"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -107,7 +108,7 @@ function FieldInput({
         aria-invalid={isInvalid}
         {...props}
       />
-      {isInvalid && <FieldError errors={field.state.meta.errors} />}
+      {isInvalid && <FieldError errors={toFieldErrors(field.state.meta.errors)} />}
     </Field>
   )
 }

@@ -40,14 +40,13 @@ type FileContent = {
   lines: string[]
   totalLines: number
   truncated: boolean
+  businesses?: Record<string, string>
 }
 
 function directionStyle(direction?: string): string {
   switch (direction) {
-    case "request":
-      return "border-transparent bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-    case "response":
-      return "border-transparent bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300"
+    case "exchange":
+      return "border-transparent bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300"
     case "callback":
       return "border-transparent bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300"
     default:
@@ -82,11 +81,13 @@ function LogEntryCard({
   entry,
   expanded,
   onToggle,
+  businessNames,
 }: {
   raw: string
   entry: LogEntry | null
   expanded: boolean
   onToggle: () => void
+  businessNames: Record<string, string>
 }) {
   const pretty = useMemo(
     () => (entry ? JSON.stringify(entry, null, 2) : raw),
@@ -143,7 +144,9 @@ function LogEntryCard({
           <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
               {entry?.businessId && (
-                <span className="font-mono">business: {entry.businessId}</span>
+                <span className="font-mono">
+                  business: {businessNames[entry.businessId] ?? entry.businessId}
+                </span>
               )}
               {entry?.durationMs != null && <span>{entry.durationMs} ms</span>}
               {entry?.attempt != null && <span>attempt {entry.attempt}</span>}
@@ -380,6 +383,7 @@ export default function AdminLogsPage() {
               onToggle={() =>
                 setExpanded((prev) => ({ ...prev, [String(i)]: !prev[String(i)] }))
               }
+              businessNames={content?.businesses ?? {}}
             />
           ))}
           {content && content.truncated && (

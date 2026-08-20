@@ -53,7 +53,7 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 function InvitationStatusBadge({ status }: { status: Invitation["status"] }) {
-  if (status === "ACCEPTED") return <Badge variant="success">Accepted</Badge>
+  if (status === "ACCEPTED") return <Badge variant="outline" className="text-success">Accepted</Badge>
   return <Badge variant="outline">{status[0] + status.slice(1).toLowerCase()}</Badge>
 }
 

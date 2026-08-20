@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Pagination } from "@/components/ui/pagination"
+import { ListPagination as Pagination } from "@/components/list-pagination"
 import {
   Select,
   SelectContent,

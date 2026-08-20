@@ -9,7 +9,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -48,7 +47,7 @@ export function UserMenu({ name, email, isAdmin }: Props) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Account menu"
-        className="py-1 pr-1.5 pl-1"
+        className="flex items-center gap-2 rounded-md py-1 pr-1.5 pl-1 transition-colors select-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
       >
         <span className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
           {initials(name)}
@@ -70,19 +69,19 @@ export function UserMenu({ name, email, isAdmin }: Props) {
           )}
           {isDark ? "Light Mode" : "Dark Mode"}
         </DropdownMenuItem>
-        <DropdownMenuLinkItem render={<Link href="/profile" />}>
+        <DropdownMenuItem render={<Link href="/profile" />}>
           <UserRound className="text-muted-foreground" />
           Profile
-        </DropdownMenuLinkItem>
-        <DropdownMenuLinkItem render={<Link href="/api-keys" />}>
+        </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/api-keys" />}>
           <KeyRound className="text-muted-foreground" />
           API Keys
-        </DropdownMenuLinkItem>
+        </DropdownMenuItem>
         {isAdmin && (
-          <DropdownMenuLinkItem render={<Link href="/admin" />}>
+          <DropdownMenuItem render={<Link href="/admin" />}>
             <Shield className="text-muted-foreground" />
             Admin
-          </DropdownMenuLinkItem>
+          </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem

@@ -72,25 +72,35 @@ async function login(businessId: string): Promise<TokenInfo> {
     tin: cfg.tin,
   }
   const body = signAndWrap(privateKey, certificate, credentials)
-  logEims({
-    direction: "request",
-    businessId,
-    method: "POST",
-    path: "/auth/login",
-    payload: credentials,
-  })
-  const res = await fetch(`${cfg.baseUrl}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  })
+  const startedAt = Date.now()
+  let res: Response
+  try {
+    res = await fetch(`${cfg.baseUrl}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+  } catch (err) {
+    logEims({
+      direction: "exchange",
+      businessId,
+      method: "POST",
+      path: "/auth/login",
+      durationMs: Date.now() - startedAt,
+      payload: credentials,
+      error: err instanceof Error ? err.message : "EIMS login failed",
+    })
+    throw err
+  }
   const text = await res.text()
   logEims({
-    direction: "response",
+    direction: "exchange",
     businessId,
     method: "POST",
     path: "/auth/login",
     status: res.status,
+    durationMs: Date.now() - startedAt,
+    payload: credentials,
     response: parseJsonOrRaw(text),
   })
   if (!res.ok) {
@@ -117,25 +127,36 @@ async function refresh(businessId: string): Promise<TokenInfo | null> {
   const body = signAndWrap(privateKey, certificate, {
     refreshToken: stored.refreshToken,
   })
-  logEims({
-    direction: "request",
-    businessId,
-    method: "POST",
-    path: "/auth/refresh-token",
-    payload: { refreshToken: stored.refreshToken },
-  })
-  const res = await fetch(`${cfg.baseUrl}/auth/refresh-token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  })
+  const startedAt = Date.now()
+  const refreshPayload = { refreshToken: stored.refreshToken }
+  let res: Response
+  try {
+    res = await fetch(`${cfg.baseUrl}/auth/refresh-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+  } catch (err) {
+    logEims({
+      direction: "exchange",
+      businessId,
+      method: "POST",
+      path: "/auth/refresh-token",
+      durationMs: Date.now() - startedAt,
+      payload: refreshPayload,
+      error: err instanceof Error ? err.message : "EIMS refresh failed",
+    })
+    throw err
+  }
   const text = await res.text()
   logEims({
-    direction: "response",
+    direction: "exchange",
     businessId,
     method: "POST",
     path: "/auth/refresh-token",
     status: res.status,
+    durationMs: Date.now() - startedAt,
+    payload: refreshPayload,
     response: parseJsonOrRaw(text),
   })
   if (!res.ok) return null

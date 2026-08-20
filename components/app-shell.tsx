@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { LogOut, Menu as MenuIcon, UserRoundCog } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuLinkItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { QueryProvider } from "@/components/query-provider"
 import { UserMenu } from "@/components/user-menu"
 import { WorkspaceGuard } from "@/components/workspace-guard"
@@ -108,12 +108,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-44">
                   {NAV.map((item) => (
-                    <DropdownMenuLinkItem
+                    <DropdownMenuItem
                       key={item.href}
                       render={<Link href={item.href} />}
                     >
                       {item.label}
-                    </DropdownMenuLinkItem>
+                    </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>

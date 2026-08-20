@@ -89,7 +89,7 @@ function MockInvoice() {
             INV-0042
           </p>
         </div>
-        <Badge variant="success">
+        <Badge variant="outline" className="text-success">
           <CheckCircle2 />
           Registered
         </Badge>

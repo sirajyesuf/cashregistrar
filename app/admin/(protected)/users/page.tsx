@@ -117,7 +117,7 @@ export default function AdminUsersPage() {
                   </TableCell>
                   <TableCell>
                     {user.role === "ADMIN" ? (
-                      <Badge variant="success">ADMIN</Badge>
+                      <Badge variant="outline" className="text-success">ADMIN</Badge>
                     ) : (
                       <Badge variant="outline">{user.role}</Badge>
                     )}

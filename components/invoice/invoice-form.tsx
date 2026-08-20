@@ -32,6 +32,7 @@ import {
   FieldLegend,
   FieldSet,
 } from "@/components/ui/field"
+import { toFieldErrors } from "@/lib/form-errors"
 import {
   calculateTotalsCents,
   formatCents,
@@ -164,7 +165,7 @@ function TextField({
         {...props}
       />
       {description && <FieldDescription>{description}</FieldDescription>}
-      {isInvalid && <FieldError errors={field.state.meta.errors} />}
+      {isInvalid && <FieldError errors={toFieldErrors(field.state.meta.errors)} />}
     </Field>
   )
 }
@@ -199,7 +200,7 @@ function SelectField({
           ))}
         </SelectContent>
       </Select>
-      {isInvalid && <FieldError errors={field.state.meta.errors} />}
+      {isInvalid && <FieldError errors={toFieldErrors(field.state.meta.errors)} />}
     </Field>
   )
 }
@@ -900,7 +901,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                             </SelectContent>
                           </Select>
                           {isInvalid && (
-                            <FieldError errors={field.state.meta.errors} />
+                            <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                           )}
                         </Field>
                       )

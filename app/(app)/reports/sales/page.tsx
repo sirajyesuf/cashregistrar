@@ -4,10 +4,8 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { format, parseISO } from "date-fns"
 import type { DateRange } from "react-day-picker"
-import { Printer } from "lucide-react"
 import { useWorkspace } from "@/components/workspace-provider"
 import { DateRangePicker } from "@/components/date-range-picker"
-import { Button } from "@/components/ui/button"
 import {
   Empty,
   EmptyContent,
@@ -90,11 +88,11 @@ function SummaryBox({
   value: string
 }) {
   return (
-    <div className="rounded-lg border p-4">
+    <div className="min-w-0 rounded-lg border p-3 sm:p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
+      <p className="mt-1 text-lg font-semibold tracking-tight break-words tabular-nums sm:text-2xl">
         {value}
       </p>
     </div>
@@ -178,7 +176,7 @@ export default function SalesReportPage() {
   )
 
   return (
-    <div className="mx-auto max-w-5xl p-6 print:max-w-none print:p-0">
+    <div className="mx-auto max-w-5xl p-4 print:max-w-none print:p-0 sm:p-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-2xl font-bold">Sales Report</h1>
@@ -205,10 +203,6 @@ export default function SalesReportPage() {
             value={selectedRange}
             onValueChange={handleRangeChange}
           />
-          <Button onClick={() => window.print()}>
-            <Printer data-icon="inline-start" />
-            Print
-          </Button>
         </div>
       </div>
 
@@ -226,7 +220,7 @@ export default function SalesReportPage() {
       ) : !data ? (
         loadingSkeleton
       ) : (
-        <div className="rounded-xl border bg-card p-6 print:rounded-none print:border-0 print:p-0">
+        <div className="rounded-xl border bg-card p-4 print:rounded-none print:border-0 print:p-0 sm:p-6">
           <div className="mb-6 border-b pb-4 text-center">
             <h2 className="text-lg font-bold uppercase tracking-wide">
               Sales Report
@@ -247,7 +241,7 @@ export default function SalesReportPage() {
             </p>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 <SummaryBox
                   label="Invoices"
                   value={String(data.totals.count)}
@@ -266,7 +260,7 @@ export default function SalesReportPage() {
                 />
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 <SummaryBox
                   label="Registered"
                   value={String(data.totals.registered)}

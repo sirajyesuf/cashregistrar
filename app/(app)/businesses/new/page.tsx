@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { useForm } from "@tanstack/react-form"
 import { Building2 } from "lucide-react"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
+import { toFieldErrors } from "@/lib/form-errors"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -184,7 +185,7 @@ export default function AddBusinessPage() {
                       aria-invalid={isInvalid}
                     />
                     {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
+                      <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                     )}
                   </Field>
                 )
@@ -236,7 +237,7 @@ export default function AddBusinessPage() {
                         aria-invalid={isInvalid}
                       />
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -274,7 +275,7 @@ export default function AddBusinessPage() {
                         </SelectContent>
                       </Select>
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -303,7 +304,7 @@ export default function AddBusinessPage() {
                         aria-invalid={isInvalid}
                       />
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -329,7 +330,7 @@ export default function AddBusinessPage() {
                         aria-invalid={isInvalid}
                       />
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -357,7 +358,7 @@ export default function AddBusinessPage() {
                         aria-invalid={isInvalid}
                       />
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -383,7 +384,7 @@ export default function AddBusinessPage() {
                         aria-invalid={isInvalid}
                       />
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -409,7 +410,7 @@ export default function AddBusinessPage() {
                         aria-invalid={isInvalid}
                       />
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -442,7 +443,7 @@ export default function AddBusinessPage() {
                         aria-invalid={isInvalid}
                       />
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -488,7 +489,7 @@ export default function AddBusinessPage() {
                         aria-invalid={isInvalid}
                       />
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -537,7 +538,7 @@ export default function AddBusinessPage() {
                         aria-invalid={isInvalid}
                       />
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -566,7 +567,7 @@ export default function AddBusinessPage() {
                         aria-invalid={isInvalid}
                       />
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -593,7 +594,7 @@ export default function AddBusinessPage() {
                         aria-invalid={isInvalid}
                       />
                       {isInvalid && (
-                        <FieldError errors={field.state.meta.errors} />
+                        <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                       )}
                     </Field>
                   )
@@ -624,7 +625,7 @@ export default function AddBusinessPage() {
                       aria-invalid={isInvalid}
                     />
                     {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
+                      <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                     )}
                   </Field>
                 )

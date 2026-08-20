@@ -12,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 export function DateRangePicker({
   value,
@@ -20,6 +21,8 @@ export function DateRangePicker({
   value: DateRange | undefined
   onValueChange: (range: DateRange | undefined) => void
 }) {
+  const isMobile = useIsMobile()
+
   return (
     <Popover>
       <PopoverTrigger
@@ -32,11 +35,11 @@ export function DateRangePicker({
             {value?.from ? (
               value.to ? (
                 <>
-                  {format(value.from, "LLL dd, y")} –{" "}
-                  {format(value.to, "LLL dd, y")}
+                  {format(value.from, isMobile ? "MMM d" : "LLL dd, y")} –{" "}
+                  {format(value.to, isMobile ? "MMM d, y" : "LLL dd, y")}
                 </>
               ) : (
-                format(value.from, "LLL dd, y")
+                format(value.from, isMobile ? "MMM d" : "LLL dd, y")
               )
             ) : (
               <span>Pick a date</span>
@@ -50,7 +53,7 @@ export function DateRangePicker({
           defaultMonth={value?.from}
           selected={value}
           onSelect={onValueChange}
-          numberOfMonths={2}
+          numberOfMonths={isMobile ? 1 : 2}
         />
       </PopoverContent>
     </Popover>

@@ -9,8 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuGroupLabel,
-  DropdownMenuLinkItem,
+  DropdownMenuLabel,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -78,23 +77,23 @@ export function AdminUserMenu({ name, email }: Props) {
             sideOffset={4}
           >
             <DropdownMenuGroup>
-              <DropdownMenuGroupLabel>
+              <DropdownMenuLabel>
                 <p className="truncate text-sm font-medium">{name}</p>
                 <p className="truncate text-xs font-normal text-muted-foreground">
                   {email}
                 </p>
-              </DropdownMenuGroupLabel>
+              </DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuLinkItem render={<Link href="/dashboard" />}>
+              <DropdownMenuItem render={<Link href="/dashboard" />}>
                 <ExternalLink className="text-muted-foreground" />
                 Go to app
-              </DropdownMenuLinkItem>
-              <DropdownMenuLinkItem render={<Link href="/admin/profile" />}>
+              </DropdownMenuItem>
+              <DropdownMenuItem render={<Link href="/admin/profile" />}>
                 <User className="text-muted-foreground" />
                 Profile
-              </DropdownMenuLinkItem>
+              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem

@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, Building2, Check, Copy, KeyRound } from "lucide-react"
 import { copyText } from "@/lib/copy"
 import { Field, FieldError, FieldLabel } from "@/components/ui/field"
+import { toFieldErrors } from "@/lib/form-errors"
 import { toast } from "@/components/toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -119,7 +120,7 @@ function CredentialField({
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
-      {isInvalid && <FieldError errors={errors} />}
+      {isInvalid && <FieldError errors={toFieldErrors(errors)} />}
     </Field>
   )
 }
@@ -261,7 +262,7 @@ function EditBusinessForm({
                     autoFocus
                     aria-invalid={isInvalid}
                   />
-                  {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                  {isInvalid && <FieldError errors={toFieldErrors(field.state.meta.errors)} />}
                 </Field>
               )
             }}
@@ -311,7 +312,7 @@ function EditBusinessForm({
                       aria-invalid={isInvalid}
                     />
                     {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
+                      <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                     )}
                   </Field>
                 )
@@ -347,7 +348,7 @@ function EditBusinessForm({
                       </SelectContent>
                     </Select>
                     {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
+                      <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                     )}
                   </Field>
                 )
@@ -376,7 +377,7 @@ function EditBusinessForm({
                       aria-invalid={isInvalid}
                     />
                     {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
+                      <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                     )}
                   </Field>
                 )
@@ -420,7 +421,7 @@ function EditBusinessForm({
                       aria-invalid={isInvalid}
                     />
                     {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
+                      <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                     )}
                   </Field>
                 )
@@ -446,7 +447,7 @@ function EditBusinessForm({
                       aria-invalid={isInvalid}
                     />
                     {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
+                      <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                     )}
                   </Field>
                 )
@@ -472,7 +473,7 @@ function EditBusinessForm({
                       aria-invalid={isInvalid}
                     />
                     {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
+                      <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                     )}
                   </Field>
                 )
@@ -505,7 +506,7 @@ function EditBusinessForm({
                       aria-invalid={isInvalid}
                     />
                     {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
+                      <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                     )}
                   </Field>
                 )
@@ -547,7 +548,7 @@ function EditBusinessForm({
                       aria-invalid={isInvalid}
                     />
                     {isInvalid && (
-                      <FieldError errors={field.state.meta.errors} />
+                      <FieldError errors={toFieldErrors(field.state.meta.errors)} />
                     )}
                   </Field>
                 )
@@ -590,7 +591,7 @@ function EditBusinessForm({
                     placeholder={initial.morCredential ? "••••••••" : ""}
                     autoComplete="off"
                     isInvalid={isInvalid}
-                    errors={field.state.meta.errors}
+                    errors={toFieldErrors(field.state.meta.errors)}
                     onBlur={field.handleBlur}
                     onChange={field.handleChange}
                   />
@@ -610,7 +611,7 @@ function EditBusinessForm({
                     placeholder={initial.morCredential ? "••••••••" : ""}
                     autoComplete="new-password"
                     isInvalid={isInvalid}
-                    errors={field.state.meta.errors}
+                    errors={toFieldErrors(field.state.meta.errors)}
                     onBlur={field.handleBlur}
                     onChange={field.handleChange}
                   />
@@ -630,7 +631,7 @@ function EditBusinessForm({
                     placeholder={initial.morCredential ? "••••••••" : ""}
                     autoComplete="new-password"
                     isInvalid={isInvalid}
-                    errors={field.state.meta.errors}
+                    errors={toFieldErrors(field.state.meta.errors)}
                     onBlur={field.handleBlur}
                     onChange={field.handleChange}
                   />

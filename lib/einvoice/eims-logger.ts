@@ -14,7 +14,7 @@ import path from "node:path"
  *   never interleave a line.
  */
 
-type EimsLogDirection = "request" | "response" | "callback"
+type EimsLogDirection = "exchange" | "callback"
 
 export type EimsLogEntry = {
   ts: string

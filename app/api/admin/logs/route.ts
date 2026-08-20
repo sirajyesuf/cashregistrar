@@ -2,6 +2,7 @@ import { open, readdir, readFile, stat } from "node:fs/promises"
 import path from "node:path"
 import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/auth/admin"
+import { prisma } from "@/lib/db"
 import { eimsLogDir } from "@/lib/einvoice/eims-logger"
 
 export const runtime = "nodejs"
@@ -80,10 +81,18 @@ export async function GET(request: Request) {
   const totalLines = allLines.length
   const lines = allLines.slice(-lineLimit)
 
+  const businesses = await prisma.business.findMany({
+    select: { id: true, name: true },
+  })
+  const businessNames = Object.fromEntries(
+    businesses.map((b) => [b.id, b.name])
+  )
+
   return NextResponse.json({
     name: file,
     lines,
     totalLines,
     truncated: totalLines > lines.length,
+    businesses: businessNames,
   })
 }

@@ -19,7 +19,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLinkItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -78,7 +77,7 @@ export function WorkspaceSwitcher() {
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         aria-label="Switch business or branch"
-        className="min-w-0 max-w-44 gap-1.5 px-2 py-1.5 sm:max-w-56 sm:gap-2"
+        className="flex min-w-0 max-w-44 items-center gap-1.5 rounded-md px-2 py-1.5 transition-colors select-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background sm:max-w-56 sm:gap-2"
       >
         <Building2 className="size-4 shrink-0 text-muted-foreground" />
         <span className="truncate text-sm font-medium">{businessLabel}</span>
@@ -100,14 +99,14 @@ export function WorkspaceSwitcher() {
             <p className="text-sm text-muted-foreground">
               You don&apos;t belong to any business yet.
             </p>
-            <DropdownMenuLinkItem
+            <DropdownMenuItem
               render={<Link href="/businesses/new" />}
               onClick={() => setOpen(false)}
               className="flex items-center justify-center gap-2 rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground"
             >
               <Plus className="size-3.5" />
               Create business
-            </DropdownMenuLinkItem>
+            </DropdownMenuItem>
           </div>
         ) : (
           <>
@@ -120,7 +119,7 @@ export function WorkspaceSwitcher() {
                   </span>
                 </div>
                 {isOwner && (
-                  <DropdownMenuLinkItem
+                  <DropdownMenuItem
                     render={
                       <Link href={`/businesses/${currentBusiness.id}/edit`} />
                     }
@@ -129,7 +128,7 @@ export function WorkspaceSwitcher() {
                     className="p-1.5"
                   >
                     <Settings2 className="size-4 text-muted-foreground" />
-                  </DropdownMenuLinkItem>
+                  </DropdownMenuItem>
                 )}
               </div>
             )}
@@ -183,7 +182,7 @@ export function WorkspaceSwitcher() {
                             <span className="truncate">{branch.name}</span>
                           </DropdownMenuItem>
                           {isCurrent && canEditBranch && (
-                            <DropdownMenuLinkItem
+                            <DropdownMenuItem
                               render={
                                 <Link
                                   href={`/businesses/${business.id}/branches/${branch.id}/edit`}
@@ -194,7 +193,7 @@ export function WorkspaceSwitcher() {
                               className="mr-1 p-1.5"
                             >
                               <Settings className="size-3.5 text-muted-foreground" />
-                            </DropdownMenuLinkItem>
+                            </DropdownMenuItem>
                           )}
                         </div>
                       )
@@ -207,7 +206,7 @@ export function WorkspaceSwitcher() {
             <DropdownMenuSeparator />
             <div className="flex flex-col gap-0.5">
               {isOwner && currentBusiness && (
-                <DropdownMenuLinkItem
+                <DropdownMenuItem
                   render={
                     <Link
                       href={`/businesses/${currentBusiness.id}/members`}
@@ -218,10 +217,10 @@ export function WorkspaceSwitcher() {
                 >
                   <Users className="size-4 text-muted-foreground" />
                   Manage team
-                </DropdownMenuLinkItem>
+                </DropdownMenuItem>
               )}
               {isOwner && currentBusiness && (
-                <DropdownMenuLinkItem
+                <DropdownMenuItem
                   render={
                     <Link
                       href={`/businesses/${currentBusiness.id}/branches/new`}
@@ -232,16 +231,16 @@ export function WorkspaceSwitcher() {
                 >
                   <GitBranch className="size-4 text-muted-foreground" />
                   Add branch
-                </DropdownMenuLinkItem>
+                </DropdownMenuItem>
               )}
-              <DropdownMenuLinkItem
+              <DropdownMenuItem
                 render={<Link href="/businesses/new" />}
                 onClick={() => setOpen(false)}
                 className="gap-2.5 px-2.5 py-2"
               >
                 <Store className="size-4 text-muted-foreground" />
                 Add business
-              </DropdownMenuLinkItem>
+              </DropdownMenuItem>
             </div>
           </>
         )}

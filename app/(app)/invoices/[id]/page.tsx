@@ -160,7 +160,7 @@ export default function InvoiceDetailPage() {
                 />
                 <span className="text-sm font-semibold">EIMS Registration</span>
                 {invoice.registrationStatus === "REGISTERED" ? (
-                  <Badge variant="success">Registered</Badge>
+                  <Badge variant="outline" className="text-success">Registered</Badge>
                 ) : invoice.registrationStatus === "PROCESSING" ? (
                   <Badge variant="outline">Processing</Badge>
                 ) : invoice.registrationStatus === "CANCELLED" ? (
