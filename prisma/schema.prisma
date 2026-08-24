@@ -356,7 +356,7 @@ model Invoice {
   paymentMode String @default("CASH")
   paymentTerm String @default("IMMIDIATE")
 
-  incomeWithholdRate Decimal? @default(2) @db.Decimal(5, 2)
+  incomeWithholdRate Decimal? @db.Decimal(5, 2)
   cashierName        String   @default("AAA")
   salesPersonName    String   @default("AAA")
 

@@ -2,7 +2,9 @@
 
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { KeyRound, Plus, Trash2 } from "lucide-react"
+import { Building2, GitBranch, KeyRound, Plus, Trash2 } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CopyField } from "@/components/copy-field"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -42,6 +44,12 @@ type ApiKey = {
   createdAt: string
 }
 
+type ApiKeyBusiness = {
+  id: string
+  name: string
+  branches: { id: string; name: string; active: boolean }[]
+}
+
 function formatDate(value: string | null): string {
   if (!value) return "Never"
   return new Date(value).toLocaleDateString("en", {
@@ -62,6 +70,16 @@ export default function ApiKeysPage() {
       if (!res.ok) throw new Error("Failed to load API keys")
       const body = (await res.json()) as { apiKeys: ApiKey[] }
       return body.apiKeys
+    },
+  })
+
+  const { data: businesses = [] } = useQuery({
+    queryKey: ["businesses"],
+    queryFn: async () => {
+      const res = await fetch("/api/businesses")
+      if (!res.ok) throw new Error("Failed to load businesses")
+      const body = (await res.json()) as { businesses: ApiKeyBusiness[] }
+      return body.businesses
     },
   })
 
@@ -238,6 +256,57 @@ export default function ApiKeysPage() {
           </Table>
         </div>
       )}
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Business &amp; branch IDs</CardTitle>
+          <CardDescription>
+            IDs used to build v1 API request paths. Copy the business ID or
+            branch ID for each branch.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {businesses.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              You don&apos;t belong to any business yet.
+            </p>
+          ) : (
+            businesses.map((business) => (
+              <div key={business.id} className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 border-b pb-2">
+                  <Building2 className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-sm font-semibold">
+                    {business.name}
+                  </span>
+                </div>
+                <CopyField label="Business ID" value={business.id} />
+                <div className="flex flex-col gap-3 rounded-lg bg-muted/40 p-3">
+                  {business.branches.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No branches yet.
+                    </p>
+                  ) : (
+                    business.branches.map((branch) => (
+                      <div
+                        key={branch.id}
+                        className="flex flex-col gap-2.5 border-b pb-3 last:border-b-0 last:pb-0"
+                      >
+                        <div className="flex items-center gap-2">
+                          <GitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+                          <span className="truncate text-sm font-medium">
+                            {branch.name}
+                          </span>
+                        </div>
+                        <CopyField value={branch.id} />
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
 
       <CreateApiKeyDialog
         open={createOpen}

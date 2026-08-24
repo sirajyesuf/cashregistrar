@@ -3,18 +3,18 @@
 import dynamic from "next/dynamic"
 import "swagger-ui-react/swagger-ui.css"
 
-// swagger-ui (bundled by swagger-ui-react) still uses the legacy
-// `UNSAFE_componentWillReceiveProps` lifecycle in its `ModelCollapse`
-// component, which React flags under strict mode in dev. It is benign and
-// upstream-owned, so we filter just that one warning on this page instead of
-// hiding unrelated warnings.
+// swagger-ui (bundled by swagger-ui-react) still uses legacy
+// `UNSAFE_componentWillReceiveProps` lifecycles in several components
+// (`ModelCollapse`, `ParameterRow`, …), which React flags under strict mode
+// in dev. They are benign and upstream-owned, so we filter just those
+// warnings on this page instead of hiding unrelated warnings.
 if (typeof window !== "undefined") {
   const originalError = console.error.bind(console)
   console.error = (...args: unknown[]) => {
     const message = args.map(String).join(" ")
     if (
       message.includes("UNSAFE_componentWillReceiveProps") &&
-      message.includes("ModelCollapse")
+      (message.includes("ModelCollapse") || message.includes("ParameterRow"))
     ) {
       return
     }

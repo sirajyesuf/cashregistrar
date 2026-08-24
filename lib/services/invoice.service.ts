@@ -10,6 +10,7 @@ import {
 } from "@/lib/idempotency"
 import { hasIssuedReceipt } from "@/lib/invoice"
 import type { InvoiceInput } from "@/lib/invoice-schema"
+import { rateForTaxCode } from "@/lib/einvoice/tax"
 
 function centsToDecimal(cents: number) {
   return new Prisma.Decimal(Math.round(cents)).div(100)
@@ -210,9 +211,10 @@ export async function createInvoice(
   opts?: { idempotencyKey?: string }
 ): Promise<Invoice & { lines: InvoiceLine[] }> {
   const lines = normalizeLines(input.lines)
+  const taxRate = rateForTaxCode(input.taxCode)
   const { subtotalCents, taxAmountCents, grandTotalCents } = computeTotals(
     lines,
-    input.taxRate
+    taxRate
   )
   const snapshot = await sellerSnapshot(businessId)
 
@@ -261,12 +263,15 @@ export async function createInvoice(
           branchId,
           ...snapshot,
           taxCode: input.taxCode,
-          taxRate: new Prisma.Decimal(input.taxRate),
+          taxRate: new Prisma.Decimal(taxRate),
           subtotal: centsToDecimal(subtotalCents),
           taxAmount: centsToDecimal(taxAmountCents),
           grandTotal: centsToDecimal(grandTotalCents),
           transactionType: input.transactionType,
-          incomeWithholdRate: new Prisma.Decimal(input.incomeWithholdRate),
+          incomeWithholdRate:
+            input.incomeWithholdRate === undefined
+              ? null
+              : new Prisma.Decimal(input.incomeWithholdRate),
           cashierName: input.cashierName || "AAA",
           salesPersonName: input.salesPersonName || "AAA",
           ...buyerData(input.buyer),
@@ -309,9 +314,10 @@ export async function updateInvoice(
   }
 
   const lines = normalizeLines(input.lines)
+  const taxRate = rateForTaxCode(input.taxCode)
   const { subtotalCents, taxAmountCents, grandTotalCents } = computeTotals(
     lines,
-    input.taxRate
+    taxRate
   )
 
   const snapshot = await sellerSnapshot(businessId)
@@ -324,12 +330,15 @@ export async function updateInvoice(
         date: input.date,
         ...snapshot,
         taxCode: input.taxCode,
-        taxRate: new Prisma.Decimal(input.taxRate),
+        taxRate: new Prisma.Decimal(taxRate),
         subtotal: centsToDecimal(subtotalCents),
         taxAmount: centsToDecimal(taxAmountCents),
         grandTotal: centsToDecimal(grandTotalCents),
         transactionType: input.transactionType,
-        incomeWithholdRate: new Prisma.Decimal(input.incomeWithholdRate),
+        incomeWithholdRate:
+          input.incomeWithholdRate === undefined
+            ? null
+            : new Prisma.Decimal(input.incomeWithholdRate),
         cashierName: input.cashierName || "AAA",
         salesPersonName: input.salesPersonName || "AAA",
         ...buyerData(input.buyer),

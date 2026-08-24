@@ -69,9 +69,8 @@ export type InvoiceFormInitial = {
   date: string
   lines: Array<Omit<InvoiceFormLine, "id" | "productId"> & { productId?: string }>
   taxCode: string
-  taxRate: number
   transactionType: TransactionType
-  buyer: BuyerDetails
+  buyer: Partial<BuyerDetails>
   cashierName: string
   salesPersonName: string
   incomeWithholdRate: number
@@ -260,7 +259,6 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
           productId: line.productId ?? "",
         })) ?? [createLineItem()],
       taxCode: initial?.taxCode ?? "VAT15",
-      taxRate: initial?.taxRate ?? 0.15,
       transactionType: initial?.transactionType ?? "B2B",
       buyer: initial?.buyer ?? EMPTY_BUYER,
       cashierName: initial?.cashierName ?? "AAA",
@@ -282,12 +280,13 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
             body: JSON.stringify({
               date: value.date,
               taxCode: value.taxCode,
-              taxRate: value.taxRate,
               transactionType: value.transactionType,
               buyer: value.buyer,
               cashierName: value.cashierName.trim() || "AAA",
               salesPersonName: value.salesPersonName.trim() || "AAA",
-              incomeWithholdRate: value.incomeWithholdRate,
+              ...(value.transactionType === "B2B"
+                ? { incomeWithholdRate: value.incomeWithholdRate }
+                : {}),
               lines: value.lines.map((line) => ({
                 description: line.description.trim(),
                 quantity: Number(line.quantity),
@@ -354,7 +353,10 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
             }
           })
 
-          const totals = calculateTotalsCents(derived, values.taxRate)
+          const totals = calculateTotalsCents(
+            derived,
+            rateForTaxCode(values.taxCode as TaxCode)
+          )
 
           return (
             <>
@@ -875,10 +877,6 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                             onValueChange={(value) => {
                               const code = (value ?? "VAT15") as TaxCode
                               field.handleChange(code as never)
-                              form.setFieldValue(
-                                "taxRate",
-                                rateForTaxCode(code) as never
-                              )
                             }}
                           >
                             <SelectTrigger
@@ -918,7 +916,10 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Tax ({Math.round(values.taxRate * 100)}%)</span>
+                  <span>
+                    Tax ({Math.round(rateForTaxCode(values.taxCode as TaxCode) * 100)}
+                    %)
+                  </span>
                   <span className="tabular-nums">
                     {formatCents(totals.taxAmountCents)}
                   </span>

@@ -168,7 +168,7 @@ export function buildRegisterPayload(params: {
 }): RegisterPayload {
   const { invoice, sellerDetails, invoiceCounter, previousIrn, cfg } = params
   const rate = Number(invoice.taxRate)
-  const withholdRate = Number(invoice.incomeWithholdRate ?? 2)
+  const withholdRate = Number(invoice.incomeWithholdRate ?? 0)
 
   const itemList = invoice.lines
     .slice()

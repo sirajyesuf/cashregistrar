@@ -32,7 +32,7 @@ function round2(value: number): number {
  * A withholding receipt documents the income withholding tax that the buyer
  * deducts from the payment and remits to the tax authority on the seller's
  * behalf. The amount is derived from the invoice's pre-tax subtotal and its
- * incomeWithholdRate (default 2%); the document type is always "TWHT".
+ * incomeWithholdRate; the document type is always "TWHT".
  */
 export function buildWithholdingReceiptPayload(params: {
   invoice: Invoice
@@ -42,7 +42,7 @@ export function buildWithholdingReceiptPayload(params: {
   const cfg = params.cfg
   const counter = params.receiptCounter
   const subtotal = Number(params.invoice.subtotal)
-  const rate = Number(params.invoice.incomeWithholdRate ?? 2)
+  const rate = Number(params.invoice.incomeWithholdRate ?? 0)
 
   return {
     ReceiptNumber: `REC${String(counter).padStart(15, "0")}`,

@@ -60,7 +60,6 @@ function formInitialFromApi(invoice: ApiInvoice): InvoiceFormInitial {
       unit: line.unit ?? "PCS",
     })),
     taxCode: invoice.taxCode ?? "VAT15",
-    taxRate: Number(invoice.taxRate),
     transactionType: invoice.transactionType === "B2C" ? "B2C" : "B2B",
     buyer: {
       legalName: invoice.buyerLegalName ?? "",
