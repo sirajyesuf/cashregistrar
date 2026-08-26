@@ -9,29 +9,41 @@ import {
   settleIdempotencyKey,
 } from "@/lib/idempotency"
 import { hasIssuedReceipt } from "@/lib/invoice"
-import type { InvoiceInput } from "@/lib/invoice-schema"
+import {
+  buyerSchema,
+  type InvoiceInput,
+  type TransactionType,
+} from "@/lib/invoice-schema"
 import { rateForTaxCode } from "@/lib/einvoice/tax"
 
 function centsToDecimal(cents: number) {
   return new Prisma.Decimal(Math.round(cents)).div(100)
 }
 
-function buyerData(buyer: InvoiceInput["buyer"]) {
+function buyerData(
+  transactionType: TransactionType,
+  buyer: InvoiceInput["buyer"]
+) {
+  // B2B keeps the strict, defaulted buyer snapshot (EIMS dummy values for any
+  // blank field). B2C stores exactly what was provided — null buyer (or blank
+  // fields) persist as NULL.
+  const canonical =
+    transactionType === "B2B" && buyer ? buyerSchema.parse(buyer) : buyer
   return {
-    buyerLegalName: buyer.legalName,
-    buyerTin: buyer.tin,
-    buyerVatNumber: buyer.vatNumber,
-    buyerIdType: buyer.idType,
-    buyerIdNumber: buyer.idNumber,
-    buyerEmail: buyer.email,
-    buyerPhone: buyer.phone,
-    buyerCity: buyer.city,
-    buyerRegion: buyer.region,
-    buyerCountry: buyer.country,
-    buyerZone: buyer.zone,
-    buyerKebele: buyer.kebele,
-    buyerWereda: buyer.wereda,
-    buyerHouseNumber: buyer.houseNumber,
+    buyerLegalName: canonical?.legalName?.trim() || null,
+    buyerTin: canonical?.tin?.trim() || null,
+    buyerVatNumber: canonical?.vatNumber?.trim() || null,
+    buyerIdType: canonical?.idType?.trim() || null,
+    buyerIdNumber: canonical?.idNumber?.trim() || null,
+    buyerEmail: canonical?.email?.trim() || null,
+    buyerPhone: canonical?.phone?.trim() || null,
+    buyerCity: canonical?.city?.trim() || null,
+    buyerRegion: canonical?.region?.trim() || null,
+    buyerCountry: canonical?.country?.trim() || null,
+    buyerZone: canonical?.zone?.trim() || null,
+    buyerKebele: canonical?.kebele?.trim() || null,
+    buyerWereda: canonical?.wereda?.trim() || null,
+    buyerHouseNumber: canonical?.houseNumber?.trim() || null,
   }
 }
 
@@ -274,7 +286,7 @@ export async function createInvoice(
               : new Prisma.Decimal(input.incomeWithholdRate),
           cashierName: input.cashierName || "AAA",
           salesPersonName: input.salesPersonName || "AAA",
-          ...buyerData(input.buyer),
+          ...buyerData(input.transactionType, input.buyer),
           userId,
           lines: { create: lineCreateData(lines) },
         },
@@ -341,7 +353,7 @@ export async function updateInvoice(
             : new Prisma.Decimal(input.incomeWithholdRate),
         cashierName: input.cashierName || "AAA",
         salesPersonName: input.salesPersonName || "AAA",
-        ...buyerData(input.buyer),
+        ...buyerData(input.transactionType, input.buyer),
         irn: null,
         registrationStatus: null,
         registrationError: Prisma.JsonNull,

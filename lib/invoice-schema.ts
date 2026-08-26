@@ -84,6 +84,82 @@ export const buyerSchema = z.object({
 
 export type BuyerDetails = z.infer<typeof buyerSchema>
 
+/**
+ * Permissive buyer shapes used for B2C (and as the raw field for both types).
+ * Every field is optional; only TIN and VAT number are validated, and only
+ * when a non-empty value is supplied. Missing/empty values are normalized to
+ * NULL at the persistence layer (see invoice.service).
+ *
+ * `buyerInputSchema` (API) also accepts `null` fields so a JSON client sending
+ * `{ tin: null }` skips validation; `buyerFormSchema` matches the web form's
+ * `Partial<BuyerDetails>` value type (strings only).
+ */
+const apiBuyerField = z.string().trim().nullable().optional()
+
+export const buyerInputSchema = z.object({
+  city: apiBuyerField,
+  email: apiBuyerField,
+  houseNumber: apiBuyerField,
+  idNumber: apiBuyerField,
+  idType: apiBuyerField,
+  tin: apiBuyerField.refine(
+    (value) => value == null || value === "" || EIMS_TIN_REGEX.test(value),
+    "TIN must be 10 to 20 digits"
+  ),
+  legalName: apiBuyerField,
+  phone: apiBuyerField,
+  region: apiBuyerField,
+  country: apiBuyerField,
+  zone: apiBuyerField,
+  kebele: apiBuyerField,
+  vatNumber: apiBuyerField.refine(
+    (value) => value == null || value === "" || EIMS_VAT_NUMBER_REGEX.test(value),
+    "VAT number must be 3 to 25 digits"
+  ),
+  wereda: apiBuyerField,
+})
+
+export type BuyerInput = z.infer<typeof buyerInputSchema>
+
+const formBuyerField = z.string().trim().optional()
+
+export const buyerFormSchema = z.object({
+  city: formBuyerField,
+  email: formBuyerField,
+  houseNumber: formBuyerField,
+  idNumber: formBuyerField,
+  idType: formBuyerField,
+  tin: formBuyerField.refine(
+    (value) => value == null || value === "" || EIMS_TIN_REGEX.test(value),
+    "TIN must be 10 to 20 digits"
+  ),
+  legalName: formBuyerField,
+  phone: formBuyerField,
+  region: formBuyerField,
+  country: formBuyerField,
+  zone: formBuyerField,
+  kebele: formBuyerField,
+  vatNumber: formBuyerField.refine(
+    (value) => value == null || value === "" || EIMS_VAT_NUMBER_REGEX.test(value),
+    "VAT number must be 3 to 25 digits"
+  ),
+  wereda: formBuyerField,
+})
+
+/**
+ * Whether the buyer block currently carries validation errors for the given
+ * transaction type. B2B requires a full buyer; B2C only flags provided-but-
+ * invalid TIN/VAT values (null/blank buyers are always valid).
+ */
+export function buyerHasIssues(
+  transactionType: TransactionType,
+  buyer: unknown
+): boolean {
+  if (buyer == null) return transactionType === "B2B"
+  if (transactionType === "B2B") return !buyerSchema.safeParse(buyer).success
+  return !buyerInputSchema.safeParse(buyer).success
+}
+
 export const transactionTypeSchema = z.enum(["B2B", "B2C"])
 export type TransactionType = z.infer<typeof transactionTypeSchema>
 
@@ -113,7 +189,7 @@ export const invoiceInputSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/, "A valid date is required"),
     taxCode: z.enum(TAX_CODE_CODES),
     transactionType: transactionTypeSchema,
-    buyer: buyerSchema,
+    buyer: buyerInputSchema.nullable().optional(),
     cashierName: z.string(),
     salesPersonName: z.string(),
     incomeWithholdRate: z
@@ -127,12 +203,28 @@ export const invoiceInputSchema = z
       .min(1, "At least one line item is required"),
   })
   .superRefine((data, ctx) => {
-    if (data.transactionType === "B2B" && data.incomeWithholdRate === undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["incomeWithholdRate"],
-        message: "Income withhold rate is required for B2B invoices",
-      })
+    if (data.transactionType === "B2B") {
+      if (data.buyer == null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["buyer"],
+          message: "Buyer details are required for B2B invoices",
+        })
+      } else {
+        const buyerResult = buyerSchema.safeParse(data.buyer)
+        if (!buyerResult.success) {
+          for (const issue of buyerResult.error.issues) {
+            ctx.addIssue({ ...issue, path: ["buyer", ...issue.path] })
+          }
+        }
+      }
+      if (data.incomeWithholdRate === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["incomeWithholdRate"],
+          message: "Income withhold rate is required for B2B invoices",
+        })
+      }
     }
   })
 
@@ -188,7 +280,7 @@ export const invoiceFormSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/, "A valid date is required"),
     taxCode: z.enum(TAX_CODE_CODES),
     transactionType: transactionTypeSchema,
-    buyer: buyerSchema,
+    buyer: buyerFormSchema,
     cashierName: z.string(),
     salesPersonName: z.string(),
     incomeWithholdRate: z
@@ -202,6 +294,24 @@ export const invoiceFormSchema = z
   .refine((data) => !isFutureDate(data.date), {
     message: "Date cannot be in the future",
     path: ["date"],
+  })
+  .superRefine((data, ctx) => {
+    if (data.transactionType === "B2B") {
+      if (data.buyer == null) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["buyer"],
+          message: "Buyer details are required for B2B invoices",
+        })
+      } else {
+        const buyerResult = buyerSchema.safeParse(data.buyer)
+        if (!buyerResult.success) {
+          for (const issue of buyerResult.error.issues) {
+            ctx.addIssue({ ...issue, path: ["buyer", ...issue.path] })
+          }
+        }
+      }
+    }
   })
 
 export type InvoiceFormValues = z.infer<typeof invoiceFormSchema>

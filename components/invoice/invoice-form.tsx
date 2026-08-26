@@ -8,6 +8,7 @@ import { Building2, ChevronDown, ChevronsUpDown, Plus, TriangleAlert, User, X } 
 import { Combobox } from "@base-ui/react/combobox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   Table,
@@ -42,6 +43,7 @@ import {
   EMPTY_BUYER,
   TEST_BUYER,
   TEST_BUYER_B2C,
+  isBlankBuyer,
   type BuyerDetails,
   type TransactionType,
 } from "@/lib/invoice"
@@ -53,7 +55,7 @@ import {
 } from "@/lib/einvoice/tax"
 import {
   invoiceFormSchema,
-  buyerSchema,
+  buyerHasIssues,
   type InvoiceFormLine,
 } from "@/lib/invoice-schema"
 import { cn, uid } from "@/lib/utils"
@@ -237,6 +239,9 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [includeBuyer, setIncludeBuyer] = useState(
+    () => initial !== undefined && !isBlankBuyer(initial.buyer)
+  )
 
   const { data: products = [] } = useQuery({
     queryKey: ["products", businessId],
@@ -281,7 +286,10 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
               date: value.date,
               taxCode: value.taxCode,
               transactionType: value.transactionType,
-              buyer: value.buyer,
+              buyer:
+                value.transactionType === "B2C" && isBlankBuyer(value.buyer)
+                  ? null
+                  : value.buyer,
               cashierName: value.cashierName.trim() || "AAA",
               salesPersonName: value.salesPersonName.trim() || "AAA",
               ...(value.transactionType === "B2B"
@@ -335,7 +343,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
           const transactionType = values.transactionType
 
           const buyerHasErrors =
-            submitted && !buyerSchema.safeParse(values.buyer).success
+            submitted && buyerHasIssues(transactionType, values.buyer)
 
           const derived = values.lines.map((item) => {
             const quantity = Number(item.quantity)
@@ -394,12 +402,36 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                     )}
                     <ChevronDown className="size-4 transition-transform group-data-[open]:rotate-180" />
                   </CollapsibleTrigger>
-                  <span className="ml-auto inline-flex flex-wrap items-center justify-end gap-2">
+                  {transactionType === "B2C" && (
+                    <label className="ml-auto inline-flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                      <Checkbox
+                        checked={includeBuyer}
+                        onCheckedChange={(checked) => {
+                          const on = Boolean(checked)
+                          setIncludeBuyer(on)
+                          if (!on) {
+                            form.setFieldValue("buyer", {
+                              ...EMPTY_BUYER,
+                            } as never)
+                          }
+                        }}
+                        aria-label="Include buyer details"
+                      />
+                      Include buyer details
+                    </label>
+                  )}
+                  <span
+                    className={cn(
+                      "inline-flex flex-wrap items-center justify-end gap-2",
+                      transactionType !== "B2C" && "ml-auto"
+                    )}
+                  >
                     <Button
                       type="button"
                       variant="outline"
                       size="xs"
                       onClick={() => {
+                        setIncludeBuyer(true)
                         form.setFieldValue("transactionType", "B2B")
                         form.setFieldValue("buyer", { ...TEST_BUYER })
                       }}
@@ -411,6 +443,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                       variant="outline"
                       size="xs"
                       onClick={() => {
+                        setIncludeBuyer(true)
                         form.setFieldValue("transactionType", "B2C")
                         form.setFieldValue("buyer", { ...TEST_BUYER_B2C })
                       }}
@@ -420,6 +453,7 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                   </span>
                 </div>
                 <CollapsibleContent>
+                  {transactionType === "B2B" || includeBuyer ? (
                   <div className="flex flex-col gap-4 border-t p-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <form.Field name="buyer.legalName">
@@ -553,7 +587,12 @@ export function InvoiceForm({ invoiceId, initial }: InvoiceFormProps) {
                       )}
                     </form.Field>
                   </div>
-                </div>
+                  </div>
+                  ) : (
+                    <div className="border-t p-4 text-sm text-muted-foreground">
+                      No buyer details will be recorded for this B2C invoice.
+                    </div>
+                  )}
                 </CollapsibleContent>
               </Collapsible>
 

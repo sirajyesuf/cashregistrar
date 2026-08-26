@@ -36,6 +36,16 @@ export const EMPTY_BUYER: BuyerDetails = {
   wereda: "",
 }
 
+/**
+ * True when no meaningful buyer information has been entered. Used by the
+ * invoice form to send `buyer: null` for B2C invoices without buyer details.
+ */
+export function isBlankBuyer(buyer: Partial<BuyerDetails>): boolean {
+  return ["legalName", "tin", "vatNumber", "email", "phone", "idNumber"].every(
+    (key) => !buyer[key as keyof BuyerDetails]?.trim()
+  )
+}
+
 export const TEST_BUYER: BuyerDetails = {
   legalName: "Taxpayer A",
   tin: "0089238373",
