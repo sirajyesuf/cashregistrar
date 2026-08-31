@@ -58,10 +58,11 @@ import {
   buyerHasIssues,
   type InvoiceFormLine,
 } from "@/lib/invoice-schema"
+import { EIMS_BUYER_ID_TYPES } from "@/lib/einvoice/buyer"
 import { cn, uid } from "@/lib/utils"
 import { useWorkspace } from "@/components/workspace-provider"
 
-const ID_TYPES = ["KID"]
+const ID_TYPES = [...EIMS_BUYER_ID_TYPES]
 const TRANSACTION_TYPES = [
   { value: "B2B", label: "B2B — Business" },
   { value: "B2C", label: "B2C — Consumer" },

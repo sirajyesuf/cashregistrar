@@ -8,6 +8,8 @@ import {
   buildSellerDetailsFromInvoice,
 } from "@/lib/einvoice/payload"
 import { validateLineTotals } from "@/lib/einvoice/validate"
+import { isEimsBuyerIdType } from "@/lib/einvoice/buyer"
+import { isBlankBuyer } from "@/lib/invoice"
 import {
   extractErrorMessage,
   isEimsAuthError,
@@ -69,6 +71,27 @@ export async function registerInvoice(
 
   if (invoice.transactionType === "B2B" && !invoice.buyerTin) {
     return { status: 400, body: { error: "B2B invoices require a buyer TIN" } }
+  }
+
+  if (
+    invoice.transactionType === "B2C" &&
+    !isBlankBuyer({
+      legalName: invoice.buyerLegalName,
+      tin: invoice.buyerTin,
+      vatNumber: invoice.buyerVatNumber,
+      email: invoice.buyerEmail,
+      phone: invoice.buyerPhone,
+      idNumber: invoice.buyerIdNumber,
+    }) &&
+    !isEimsBuyerIdType(invoice.buyerIdType)
+  ) {
+    return {
+      status: 400,
+      body: {
+        error:
+          "B2C buyers with details require a valid ID type (NID, KID, SID, WID, PST, DLS, MRS)",
+      },
+    }
   }
 
   if (invoice.lines.some((line) => line.description.trim().length < 3)) {

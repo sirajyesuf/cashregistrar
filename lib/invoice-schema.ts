@@ -1,6 +1,8 @@
 import { z } from "zod"
 
+import { EIMS_BUYER_ID_TYPES } from "@/lib/einvoice/buyer"
 import { TAX_CODE_CODES } from "@/lib/einvoice/tax"
+import { isBlankBuyer } from "@/lib/invoice"
 import { UNIT_CODES } from "@/lib/units"
 
 const EIMS_EMAIL_REGEX = /^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+$/
@@ -96,12 +98,24 @@ export type BuyerDetails = z.infer<typeof buyerSchema>
  */
 const apiBuyerField = z.string().trim().nullable().optional()
 
+/**
+ * ID type must be one of EIMS's accepted values whenever a value is supplied
+ * (a blank value normalizes to null). ID number remains optional.
+ */
+const apiBuyerIdTypeField = z
+  .string()
+  .trim()
+  .nullable()
+  .optional()
+  .transform((value) => (value ? value : null))
+  .pipe(z.enum(EIMS_BUYER_ID_TYPES).nullable())
+
 export const buyerInputSchema = z.object({
   city: apiBuyerField,
   email: apiBuyerField,
   houseNumber: apiBuyerField,
   idNumber: apiBuyerField,
-  idType: apiBuyerField,
+  idType: apiBuyerIdTypeField,
   tin: apiBuyerField.refine(
     (value) => value == null || value === "" || EIMS_TIN_REGEX.test(value),
     "TIN must be 10 to 20 digits"
@@ -123,12 +137,19 @@ export type BuyerInput = z.infer<typeof buyerInputSchema>
 
 const formBuyerField = z.string().trim().optional()
 
+const formBuyerIdTypeField = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => (value ? value : undefined))
+  .pipe(z.enum(EIMS_BUYER_ID_TYPES).optional())
+
 export const buyerFormSchema = z.object({
   city: formBuyerField,
   email: formBuyerField,
   houseNumber: formBuyerField,
   idNumber: formBuyerField,
-  idType: formBuyerField,
+  idType: formBuyerIdTypeField,
   tin: formBuyerField.refine(
     (value) => value == null || value === "" || EIMS_TIN_REGEX.test(value),
     "TIN must be 10 to 20 digits"
@@ -157,7 +178,21 @@ export function buyerHasIssues(
 ): boolean {
   if (buyer == null) return transactionType === "B2B"
   if (transactionType === "B2B") return !buyerSchema.safeParse(buyer).success
-  return !buyerInputSchema.safeParse(buyer).success
+  const parsed = buyerInputSchema.safeParse(buyer)
+  if (!parsed.success) return true
+  return !isBlankBuyer(buyer) && !parsed.data.idType
+}
+
+export function buyerNeedsIdType(
+  transactionType: TransactionType,
+  buyer: { idType?: string | null } | null | undefined
+): boolean {
+  return (
+    transactionType === "B2C" &&
+    buyer != null &&
+    !isBlankBuyer(buyer as Partial<BuyerDetails>) &&
+    !buyer.idType
+  )
 }
 
 export const transactionTypeSchema = z.enum(["B2B", "B2C"])
@@ -225,6 +260,14 @@ export const invoiceInputSchema = z
           message: "Income withhold rate is required for B2B invoices",
         })
       }
+    }
+    if (buyerNeedsIdType(data.transactionType, data.buyer)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["buyer", "idType"],
+        message:
+          "ID type is required when B2C buyer details are included (NID, KID, SID, WID, PST, DLS, MRS)",
+      })
     }
   })
 
@@ -311,6 +354,14 @@ export const invoiceFormSchema = z
           }
         }
       }
+    }
+    if (buyerNeedsIdType(data.transactionType, data.buyer)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["buyer", "idType"],
+        message:
+          "ID type is required when B2C buyer details are included (NID, KID, SID, WID, PST, DLS, MRS)",
+      })
     }
   })
 

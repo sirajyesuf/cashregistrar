@@ -40,7 +40,9 @@ export const EMPTY_BUYER: BuyerDetails = {
  * True when no meaningful buyer information has been entered. Used by the
  * invoice form to send `buyer: null` for B2C invoices without buyer details.
  */
-export function isBlankBuyer(buyer: Partial<BuyerDetails>): boolean {
+export function isBlankBuyer(
+  buyer: { [K in keyof BuyerDetails]?: string | null | undefined }
+): boolean {
   return ["legalName", "tin", "vatNumber", "email", "phone", "idNumber"].every(
     (key) => !buyer[key as keyof BuyerDetails]?.trim()
   )
